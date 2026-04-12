@@ -17,14 +17,39 @@ function TikTokIcon({ className }: { className?: string }) {
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-primary text-primary-foreground">
+    <footer className="mt-12 border-t border-border bg-primary text-primary-foreground">
       <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
+        <div className="mb-12 grid gap-6 rounded-[2rem] border border-primary-foreground/10 bg-primary-foreground/5 p-8 lg:grid-cols-[1.3fr_0.7fr] lg:items-center">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-accent">Adakan Hair Studio</p>
+            <h2 className="mt-3 max-w-xl font-serif text-3xl font-bold text-primary-foreground">
+              Saç bakım ve tasarım sürecinizi sakin, planlı ve güven veren bir deneyime dönüştürelim.
+            </h2>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
+            <a
+              href={siteContent.contact.phoneHref}
+              className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold uppercase tracking-[0.14em] text-accent-foreground transition-opacity hover:opacity-90"
+            >
+              {siteContent.cta.secondaryLabel}
+            </a>
+            <Link
+              href="/randevu"
+              className="rounded-full border border-primary-foreground/20 px-6 py-3 text-center text-sm font-semibold uppercase tracking-[0.14em] text-primary-foreground transition-colors hover:bg-primary-foreground/10"
+            >
+              {siteContent.cta.primaryLabel}
+            </Link>
+          </div>
+        </div>
+
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <div className="flex items-center gap-2">
-              <Scissors className="h-6 w-6 text-accent" />
-              <span className="font-serif text-xl font-bold tracking-wide">
-                {siteContent.brand.name}
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full border border-primary-foreground/15 bg-primary-foreground/10">
+                <Scissors className="h-5 w-5 text-accent" />
+              </span>
+              <span className="font-serif text-xl font-bold tracking-[0.18em]">
+                {siteContent.brand.shortName}
               </span>
             </div>
             <p className="mt-4 text-sm leading-relaxed text-primary-foreground/70">
@@ -53,7 +78,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider">Sayfalar</h3>
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em]">Sayfalar</h3>
             <ul className="space-y-3">
               {siteContent.navigation.map((link) => (
                 <li key={link.href}>
@@ -69,7 +94,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider">Iletisim</h3>
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em]">İletişim</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
                 <Phone className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
@@ -91,7 +116,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider">Calisma Saatleri</h3>
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em]">Çalışma Saatleri</h3>
             <ul className="space-y-3">
               {siteContent.contact.hours.map((item) => (
                 <li key={item.label} className="flex items-start gap-3">
@@ -106,7 +131,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 overflow-hidden rounded-lg border border-primary-foreground/10">
+        <div className="mt-12 overflow-hidden rounded-[1.75rem] border border-primary-foreground/10">
           <iframe
             src={siteContent.contact.mapEmbed}
             width="100%"
@@ -121,7 +146,7 @@ export function Footer() {
 
         <div className="mt-12 border-t border-primary-foreground/10 pt-8 text-center">
           <p className="text-sm text-primary-foreground/50">
-            {`(c) 2026 ${siteContent.brand.title}. Tum haklari saklidir.`}
+            {`© 2026 ${siteContent.brand.name}. Tüm hakları saklıdır.`}
           </p>
         </div>
       </div>

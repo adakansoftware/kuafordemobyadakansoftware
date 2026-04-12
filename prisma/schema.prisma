@@ -98,6 +98,9 @@ model Appointment {
 
   @@index([scheduledAt])
   @@index([status])
+  @@index([scheduledDate, scheduledTime])
+  @@index([staffId, scheduledDate, scheduledTime])
+  @@index([customerId, scheduledDate, scheduledTime])
 }
 
 model ContactLead {
@@ -107,4 +110,17 @@ model ContactLead {
   phone     String?
   message   String
   createdAt DateTime @default(now())
+}
+
+model RateLimitBucket {
+  id        String   @id @default(cuid())
+  namespace String
+  key       String
+  count     Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([namespace, key])
+  @@index([resetAt])
 }

@@ -4,31 +4,31 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.97 0.005 80);
-  --foreground: oklch(0.18 0.01 60);
-  --card: oklch(0.99 0.003 80);
-  --card-foreground: oklch(0.18 0.01 60);
-  --popover: oklch(0.99 0.003 80);
-  --popover-foreground: oklch(0.18 0.01 60);
-  --primary: oklch(0.20 0.01 60);
-  --primary-foreground: oklch(0.97 0.005 80);
-  --secondary: oklch(0.93 0.01 80);
-  --secondary-foreground: oklch(0.20 0.01 60);
-  --muted: oklch(0.94 0.008 80);
-  --muted-foreground: oklch(0.50 0.01 60);
-  --accent: oklch(0.75 0.08 55);
-  --accent-foreground: oklch(0.18 0.01 60);
+  --background: oklch(0.975 0.006 75);
+  --foreground: oklch(0.2 0.012 55);
+  --card: oklch(0.995 0.004 80);
+  --card-foreground: oklch(0.2 0.012 55);
+  --popover: oklch(0.995 0.004 80);
+  --popover-foreground: oklch(0.2 0.012 55);
+  --primary: oklch(0.22 0.015 45);
+  --primary-foreground: oklch(0.98 0.004 75);
+  --secondary: oklch(0.95 0.012 70);
+  --secondary-foreground: oklch(0.2 0.012 55);
+  --muted: oklch(0.955 0.008 70);
+  --muted-foreground: oklch(0.5 0.015 55);
+  --accent: oklch(0.77 0.1 60);
+  --accent-foreground: oklch(0.2 0.012 45);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.89 0.01 80);
-  --input: oklch(0.89 0.01 80);
-  --ring: oklch(0.60 0.05 55);
+  --border: oklch(0.9 0.012 70);
+  --input: oklch(0.9 0.012 70);
+  --ring: oklch(0.68 0.06 58);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.5rem;
+  --radius: 1rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -122,5 +122,28 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at top, color-mix(in oklab, var(--accent) 10%, transparent) 0%, transparent 35%),
+      linear-gradient(180deg, color-mix(in oklab, var(--secondary) 45%, white) 0%, transparent 22%),
+      linear-gradient(180deg, white 0%, color-mix(in oklab, var(--background) 92%, white) 100%);
+    min-height: 100vh;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 55%, white);
+    color: var(--foreground);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.02em;
+  }
+
+  a,
+  button {
+    -webkit-tap-highlight-color: transparent;
   }
 }

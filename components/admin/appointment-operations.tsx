@@ -7,6 +7,7 @@ import {
   type UpdateAppointmentActionState,
   updateAppointmentAction,
 } from "@/app/admin/actions"
+import { siteContent } from "@/lib/site-content"
 
 type StaffOption = {
   id: string
@@ -53,21 +54,37 @@ export function AppointmentOperations({
 
   const assignedStaffLabel = useMemo(() => {
     if (!appointment.staff) {
-      return "Henuz atanmadi"
+      return "Henüz atanmadı"
     }
 
     const matched = staffOptions.find((staff) => staff.id === appointment.staff?.id)
     return matched ? `${matched.name} - ${matched.role}` : appointment.staff.name
   }, [appointment.staff, staffOptions])
 
+  const statusToneClass = useMemo(() => {
+    switch (appointment.status) {
+      case "CONFIRMED":
+        return "bg-emerald-500/10 text-emerald-700"
+      case "COMPLETED":
+        return "bg-sky-500/10 text-sky-700"
+      case "CANCELLED":
+        return "bg-rose-500/10 text-rose-700"
+      default:
+        return "bg-amber-500/10 text-amber-700"
+    }
+  }, [appointment.status])
+
   return (
-    <article className="rounded-2xl border border-border bg-card p-5">
+    <article className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="font-serif text-xl font-bold text-foreground">{appointment.customer.name}</h3>
-            <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
-              {appointment.status}
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${statusToneClass}`}>
+              {siteContent.admin.statusLabels[appointment.status]}
+            </span>
+            <span className="rounded-full border border-border bg-background px-3 py-1 text-xs uppercase tracking-wide text-muted-foreground">
+              {appointment.staff ? "Planlandı" : "Atama bekliyor"}
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -93,7 +110,7 @@ export function AppointmentOperations({
               >
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
-                    {status}
+                    {siteContent.admin.statusLabels[status]}
                   </option>
                 ))}
               </select>
@@ -123,13 +140,14 @@ export function AppointmentOperations({
               defaultValue={appointment.notes ?? ""}
               rows={3}
               placeholder="Onay notu, musteri talebi veya operasyon bilgisi ekleyin."
+              maxLength={500}
               className="resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
             />
           </label>
 
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <p className={currentState.success ? "text-sm text-green-600" : "text-sm text-destructive"}>
-              {currentState.message || "Durum, personel ve notlar ayni cekirdek kayit uzerinden yonetilir."}
+              {currentState.message || "Durum, personel ve notlar aynı çekirdek kayıt üzerinden yönetilir."}
             </p>
             <SubmitButton />
           </div>

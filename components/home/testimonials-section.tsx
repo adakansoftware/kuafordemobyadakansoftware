@@ -28,16 +28,16 @@ export function TestimonialsSection() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="text-center">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-accent">
-            Musteri Yorumlari
+            Misafir Yorumları
           </p>
           <h2 className="mt-3 font-serif text-3xl font-bold text-foreground md:text-4xl text-balance">
-            Musterilerimiz Ne Diyor?
+            Misafirlerimiz deneyimi nasıl anlatıyor?
           </h2>
         </div>
 
         <div className="relative mt-16">
           <div className="mx-auto max-w-3xl overflow-hidden">
-            <div className="rounded-lg border border-border bg-card p-8 text-center md:p-12">
+            <div className="rounded-[2rem] border border-border bg-card p-8 text-center shadow-[0_24px_50px_rgba(28,20,12,0.06)] md:p-12">
               <div className="mb-6 flex items-center justify-center gap-1">
                 {Array.from({ length: testimonials[current].rating }).map((_, index) => (
                   <Star key={index} className="h-5 w-5 fill-accent text-accent" />

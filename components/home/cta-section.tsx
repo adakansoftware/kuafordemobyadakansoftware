@@ -21,15 +21,15 @@ export function CtaSection() {
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
             href="/randevu"
-            className="rounded-sm bg-accent px-8 py-3.5 text-sm font-semibold uppercase tracking-wider text-accent-foreground transition-all duration-300 hover:opacity-90"
+            className="rounded-full bg-accent px-8 py-3.5 text-sm font-semibold uppercase tracking-[0.16em] text-accent-foreground transition-all duration-300 hover:opacity-90"
           >
-            Online Randevu Al
+            {siteContent.cta.primaryLabel}
           </Link>
           <a
-            href="tel:+902125550088"
-            className="rounded-sm border border-primary-foreground/30 px-8 py-3.5 text-sm font-semibold uppercase tracking-wider text-primary-foreground transition-all duration-300 hover:bg-primary-foreground/10"
+            href={siteContent.contact.phoneHref}
+            className="rounded-full border border-primary-foreground/30 px-8 py-3.5 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-all duration-300 hover:bg-primary-foreground/10"
           >
-            Bizi Arayin
+            {siteContent.cta.secondaryLabel}
           </a>
         </div>
       </div>

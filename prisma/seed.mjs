@@ -121,25 +121,39 @@ const staffMembers = [
 ]
 
 async function main() {
+  await prisma.appointment.deleteMany({
+    where: {
+      customer: {
+        email: "demo@bellasalon.com.tr",
+      },
+    },
+  })
+
+  await prisma.customer.deleteMany({
+    where: {
+      email: "demo@bellasalon.com.tr",
+    },
+  })
+
   await prisma.businessSettings.upsert({
-    where: { id: "bella-core-settings" },
+    where: { id: "adakan-core-settings" },
     update: {
-      businessName: "Bella Sac ve Guzellik Salonu",
-      tagline: "Premium Sac ve Guzellik Salonu",
-      phone: "+90 (212) 555 00 88",
-      email: "info@bellasalon.com.tr",
-      address: "Nisantasi Mah. Abdi Ipekci Cad. No:42, Sisli / Istanbul",
+      businessName: "Adakan Hair Studio",
+      tagline: "Salonlar Icin Premium Randevu ve Deneyim Altyapisi",
+      phone: "+90 (216) 777 40 40",
+      email: "info@adakan.studio",
+      address: "Bagdat Caddesi No:128, Caddebostan / Istanbul",
       city: "Istanbul",
       timezone: "Europe/Istanbul",
       currency: "TRY",
     },
     create: {
-      id: "bella-core-settings",
-      businessName: "Bella Sac ve Guzellik Salonu",
-      tagline: "Premium Sac ve Guzellik Salonu",
-      phone: "+90 (212) 555 00 88",
-      email: "info@bellasalon.com.tr",
-      address: "Nisantasi Mah. Abdi Ipekci Cad. No:42, Sisli / Istanbul",
+      id: "adakan-core-settings",
+      businessName: "Adakan Hair Studio",
+      tagline: "Salonlar Icin Premium Randevu ve Deneyim Altyapisi",
+      phone: "+90 (216) 777 40 40",
+      email: "info@adakan.studio",
+      address: "Bagdat Caddesi No:128, Caddebostan / Istanbul",
       city: "Istanbul",
       timezone: "Europe/Istanbul",
       currency: "TRY",
@@ -162,39 +176,11 @@ async function main() {
     })
   }
 
-  const existingAppointments = await prisma.appointment.count()
-
-  if (existingAppointments === 0) {
-    const customer = await prisma.customer.create({
-      data: {
-        name: "Demo Musteri",
-        email: "demo@bellasalon.com.tr",
-        phone: "05550000000",
-      },
-    })
-
-    const service = await prisma.service.findFirstOrThrow({
-      where: { slug: "sac-kesim-tasarim" },
-    })
-
-    const staff = await prisma.staff.findFirst()
-
-    await prisma.appointment.create({
-      data: {
-        customerId: customer.id,
-        serviceId: service.id,
-        staffId: staff?.id,
-        status: "CONFIRMED",
-        source: "ADMIN",
-        scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        scheduledDate: new Intl.DateTimeFormat("en-CA", {
-          timeZone: "Europe/Istanbul",
-        }).format(new Date(Date.now() + 1000 * 60 * 60 * 24)),
-        scheduledTime: "14:00",
-        notes: "Seed demo randevusu",
-      },
-    })
-  }
+  await prisma.businessSettings.deleteMany({
+    where: {
+      id: "bella-core-settings",
+    },
+  })
 }
 
 main()

@@ -26,15 +26,22 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         scrolled
-          ? "bg-background/95 border-b border-border shadow-sm backdrop-blur-md"
+          ? "border-b border-border/80 bg-background/90 shadow-[0_18px_48px_rgba(25,20,13,0.08)] backdrop-blur-xl"
           : "bg-transparent"
       )}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
-        <Link href="/" className="flex items-center gap-2">
-          <Scissors className="h-6 w-6 text-accent" />
-          <span className="font-serif text-xl font-bold tracking-wide text-foreground">
-            {siteContent.brand.name}
+        <Link href="/" className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full border border-accent/30 bg-white/80 shadow-sm">
+            <Scissors className="h-5 w-5 text-accent" />
+          </span>
+          <span className="flex flex-col">
+            <span className="font-serif text-xl font-bold tracking-[0.18em] text-foreground">
+              {siteContent.brand.shortName}
+            </span>
+            <span className="hidden text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:block">
+              {siteContent.brand.heroEyebrow}
+            </span>
           </span>
         </Link>
 
@@ -44,7 +51,7 @@ export function Navbar() {
               key={link.href}
               href={link.href}
               className={cn(
-                "text-sm font-medium tracking-wide uppercase transition-colors duration-200 hover:text-accent",
+                "text-sm font-medium tracking-[0.16em] uppercase transition-colors duration-200 hover:text-accent",
                 pathname === link.href ? "text-accent" : "text-foreground/70"
               )}
             >
@@ -55,9 +62,9 @@ export function Navbar() {
 
         <Link
           href="/randevu"
-          className="hidden rounded-sm bg-primary px-5 py-2.5 text-sm font-medium tracking-wide text-primary-foreground transition-all duration-200 hover:opacity-90 md:block"
+          className="hidden rounded-full bg-primary px-5 py-3 text-sm font-semibold tracking-[0.14em] text-primary-foreground shadow-[0_10px_24px_rgba(25,20,13,0.18)] transition-all duration-200 hover:-translate-y-0.5 hover:opacity-95 md:block"
         >
-          Randevu Al
+          Randevu Oluştur
         </Link>
 
         <button
@@ -82,7 +89,7 @@ export function Navbar() {
               href={link.href}
               onClick={() => setIsOpen(false)}
               className={cn(
-                "block py-3 text-sm font-medium tracking-wide uppercase transition-colors duration-200",
+                "block py-3 text-sm font-medium tracking-[0.16em] uppercase transition-colors duration-200",
                 pathname === link.href ? "text-accent" : "text-foreground/70 hover:text-accent"
               )}
             >
@@ -92,9 +99,9 @@ export function Navbar() {
           <Link
             href="/randevu"
             onClick={() => setIsOpen(false)}
-            className="mt-3 block w-full rounded-sm bg-primary px-5 py-2.5 text-center text-sm font-medium tracking-wide text-primary-foreground transition-all duration-200 hover:opacity-90"
+            className="mt-3 block w-full rounded-full bg-primary px-5 py-3 text-center text-sm font-semibold tracking-[0.14em] text-primary-foreground transition-all duration-200 hover:opacity-90"
           >
-            Randevu Al
+            Randevu Oluştur
           </Link>
         </div>
       </div>

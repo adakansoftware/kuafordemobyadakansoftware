@@ -3,6 +3,8 @@
 import { AppointmentStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { AppointmentConflictError, updateAppointmentFromAdmin } from "@/lib/bookings-repository"
+import { adminNotesSchema } from "@/lib/booking"
+import { AdminAccessError, requireAdminAccess, RequestSecurityError, verifyTrustedOrigin } from "@/lib/security"
 
 export type UpdateAppointmentActionState = {
   success: boolean
@@ -21,6 +23,23 @@ export async function updateAppointmentAction(
   _previousState: UpdateAppointmentActionState,
   formData: FormData
 ): Promise<UpdateAppointmentActionState> {
+  try {
+    await requireAdminAccess()
+    await verifyTrustedOrigin({ allowHostFallback: true })
+  } catch (error) {
+    const message =
+      error instanceof AdminAccessError
+        ? "Bu işlem için yönetim erişimi doğrulanamadı."
+        : error instanceof RequestSecurityError
+          ? "İstek kaynağı doğrulanamadı."
+          : "Güvenlik doğrulaması başarısız oldu."
+
+    return {
+      success: false,
+      message,
+    }
+  }
+
   const appointmentId = String(formData.get("appointmentId") ?? "").trim()
   const statusValue = String(formData.get("status") ?? "").trim()
   const staffId = String(formData.get("staffId") ?? "").trim()
@@ -29,14 +48,24 @@ export async function updateAppointmentAction(
   if (!appointmentId) {
     return {
       success: false,
-      message: "Randevu kaydi bulunamadi.",
+      message: "Randevu kaydı bulunamadı.",
     }
   }
 
   if (!validStatuses.has(statusValue as AppointmentStatus)) {
     return {
       success: false,
-      message: "Gecersiz durum secildi.",
+      message: "Geçersiz durum seçildi.",
+      appointmentId,
+    }
+  }
+
+  const validatedNotes = adminNotesSchema.safeParse(notes)
+
+  if (!validatedNotes.success) {
+    return {
+      success: false,
+      message: validatedNotes.error.issues[0]?.message ?? "Operasyon notu geçersiz.",
       appointmentId,
     }
   }
@@ -46,7 +75,7 @@ export async function updateAppointmentAction(
       appointmentId,
       status: statusValue as AppointmentStatus,
       staffId: staffId || null,
-      notes,
+      notes: validatedNotes.data,
     })
 
     revalidatePath("/admin")
@@ -54,7 +83,7 @@ export async function updateAppointmentAction(
 
     return {
       success: true,
-      message: "Randevu kaydi guncellendi.",
+      message: "Randevu kaydı güncellendi.",
       appointmentId,
     }
   } catch (error) {
@@ -68,7 +97,7 @@ export async function updateAppointmentAction(
 
     return {
       success: false,
-      message: "Guncelleme sirasinda beklenmeyen bir hata olustu.",
+      message: "Güncelleme sırasında beklenmeyen bir hata oluştu.",
       appointmentId,
     }
   }

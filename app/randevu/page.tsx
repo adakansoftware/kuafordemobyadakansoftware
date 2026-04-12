@@ -1,12 +1,14 @@
 import type { Metadata } from "next"
+import { Phone, MapPin, Clock, ShieldCheck } from "lucide-react"
 import { BookingForm } from "@/components/booking-form"
-import { Phone, MapPin, Clock } from "lucide-react"
 import { siteContent } from "@/lib/site-content"
+import { buildMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
-  title: "Randevu Al | Bella Sac ve Guzellik Salonu",
-  description: "Online randevu olusturun ve ekibimizle kolayca iletisime gecin.",
-}
+export const metadata: Metadata = buildMetadata({
+  title: "Online Randevu",
+  description: "Adakan Hair Studio için online randevu talebi oluşturun, uygun hizmet ve saati birkaç adımda planlayın.",
+  path: "/randevu",
+})
 
 export default function RandevuPage() {
   return (
@@ -14,9 +16,11 @@ export default function RandevuPage() {
       <section className="bg-primary pt-32 pb-16">
         <div className="mx-auto max-w-7xl px-6 text-center lg:px-8">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-accent">Randevu</p>
-          <h1 className="mt-3 font-serif text-4xl font-bold text-primary-foreground md:text-5xl text-balance">Online Randevu Al</h1>
+          <h1 className="mt-3 font-serif text-4xl font-bold text-primary-foreground md:text-5xl text-balance">
+            Online randevu oluşturun
+          </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-primary-foreground/70">
-            Formu doldurun, ekibimiz en kisa surede sizinle iletisime gecsin.
+            {siteContent.booking.introDescription}
           </p>
         </div>
       </section>
@@ -24,17 +28,21 @@ export default function RandevuPage() {
       <section className="py-24">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-3">
-            <div className="lg:col-span-2"><BookingForm /></div>
+            <div className="lg:col-span-2">
+              <BookingForm />
+            </div>
 
             <div className="flex flex-col gap-6">
-              <div className="rounded-lg border border-border bg-card p-6">
-                <h3 className="font-serif text-lg font-bold text-foreground">Iletisim Bilgileri</h3>
+              <div className="rounded-[1.75rem] border border-border bg-card p-6 shadow-sm">
+                <h3 className="font-serif text-lg font-bold text-foreground">İletişim bilgileri</h3>
                 <ul className="mt-4 space-y-4">
                   <li className="flex items-start gap-3">
                     <Phone className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                     <div>
                       <p className="text-sm font-medium text-foreground">Telefon</p>
-                      <a href={siteContent.contact.phoneHref} className="text-sm text-muted-foreground hover:text-accent">{siteContent.contact.phoneDisplay}</a>
+                      <a href={siteContent.contact.phoneHref} className="text-sm text-muted-foreground hover:text-accent">
+                        {siteContent.contact.phoneDisplay}
+                      </a>
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
@@ -47,25 +55,41 @@ export default function RandevuPage() {
                   <li className="flex items-start gap-3">
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Calisma Saatleri</p>
+                      <p className="text-sm font-medium text-foreground">Çalışma saatleri</p>
                       {siteContent.contact.hours.map((item) => (
-                        <p key={item.label} className="text-sm text-muted-foreground">{item.label}: {item.value}</p>
+                        <p key={item.label} className="text-sm text-muted-foreground">
+                          {item.label}: {item.value}
+                        </p>
                       ))}
                     </div>
                   </li>
                 </ul>
               </div>
 
-              <div className="rounded-lg border border-accent/20 bg-accent/5 p-6">
-                <h3 className="font-serif text-lg font-bold text-foreground">Bilgilendirme</h3>
+              <div className="rounded-[1.75rem] border border-accent/20 bg-accent/5 p-6">
+                <h3 className="font-serif text-lg font-bold text-foreground">Randevu bilgilendirmesi</h3>
                 <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-                  <li>- Randevunuzu 24 saat oncesine kadar degistirebilirsiniz.</li>
-                  <li>- Ilk ziyaretiniz icin ozel kampanyalar sunuyoruz.</li>
-                  <li>- Lutfen randevu saatinizden 10 dakika once salonda olun.</li>
+                  {siteContent.booking.notes.map((note) => (
+                    <li key={note}>- {note}</li>
+                  ))}
                 </ul>
               </div>
 
-              <div className="overflow-hidden rounded-lg border border-border">
+              <div className="rounded-[1.75rem] border border-border bg-card p-6 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="mt-1 h-5 w-5 text-accent" />
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-foreground">Güven ve süreç</h3>
+                    <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+                      {siteContent.booking.trustPoints.map((item) => (
+                        <p key={item}>{item}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-[1.75rem] border border-border shadow-sm">
                 <iframe
                   src={siteContent.contact.mapEmbed}
                   width="100%"

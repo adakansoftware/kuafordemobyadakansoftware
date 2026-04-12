@@ -2,6 +2,7 @@
 
 import { AppointmentConflictError, createAppointmentFromWeb } from "@/lib/bookings-repository"
 import { validateBookingForm, type BookingFormDraft } from "@/lib/booking"
+import { RequestSecurityError, verifyTrustedOrigin } from "@/lib/security"
 
 export type SubmitBookingResult =
   | {
@@ -20,12 +21,23 @@ export type SubmitBookingResult =
     }
 
 export async function submitBookingAction(values: BookingFormDraft): Promise<SubmitBookingResult> {
+  try {
+    await verifyTrustedOrigin({ allowHostFallback: true })
+  } catch (error) {
+    if (error instanceof RequestSecurityError) {
+      return {
+        success: false,
+        message: "İstek kaynağı doğrulanamadı. Sayfayı yenileyip yeniden deneyin.",
+      }
+    }
+  }
+
   const validation = validateBookingForm(values)
 
   if (!validation.success) {
     return {
       success: false,
-      message: "Formdaki alanlari kontrol edin.",
+      message: "Lütfen formdaki alanları kontrol edin.",
       errors: validation.errors,
     }
   }
@@ -40,7 +52,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
       date: booking.scheduledDate,
       time: booking.scheduledTime,
       name: booking.customer.name,
-      message: "Randevu talebi basariyla kaydedildi.",
+      message: "Randevu talebiniz başarıyla alındı.",
     }
   } catch (error) {
     if (error instanceof AppointmentConflictError) {
@@ -52,7 +64,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
     return {
       success: false,
-      message: "Randevu kaydedilirken beklenmeyen bir sorun olustu.",
+      message: "Randevu kaydedilirken beklenmeyen bir sorun oluştu.",
     }
   }
 }

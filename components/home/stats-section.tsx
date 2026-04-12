@@ -70,7 +70,6 @@ export function StatsSection() {
               <AnimatedNumber
                 value={stat.value}
                 suffix={stat.suffix}
-                prefix={"prefix" in stat ? stat.prefix : undefined}
               />
               <p className="mt-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
                 {stat.label}

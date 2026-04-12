@@ -33,26 +33,27 @@ export const bookingServiceSlugs = siteContent.services.map((service) => service
 
 export const bookingSchema = z.object({
   service: z.enum(bookingServiceSlugs, {
-    message: "Lutfen bir hizmet secin.",
+    message: "Lütfen bir hizmet seçin.",
   }),
   date: z
     .string()
-    .min(1, "Lutfen bir tarih secin.")
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Gecerli bir tarih secin."),
+    .min(1, "Lütfen bir tarih seçin.")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Geçerli bir tarih seçin."),
   time: z.enum(bookingTimeSlots, {
-    message: "Lutfen bir saat secin.",
+    message: "Lütfen bir saat seçin.",
   }),
   name: z
     .string()
     .trim()
-    .min(3, "Ad soyad en az 3 karakter olmali.")
-    .max(80, "Ad soyad cok uzun."),
+    .min(3, "Ad soyad en az 3 karakter olmalı.")
+    .max(80, "Ad soyad çok uzun.")
+    .regex(/^[\p{L}\s'.-]+$/u, "Ad soyad alanında yalnızca harf kullanın."),
   phone: z
     .string()
     .trim()
-    .min(10, "Telefon numarasi eksik gorunuyor.")
-    .max(20, "Telefon numarasi cok uzun."),
-  email: z.string().trim().email("Gecerli bir e-posta girin."),
+    .min(10, "Telefon numarası eksik görünüyor.")
+    .max(20, "Telefon numarası çok uzun."),
+  email: z.string().trim().email("Geçerli bir e-posta girin."),
 })
 
 export type BookingFormValues = z.infer<typeof bookingSchema>
@@ -67,21 +68,56 @@ export type BookingFormDraft = {
 
 export type BookingFieldErrors = Partial<Record<keyof BookingFormValues, string>>
 
+export const adminNotesSchema = z
+  .string()
+  .trim()
+  .max(500, "Operasyon notu en fazla 500 karakter olabilir.")
+
+export function sanitizeBookingForm(values: BookingFormDraft): BookingFormDraft {
+  const normalizedPhone = values.phone.replace(/[^\d+]/g, "")
+
+  return {
+    service: values.service.trim(),
+    date: values.date.trim(),
+    time: values.time.trim(),
+    name: values.name.replace(/\s+/g, " ").trim(),
+    phone: normalizedPhone,
+    email: values.email.trim().toLowerCase(),
+  }
+}
+
 export function getBookingMinDate() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Istanbul",
   }).format(new Date())
 }
 
+export function isBookingTimeInPast(date: string, time: string) {
+  const now = new Date()
+  const bookingDate = new Date(`${date}T${time}:00+03:00`)
+
+  return bookingDate.getTime() < now.getTime() + 1000 * 60 * 30
+}
+
 export function validateBookingForm(values: BookingFormDraft) {
-  const result = bookingSchema.safeParse(values)
+  const sanitizedValues = sanitizeBookingForm(values)
+  const result = bookingSchema.safeParse(sanitizedValues)
 
   if (result.success) {
     if (result.data.date < getBookingMinDate()) {
       return {
         success: false as const,
         errors: {
-          date: "Gecmis bir tarih secemezsiniz.",
+          date: "Geçmiş bir tarih seçemezsiniz.",
+        } satisfies BookingFieldErrors,
+      }
+    }
+
+    if (isBookingTimeInPast(result.data.date, result.data.time)) {
+      return {
+        success: false as const,
+        errors: {
+          time: "Yaklaşan 30 dakika içindeki saatler için online talep alınmıyor. Lütfen daha ileri bir saat seçin.",
         } satisfies BookingFieldErrors,
       }
     }
