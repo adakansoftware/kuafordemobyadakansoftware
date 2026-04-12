@@ -25,16 +25,12 @@ export const siteContent = {
     shortName: "ADAKAN",
     name: "Adakan Hair Studio",
     legalName: "Adakan Hair Studio Güzellik Hizmetleri",
-    tagline: "Caddebostan'da premium saç tasarımı ve randevu deneyimi",
+    tagline: "Caddebostan'da premium saç tasarımı ve planlı randevu deneyimi",
     heroEyebrow: "Caddebostan / İstanbul",
     heroTitle: "Güven veren salon deneyimi, güçlü saç tasarımı ve özenli bakım",
     heroDescription:
       "Adakan Hair Studio; kişiye özel saç kesimi, renk uygulamaları ve bakım ritüellerini sakin, düzenli ve premium bir salon deneyimiyle buluşturur.",
-    heroHighlights: [
-      "Uzman stil danışmanlığı",
-      "Planlı randevu akışı",
-      "Premium ürün seçkisi",
-    ],
+    heroHighlights: ["Uzman stil danışmanlığı", "Planlı randevu akışı", "Premium ürün seçkisi"],
     aboutLead:
       "Adakan Hair Studio, modern saç tasarımını dikkatli analiz, profesyonel uygulama ve güçlü misafir deneyimi standartlarıyla bir araya getiren butik bir salon markasıdır.",
     aboutDescription:
@@ -77,8 +73,8 @@ export const siteContent = {
     ],
   },
   social: {
-    instagram: "https://instagram.com",
-    tiktok: "https://tiktok.com",
+    instagram: "",
+    tiktok: "",
   },
   stats: [
     { value: 10, suffix: "+", label: "Yıllık Deneyim" },
@@ -251,11 +247,7 @@ export const siteContent = {
       "Değişiklik veya iptal için mümkünse en az 24 saat önce bilgi verilmesini rica ederiz.",
       "İlk ziyaretinizde saç geçmişinizi daha sağlıklı değerlendirebilmemiz için 5-10 dakika erken gelmeniz faydalı olur.",
     ],
-    trustPoints: [
-      "Gizli ve güvenli talep kaydı",
-      "Aynı saat için çakışma kontrolü",
-      "Net teyit ve geri dönüş akışı",
-    ],
+    trustPoints: ["Gizli ve güvenli talep kaydı", "Aynı saat için çakışma kontrolü", "Net teyit ve geri dönüş akışı"],
   },
   cta: {
     eyebrow: "Randevunuzu Planlayın",

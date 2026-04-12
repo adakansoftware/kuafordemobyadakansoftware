@@ -50,6 +50,8 @@ export function buildMetadata(input: BuildMetadataInput = {}): Metadata {
 }
 
 export function getOrganizationJsonLd() {
+  const sameAs = [siteContent.social.instagram, siteContent.social.tiktok].filter(Boolean)
+
   return {
     "@context": "https://schema.org",
     "@type": "HairSalon",
@@ -78,6 +80,6 @@ export function getOrganizationJsonLd() {
         closes: "18:00",
       },
     ],
-    sameAs: [siteContent.social.instagram, siteContent.social.tiktok],
+    ...(sameAs.length ? { sameAs } : {}),
   }
 }

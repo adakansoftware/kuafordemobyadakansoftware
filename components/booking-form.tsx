@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { CalendarDays, CheckCircle2, Clock, Mail, Phone, User } from "lucide-react"
+import { useEffect, useState, useTransition } from "react"
+import { CalendarDays, CheckCircle2, Clock, LoaderCircle, Mail, Phone, User } from "lucide-react"
 import { submitBookingAction } from "@/app/randevu/actions"
 import {
   bookingServiceSlugs,
@@ -22,12 +22,30 @@ type ConfirmationState = {
   name: string
 }
 
+type AvailabilityResponse = {
+  success: boolean
+  data?: {
+    date: string
+    capacity: number
+    slots: Array<{
+      time: string
+      booked: number
+      available: number
+      isAvailable: boolean
+    }>
+  }
+  message?: string
+}
+
 export function BookingForm() {
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [errors, setErrors] = useState<BookingFieldErrors>({})
   const [formMessage, setFormMessage] = useState("")
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null)
+  const [availability, setAvailability] = useState<AvailabilityResponse["data"] | null>(null)
+  const [availabilityLoading, setAvailabilityLoading] = useState(false)
+  const [availabilityMessage, setAvailabilityMessage] = useState("")
   const [formData, setFormData] = useState<BookingFormDraft>({
     service: bookingServiceSlugs[0],
     date: "",
@@ -35,11 +53,72 @@ export function BookingForm() {
     name: "",
     phone: "",
     email: "",
+    website: "",
   })
 
   const minDate = getBookingMinDate()
   const selectedService =
     siteContent.services.find((service) => service.slug === formData.service) ?? siteContent.services[0]
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadAvailability() {
+      if (!formData.date) {
+        setAvailability(null)
+        setAvailabilityMessage("")
+        return
+      }
+
+      setAvailabilityLoading(true)
+      setAvailabilityMessage("")
+
+      try {
+        const response = await fetch(`/api/bookings?date=${encodeURIComponent(formData.date)}`, {
+          method: "GET",
+          cache: "no-store",
+        })
+        const payload = (await response.json()) as AvailabilityResponse
+
+        if (cancelled) {
+          return
+        }
+
+        if (!response.ok || !payload.success || !payload.data) {
+          setAvailability(null)
+          setAvailabilityMessage(payload.message ?? "Uygunluk bilgisi şu anda alınamıyor.")
+          return
+        }
+
+        setAvailability(payload.data)
+
+        const selectedSlot = payload.data.slots.find((slot) => slot.time === formData.time)
+
+        if (formData.time && selectedSlot && !selectedSlot.isAvailable) {
+          setFormData((prev) => ({ ...prev, time: "" }))
+          setErrors((prev) => ({
+            ...prev,
+            time: "Seçtiğiniz saat artık uygun görünmüyor. Lütfen listedeki başka bir saat seçin.",
+          }))
+        }
+      } catch {
+        if (!cancelled) {
+          setAvailability(null)
+          setAvailabilityMessage("Uygunluk bilgisi alınırken bağlantı sorunu oluştu.")
+        }
+      } finally {
+        if (!cancelled) {
+          setAvailabilityLoading(false)
+        }
+      }
+    }
+
+    void loadAvailability()
+
+    return () => {
+      cancelled = true
+    }
+  }, [formData.date, formData.time])
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -49,6 +128,16 @@ export function BookingForm() {
 
     if (!result.success) {
       setErrors(result.errors)
+      return
+    }
+
+    const selectedSlot = availability?.slots.find((slot) => slot.time === formData.time)
+
+    if (formData.date && selectedSlot && !selectedSlot.isAvailable) {
+      setErrors((prev) => ({
+        ...prev,
+        time: "Bu saat dolu görünüyor. Lütfen uygun bir saat seçin.",
+      }))
       return
     }
 
@@ -116,10 +205,20 @@ export function BookingForm() {
         <button
           onClick={() => {
             setSubmitted(false)
-            setFormData({ service: bookingServiceSlugs[0], date: "", time: "", name: "", phone: "", email: "" })
+            setFormData({
+              service: bookingServiceSlugs[0],
+              date: "",
+              time: "",
+              name: "",
+              phone: "",
+              email: "",
+              website: "",
+            })
             setErrors({})
             setFormMessage("")
             setConfirmation(null)
+            setAvailability(null)
+            setAvailabilityMessage("")
           }}
           className="mt-8 rounded-full bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-primary-foreground transition-all duration-200 hover:opacity-90"
         >
@@ -136,6 +235,17 @@ export function BookingForm() {
           <h2 className="font-serif text-2xl font-bold text-foreground">{siteContent.booking.introTitle}</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">{siteContent.booking.introDescription}</p>
         </div>
+
+        <input
+          type="text"
+          name="website"
+          value={formData.website ?? ""}
+          onChange={handleChange}
+          tabIndex={-1}
+          autoComplete="off"
+          className="hidden"
+          aria-hidden="true"
+        />
 
         <div>
           <label htmlFor="service" className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
@@ -186,20 +296,40 @@ export function BookingForm() {
               value={formData.time}
               onChange={handleChange}
               required
-              className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
+              disabled={!formData.date || availabilityLoading}
+              className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
             >
               <option value="" disabled>
-                Saat seçin
+                {!formData.date ? "Önce tarih seçin" : availabilityLoading ? "Uygunluk yükleniyor" : "Saat seçin"}
               </option>
-              {bookingTimeSlots.map((slot) => (
-                <option key={slot} value={slot}>
-                  {slot}
-                </option>
-              ))}
+              {(availability?.slots ?? bookingTimeSlots.map((time) => ({ time, isAvailable: true, available: 1 }))).map(
+                (slot) => (
+                  <option key={slot.time} value={slot.time} disabled={!slot.isAvailable}>
+                    {slot.time}
+                    {slot.isAvailable ? (slot.available <= 1 ? " • Son uygunluk" : "") : " • Dolu"}
+                  </option>
+                )
+              )}
             </select>
+            {availabilityLoading ? (
+              <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Uygun saatler güncelleniyor.
+              </p>
+            ) : null}
+            {availabilityMessage ? <p className="mt-2 text-xs text-muted-foreground">{availabilityMessage}</p> : null}
             {errors.time ? <p className="mt-2 text-sm text-destructive">{errors.time}</p> : null}
           </div>
         </div>
+
+        {availability && formData.date ? (
+          <div className="rounded-[1.5rem] border border-border/80 bg-secondary/50 p-4 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">{formData.date} için canlı uygunluk özeti</p>
+            <p className="mt-1">
+              Müsait slot sayısı: {availability.slots.filter((slot) => slot.isAvailable).length} / {availability.slots.length}
+            </p>
+            <p className="mt-1">Ekip kapasitesi: aynı anda yaklaşık {availability.capacity} aktif randevu.</p>
+          </div>
+        ) : null}
 
         <div>
           <label htmlFor="name" className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
@@ -261,10 +391,10 @@ export function BookingForm() {
 
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || availabilityLoading}
           className={cn(
             "mt-2 w-full rounded-full bg-primary px-8 py-3.5 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-all duration-200 hover:opacity-90",
-            isPending && "cursor-not-allowed opacity-70"
+            (isPending || availabilityLoading) && "cursor-not-allowed opacity-70"
           )}
         >
           {isPending ? "Talep kaydediliyor..." : "Randevu talebi oluştur"}

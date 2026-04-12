@@ -26,10 +26,7 @@ export const bookingTimeSlots = [
   "20:00",
 ] as const
 
-export const bookingServiceSlugs = siteContent.services.map((service) => service.slug) as [
-  string,
-  ...string[],
-]
+export const bookingServiceSlugs = siteContent.services.map((service) => service.slug) as [string, ...string[]]
 
 export const bookingSchema = z.object({
   service: z.enum(bookingServiceSlugs, {
@@ -48,12 +45,9 @@ export const bookingSchema = z.object({
     .min(3, "Ad soyad en az 3 karakter olmalı.")
     .max(80, "Ad soyad çok uzun.")
     .regex(/^[\p{L}\s'.-]+$/u, "Ad soyad alanında yalnızca harf kullanın."),
-  phone: z
-    .string()
-    .trim()
-    .min(10, "Telefon numarası eksik görünüyor.")
-    .max(20, "Telefon numarası çok uzun."),
+  phone: z.string().trim().min(10, "Telefon numarası eksik görünüyor.").max(20, "Telefon numarası çok uzun."),
   email: z.string().trim().email("Geçerli bir e-posta girin."),
+  website: z.string().trim().max(0).optional().default(""),
 })
 
 export type BookingFormValues = z.infer<typeof bookingSchema>
@@ -64,14 +58,12 @@ export type BookingFormDraft = {
   name: string
   phone: string
   email: string
+  website?: string
 }
 
 export type BookingFieldErrors = Partial<Record<keyof BookingFormValues, string>>
 
-export const adminNotesSchema = z
-  .string()
-  .trim()
-  .max(500, "Operasyon notu en fazla 500 karakter olabilir.")
+export const adminNotesSchema = z.string().trim().max(500, "Operasyon notu en fazla 500 karakter olabilir.")
 
 export function sanitizeBookingForm(values: BookingFormDraft): BookingFormDraft {
   const normalizedPhone = values.phone.replace(/[^\d+]/g, "")
@@ -83,6 +75,7 @@ export function sanitizeBookingForm(values: BookingFormDraft): BookingFormDraft 
     name: values.name.replace(/\s+/g, " ").trim(),
     phone: normalizedPhone,
     email: values.email.trim().toLowerCase(),
+    website: values.website?.trim() ?? "",
   }
 }
 
@@ -140,6 +133,7 @@ export function validateBookingForm(values: BookingFormDraft) {
       name: fieldErrors.name?.[0],
       phone: fieldErrors.phone?.[0],
       email: fieldErrors.email?.[0],
+      website: fieldErrors.website?.[0],
     } satisfies BookingFieldErrors,
   }
 }

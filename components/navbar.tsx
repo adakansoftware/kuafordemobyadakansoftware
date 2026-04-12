@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X, Scissors } from "lucide-react"
+import { Menu, Scissors, X } from "lucide-react"
 import { siteContent } from "@/lib/site-content"
 import { cn } from "@/lib/utils"
 
@@ -70,18 +70,13 @@ export function Navbar() {
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="text-foreground md:hidden"
-          aria-label={isOpen ? "Menuyu kapat" : "Menuyu ac"}
+          aria-label={isOpen ? "Menüyü kapat" : "Menüyü aç"}
         >
           {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </nav>
 
-      <div
-        className={cn(
-          "overflow-hidden transition-all duration-300 md:hidden",
-          isOpen ? "max-h-80" : "max-h-0"
-        )}
-      >
+      <div className={cn("overflow-hidden transition-all duration-300 md:hidden", isOpen ? "max-h-80" : "max-h-0")}>
         <div className="border-t border-border bg-background/95 px-6 py-4 backdrop-blur-md">
           {siteContent.navigation.map((link) => (
             <Link

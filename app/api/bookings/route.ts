@@ -41,6 +41,7 @@ function parseBookingPayload(payload: unknown): BookingFormDraft | null {
     name: candidate.name,
     phone: candidate.phone,
     email: candidate.email,
+    website: typeof candidate.website === "string" ? candidate.website : "",
   }
 }
 

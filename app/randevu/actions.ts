@@ -21,6 +21,13 @@ export type SubmitBookingResult =
     }
 
 export async function submitBookingAction(values: BookingFormDraft): Promise<SubmitBookingResult> {
+  if (values.website?.trim()) {
+    return {
+      success: false,
+      message: "Talebiniz doğrulanamadı. Lütfen formu yeniden deneyin.",
+    }
+  }
+
   try {
     await verifyTrustedOrigin({ allowHostFallback: true })
   } catch (error) {

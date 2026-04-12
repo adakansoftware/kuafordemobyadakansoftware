@@ -1,5 +1,5 @@
 import { AppointmentSource, AppointmentStatus, Prisma } from "@prisma/client"
-import { type BookingFormValues } from "@/lib/booking"
+import { bookingTimeSlots, type BookingFormValues } from "@/lib/booking"
 import { db } from "@/lib/db"
 
 const ACTIVE_APPOINTMENT_STATUSES = [AppointmentStatus.NEW, AppointmentStatus.CONFIRMED] as const
@@ -363,12 +363,16 @@ export async function getPublicAvailabilityByDate(date: string) {
   return {
     date,
     capacity,
-    slots: Array.from(bookedMap.entries()).map(([time, booked]) => ({
-      time,
-      booked,
-      available: Math.max(capacity - booked, 0),
-      isAvailable: booked < capacity,
-    })),
+    slots: bookingTimeSlots.map((time) => {
+      const booked = bookedMap.get(time) ?? 0
+
+      return {
+        time,
+        booked,
+        available: Math.max(capacity - booked, 0),
+        isAvailable: booked < capacity,
+      }
+    }),
   }
 }
 

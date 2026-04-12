@@ -55,11 +55,10 @@ export function HeroSection() {
         <div className="lg:justify-self-end">
           <div className="rounded-[2rem] border border-white/14 bg-white/10 p-6 text-background shadow-[0_24px_60px_rgba(10,8,5,0.22)] backdrop-blur-md">
             <p className="text-xs uppercase tracking-[0.24em] text-background/68">Salon Notu</p>
-            <h2 className="mt-3 font-serif text-3xl font-bold text-balance">
-              {siteContent.brand.tagline}
-            </h2>
+            <h2 className="mt-3 font-serif text-3xl font-bold text-balance">{siteContent.brand.tagline}</h2>
             <p className="mt-4 text-sm leading-relaxed text-background/72">
-              İlk temastan son dokunuşa kadar net iletişim, düzenli operasyon ve profesyonel saç tasarımı odağını birlikte koruyoruz.
+              İlk temastan son dokunuşa kadar net iletişim, düzenli operasyon ve profesyonel saç tasarımı odağını
+              birlikte koruyoruz.
             </p>
             <div className="mt-6 grid gap-4 border-t border-white/12 pt-5 sm:grid-cols-3 lg:grid-cols-1">
               <div>
