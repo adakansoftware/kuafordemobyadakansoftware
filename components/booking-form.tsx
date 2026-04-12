@@ -1,14 +1,33 @@
 "use client"
 
-import { useState } from "react"
-import { bookingServiceSlugs, bookingTimeSlots, type BookingFieldErrors, type BookingFormDraft, getBookingMinDate, validateBookingForm } from "@/lib/booking"
+import { useState, useTransition } from "react"
+import { submitBookingAction } from "@/app/randevu/actions"
+import {
+  bookingServiceSlugs,
+  bookingTimeSlots,
+  type BookingFieldErrors,
+  type BookingFormDraft,
+  getBookingMinDate,
+  validateBookingForm,
+} from "@/lib/booking"
 import { siteContent } from "@/lib/site-content"
 import { cn } from "@/lib/utils"
 import { CalendarDays, Clock, User, Phone, Mail, CheckCircle2 } from "lucide-react"
 
+type ConfirmationState = {
+  bookingId: string
+  serviceTitle: string
+  date: string
+  time: string
+  name: string
+}
+
 export function BookingForm() {
   const [submitted, setSubmitted] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const [errors, setErrors] = useState<BookingFieldErrors>({})
+  const [formMessage, setFormMessage] = useState("")
+  const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null)
   const [formData, setFormData] = useState<BookingFormDraft>({
     service: bookingServiceSlugs[0],
     date: "",
@@ -19,10 +38,12 @@ export function BookingForm() {
   })
 
   const minDate = getBookingMinDate()
-  const selectedService = siteContent.services.find((service) => service.slug === formData.service)
+  const selectedService =
+    siteContent.services.find((service) => service.slug === formData.service) ?? siteContent.services[0]
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setFormMessage("")
 
     const result = validateBookingForm(formData)
 
@@ -32,7 +53,26 @@ export function BookingForm() {
     }
 
     setErrors({})
-    setSubmitted(true)
+
+    startTransition(async () => {
+      const response = await submitBookingAction(formData)
+
+      if (!response.success) {
+        setErrors((response.errors ?? {}) as BookingFieldErrors)
+        setFormMessage(response.message)
+        return
+      }
+
+      setConfirmation({
+        bookingId: response.bookingId,
+        serviceTitle: response.serviceTitle,
+        date: response.date,
+        time: response.time,
+        name: response.name,
+      })
+      setFormMessage(response.message)
+      setSubmitted(true)
+    })
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -50,13 +90,15 @@ export function BookingForm() {
         </div>
         <h3 className="mt-6 font-serif text-2xl font-bold text-foreground">Randevunuz Alindi!</h3>
         <p className="mt-3 max-w-md text-base leading-relaxed text-muted-foreground">
-          Sayin <span className="font-medium text-foreground">{formData.name}</span>, randevunuz basariyla olusturuldu. Ekibimiz planlamayi teyit etmek icin en kisa surede sizinle iletisime gececek.
+          Sayin <span className="font-medium text-foreground">{confirmation?.name}</span>, randevunuz basariyla olusturuldu. Ekibimiz planlamayi teyit etmek icin en kisa surede sizinle iletisime gececek.
         </p>
+        {formMessage ? <p className="mt-2 text-sm text-accent">{formMessage}</p> : null}
         <div className="mt-6 rounded-lg bg-secondary p-4">
           <div className="grid gap-2 text-sm">
-            <p><span className="text-muted-foreground">Hizmet:</span> <span className="font-medium text-foreground">{selectedService?.title ?? formData.service}</span></p>
-            <p><span className="text-muted-foreground">Tarih:</span> <span className="font-medium text-foreground">{formData.date}</span></p>
-            <p><span className="text-muted-foreground">Saat:</span> <span className="font-medium text-foreground">{formData.time}</span></p>
+            <p><span className="text-muted-foreground">Hizmet:</span> <span className="font-medium text-foreground">{confirmation?.serviceTitle}</span></p>
+            <p><span className="text-muted-foreground">Tarih:</span> <span className="font-medium text-foreground">{confirmation?.date}</span></p>
+            <p><span className="text-muted-foreground">Saat:</span> <span className="font-medium text-foreground">{confirmation?.time}</span></p>
+            <p><span className="text-muted-foreground">Talep No:</span> <span className="font-medium text-foreground">{confirmation?.bookingId}</span></p>
           </div>
         </div>
         <button
@@ -64,6 +106,8 @@ export function BookingForm() {
             setSubmitted(false)
             setFormData({ service: bookingServiceSlugs[0], date: "", time: "", name: "", phone: "", email: "" })
             setErrors({})
+            setFormMessage("")
+            setConfirmation(null)
           }}
           className="mt-8 rounded-sm bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-all duration-200 hover:opacity-90"
         >
@@ -83,6 +127,7 @@ export function BookingForm() {
           <select id="service" name="service" value={formData.service} onChange={handleChange} required className="w-full rounded-sm border border-input bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent">
             {siteContent.services.map((service) => <option key={service.slug} value={service.slug}>{service.title}</option>)}
           </select>
+          <p className="mt-2 text-xs text-muted-foreground">{selectedService.teaser}</p>
           {errors.service ? <p className="mt-2 text-sm text-destructive">{errors.service}</p> : null}
         </div>
 
@@ -131,9 +176,10 @@ export function BookingForm() {
           </div>
         </div>
 
-        <button type="submit" className={cn("mt-2 w-full rounded-sm bg-primary px-8 py-3.5 text-sm font-semibold uppercase tracking-wider text-primary-foreground transition-all duration-200 hover:opacity-90")}>
-          Randevuyu Onayla
+        <button type="submit" disabled={isPending} className={cn("mt-2 w-full rounded-sm bg-primary px-8 py-3.5 text-sm font-semibold uppercase tracking-wider text-primary-foreground transition-all duration-200 hover:opacity-90", isPending && "cursor-not-allowed opacity-70")}>
+          {isPending ? "Kaydediliyor..." : "Randevuyu Onayla"}
         </button>
+        {formMessage && !submitted ? <p className="text-sm text-destructive">{formMessage}</p> : null}
       </div>
     </form>
   )

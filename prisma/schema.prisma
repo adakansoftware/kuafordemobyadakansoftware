@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AppointmentStatus {
+  NEW
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum AppointmentSource {
+  WEB
+  ADMIN
+}
+
+model BusinessSettings {
+  id           String   @id @default(cuid())
+  businessName String
+  tagline      String
+  phone        String
+  email        String
+  address      String
+  city         String
+  timezone     String
+  currency     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Service {
+  id              String        @id @default(cuid())
+  slug            String        @unique
+  title           String
+  shortTitle      String
+  teaser          String
+  description     String
+  image           String
+  priceFrom       Int
+  priceLabel      String
+  durationMinutes Int
+  isActive        Boolean       @default(true)
+  sortOrder       Int           @default(0)
+  features        Json
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  appointments    Appointment[]
+}
+
+model Staff {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  role         String
+  bio          String
+  avatar       String
+  isActive     Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+}
+
+model Customer {
+  id           String        @id @default(cuid())
+  name         String
+  email        String?
+  phone        String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+
+  @@unique([email])
+  @@unique([phone])
+}
+
+model Appointment {
+  id            String             @id @default(cuid())
+  customerId    String
+  serviceId     String
+  staffId       String?
+  status        AppointmentStatus  @default(NEW)
+  source        AppointmentSource  @default(WEB)
+  scheduledAt   DateTime
+  scheduledDate String
+  scheduledTime String
+  notes         String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  customer      Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  service       Service            @relation(fields: [serviceId], references: [id])
+  staff         Staff?             @relation(fields: [staffId], references: [id])
+
+  @@index([scheduledAt])
+  @@index([status])
+}
+
+model ContactLead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  message   String
+  createdAt DateTime @default(now())
+}
