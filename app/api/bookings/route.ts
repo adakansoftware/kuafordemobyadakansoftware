@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createAppointmentFromWeb, listAppointments } from "@/lib/bookings-repository"
+import { AppointmentConflictError, createAppointmentFromWeb, listAppointments } from "@/lib/bookings-repository"
 import { validateBookingForm } from "@/lib/booking"
 
 export async function GET() {
@@ -26,20 +26,40 @@ export async function POST(request: Request) {
     )
   }
 
-  const booking = await createAppointmentFromWeb(validation.data)
+  try {
+    const booking = await createAppointmentFromWeb(validation.data)
 
-  return NextResponse.json(
-    {
-      success: true,
-      data: {
-        id: booking.id,
-        service: booking.service.title,
-        customer: booking.customer.name,
-        date: booking.scheduledDate,
-        time: booking.scheduledTime,
-        status: booking.status,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: booking.id,
+          service: booking.service.title,
+          customer: booking.customer.name,
+          date: booking.scheduledDate,
+          time: booking.scheduledTime,
+          status: booking.status,
+        },
       },
-    },
-    { status: 201 }
-  )
+      { status: 201 }
+    )
+  } catch (error) {
+    if (error instanceof AppointmentConflictError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: error.message,
+        },
+        { status: 409 }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Randevu kaydi sirasinda beklenmeyen bir hata olustu.",
+      },
+      { status: 500 }
+    )
+  }
 }

@@ -1,6 +1,6 @@
 "use server"
 
-import { createAppointmentFromWeb } from "@/lib/bookings-repository"
+import { AppointmentConflictError, createAppointmentFromWeb } from "@/lib/bookings-repository"
 import { validateBookingForm, type BookingFormDraft } from "@/lib/booking"
 
 export type SubmitBookingResult =
@@ -30,15 +30,29 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
     }
   }
 
-  const booking = await createAppointmentFromWeb(validation.data)
+  try {
+    const booking = await createAppointmentFromWeb(validation.data)
 
-  return {
-    success: true,
-    bookingId: booking.id,
-    serviceTitle: booking.service.title,
-    date: booking.scheduledDate,
-    time: booking.scheduledTime,
-    name: booking.customer.name,
-    message: "Randevu talebi basariyla kaydedildi.",
+    return {
+      success: true,
+      bookingId: booking.id,
+      serviceTitle: booking.service.title,
+      date: booking.scheduledDate,
+      time: booking.scheduledTime,
+      name: booking.customer.name,
+      message: "Randevu talebi basariyla kaydedildi.",
+    }
+  } catch (error) {
+    if (error instanceof AppointmentConflictError) {
+      return {
+        success: false,
+        message: error.message,
+      }
+    }
+
+    return {
+      success: false,
+      message: "Randevu kaydedilirken beklenmeyen bir sorun olustu.",
+    }
   }
 }
