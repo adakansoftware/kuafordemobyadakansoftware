@@ -29,6 +29,18 @@ function getSecurityHeaders() {
       value: "same-origin",
     },
     {
+      key: "Origin-Agent-Cluster",
+      value: "?1",
+    },
+    {
+      key: "X-DNS-Prefetch-Control",
+      value: "off",
+    },
+    {
+      key: "Strict-Transport-Security",
+      value: "max-age=63072000; includeSubDomains; preload",
+    },
+    {
       key: "Content-Security-Policy",
       value: [
         "default-src 'self'",

@@ -23,6 +23,15 @@ export const metadata: Metadata = {
     default: siteContent.seo.defaultTitle,
     template: siteContent.seo.titleTemplate,
   },
+  applicationName: siteContent.brand.name,
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-light-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 }
 
 export const viewport: Viewport = {
@@ -39,8 +48,16 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body className={`${inter.variable} ${playfair.variable} font-sans antialiased`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground"
+        >
+          İçeriğe geç
+        </a>
         <Navbar />
-        <main className="min-h-screen">{children}</main>
+        <main id="main-content" className="min-h-screen">
+          {children}
+        </main>
         <Footer />
         <Analytics />
       </body>
