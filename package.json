@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test:smoke": "node scripts/smoke-check.mjs",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "db:seed": "node prisma/seed.mjs"
