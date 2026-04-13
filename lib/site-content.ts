@@ -165,30 +165,12 @@ export const siteContent = {
     },
   ] satisfies Service[],
   reasons: [
-    {
-      title: "Uzman Kadro",
-      description: "Sürekli eğitim alan, tekniği güncel takip eden deneyimli ekip.",
-    },
-    {
-      title: "Premium Ürünler",
-      description: "Saç sağlığını koruyan güvenilir ve profesyonel ürün seçkisi.",
-    },
-    {
-      title: "Hijyen Standardı",
-      description: "Temiz, düzenli ve güven veren salon akışı.",
-    },
-    {
-      title: "Kişiye Özel Planlama",
-      description: "Her işlem saç yapısına ve beklentiye göre ayrı değerlendirilir.",
-    },
-    {
-      title: "Sakin Deneyim",
-      description: "Randevu yoğunluğu kontrollü, iletişimi net bir ziyaret süreci.",
-    },
-    {
-      title: "Sonuç Odaklı Yaklaşım",
-      description: "Gösterişli değil, sürdürülebilir ve taşınabilir sonuçlara odaklanırız.",
-    },
+    { title: "Uzman Kadro", description: "Sürekli eğitim alan, tekniği güncel takip eden deneyimli ekip." },
+    { title: "Premium Ürünler", description: "Saç sağlığını koruyan güvenilir ve profesyonel ürün seçkisi." },
+    { title: "Hijyen Standardı", description: "Temiz, düzenli ve güven veren salon akışı." },
+    { title: "Kişiye Özel Planlama", description: "Her işlem saç yapısına ve beklentiye göre ayrı değerlendirilir." },
+    { title: "Sakin Deneyim", description: "Randevu yoğunluğu kontrollü, iletişimi net bir ziyaret süreci." },
+    { title: "Sonuç Odaklı Yaklaşım", description: "Gösterişli değil, sürdürülebilir ve taşınabilir sonuçlara odaklanırız." },
   ],
   gallery: [
     { src: "/images/before-after-1.jpg", alt: "Saç bakım uygulaması öncesi ve sonrası" },

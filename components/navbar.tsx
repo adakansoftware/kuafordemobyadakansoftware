@@ -36,9 +36,7 @@ export function Navbar() {
             <Scissors className="h-5 w-5 text-accent" />
           </span>
           <span className="flex flex-col">
-            <span className="font-serif text-xl font-bold tracking-[0.18em] text-foreground">
-              {siteContent.brand.shortName}
-            </span>
+            <span className="font-serif text-xl font-bold tracking-[0.18em] text-foreground">{siteContent.brand.shortName}</span>
             <span className="hidden text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:block">
               {siteContent.brand.heroEyebrow}
             </span>

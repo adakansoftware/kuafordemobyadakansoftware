@@ -13,7 +13,7 @@ const filesToCheck = [
   "lib/site-content.ts",
 ]
 
-const forbiddenTokens = ["Ã", "Ä", "Å", "TODO"]
+const forbiddenTokens = [String.fromCharCode(195), String.fromCharCode(196), String.fromCharCode(197), "TODO"]
 
 async function main() {
   for (const file of filesToCheck) {
