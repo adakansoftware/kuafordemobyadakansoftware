@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto"
 import { headers } from "next/headers"
+import { env } from "@/lib/env"
 import { siteContent } from "@/lib/site-content"
 
 const ADMIN_REALM = "Adakan Admin"
@@ -36,7 +37,7 @@ function extractHostFromOrigin(origin: string) {
 
 export function getAllowedOrigins() {
   return new Set(
-    [siteContent.seo.siteUrl, process.env.NEXT_PUBLIC_SITE_URL?.trim()]
+    [siteContent.seo.siteUrl, env.NEXT_PUBLIC_SITE_URL?.trim()]
       .filter((value): value is string => Boolean(value))
       .map((value) => normalizeOrigin(value))
   )
@@ -44,7 +45,7 @@ export function getAllowedOrigins() {
 
 export function getAllowedHosts() {
   const hosts = new Set(Array.from(getAllowedOrigins()).map(extractHostFromOrigin).filter(Boolean))
-  const envHosts = (process.env.ALLOWED_ORIGIN_HOSTS ?? "")
+  const envHosts = (env.ALLOWED_ORIGIN_HOSTS ?? "")
     .split(",")
     .map((value) => normalizeHost(value))
     .filter(Boolean)
@@ -100,7 +101,7 @@ function decodeBasicAuth(value: string) {
 }
 
 function hasAdminCredentialsConfigured() {
-  return Boolean(process.env.ADMIN_USERNAME?.trim() && process.env.ADMIN_PASSWORD?.trim())
+  return Boolean(env.ADMIN_USERNAME?.trim() && env.ADMIN_PASSWORD?.trim())
 }
 
 export function getAdminBasicAuthHeader() {
@@ -119,8 +120,8 @@ export function authorizeAdminRequest(authHeader: string | null) {
   }
 
   return (
-    isSameCredential(credentials.username, process.env.ADMIN_USERNAME?.trim() ?? "") &&
-    isSameCredential(credentials.password, process.env.ADMIN_PASSWORD?.trim() ?? "")
+    isSameCredential(credentials.username, env.ADMIN_USERNAME?.trim() ?? "") &&
+    isSameCredential(credentials.password, env.ADMIN_PASSWORD?.trim() ?? "")
   )
 }
 
@@ -157,10 +158,7 @@ type TrustedOriginOptions = {
   allowHostFallback?: boolean
 }
 
-export function isTrustedRequestOriginHeaders(
-  requestHeaders: Headers,
-  options: TrustedOriginOptions = {}
-) {
+export function isTrustedRequestOriginHeaders(requestHeaders: Headers, options: TrustedOriginOptions = {}) {
   const allowedOrigins = getAllowedOrigins()
   const allowedHosts = getAllowedHosts()
   const origin = normalizeOrigin(requestHeaders.get("origin"))

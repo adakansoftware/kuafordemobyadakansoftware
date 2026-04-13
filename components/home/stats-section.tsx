@@ -1,7 +1,12 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { siteContent } from "@/lib/site-content"
+
+type StatItem = {
+  value: number
+  suffix: string
+  label: string
+}
 
 function AnimatedNumber({
   value,
@@ -60,20 +65,15 @@ function AnimatedNumber({
   )
 }
 
-export function StatsSection() {
+export function StatsSection({ stats }: { stats: StatItem[] }) {
   return (
     <section className="border-b border-border bg-secondary py-20">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
-          {siteContent.stats.map((stat) => (
+          {stats.map((stat) => (
             <div key={stat.label} className="text-center">
-              <AnimatedNumber
-                value={stat.value}
-                suffix={stat.suffix}
-              />
-              <p className="mt-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
-                {stat.label}
-              </p>
+              <AnimatedNumber value={stat.value} suffix={stat.suffix} />
+              <p className="mt-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">{stat.label}</p>
             </div>
           ))}
         </div>

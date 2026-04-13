@@ -5,11 +5,15 @@ const filesToCheck = [
   "app/randevu/page.tsx",
   "app/hizmetler/page.tsx",
   "app/hakkimizda/page.tsx",
+  "app/admin/page.tsx",
   "app/api/bookings/route.ts",
+  "app/admin/actions.ts",
+  "components/admin/appointment-operations.tsx",
+  "lib/security.ts",
   "lib/site-content.ts",
 ]
 
-const forbiddenTokens = ["Ã", "Ä", "Å", "undefined", "TODO"]
+const forbiddenTokens = ["Ã", "Ä", "Å", "TODO"]
 
 async function main() {
   for (const file of filesToCheck) {

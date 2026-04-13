@@ -3,10 +3,7 @@
 import { useActionState, useMemo } from "react"
 import { type AppointmentStatus } from "@prisma/client"
 import { useFormStatus } from "react-dom"
-import {
-  type UpdateAppointmentActionState,
-  updateAppointmentAction,
-} from "@/app/admin/actions"
+import { type UpdateAppointmentActionState, updateAppointmentAction } from "@/app/admin/actions"
 import { siteContent } from "@/lib/site-content"
 
 type StaffOption = {
@@ -45,10 +42,7 @@ const initialState: UpdateAppointmentActionState = {
 
 const statusOptions: AppointmentStatus[] = ["NEW", "CONFIRMED", "COMPLETED", "CANCELLED"]
 
-export function AppointmentOperations({
-  appointment,
-  staffOptions,
-}: AppointmentOperationCardProps) {
+export function AppointmentOperations({ appointment, staffOptions }: AppointmentOperationCardProps) {
   const [state, formAction] = useActionState(updateAppointmentAction, initialState)
   const currentState = state.appointmentId === appointment.id ? state : initialState
 
@@ -123,7 +117,7 @@ export function AppointmentOperations({
                 defaultValue={appointment.staff?.id ?? ""}
                 className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
               >
-                <option value="">Atama yapilmadi</option>
+                <option value="">Atama yapılmadı</option>
                 {staffOptions.map((staff) => (
                   <option key={staff.id} value={staff.id}>
                     {staff.name} - {staff.role}
@@ -139,7 +133,7 @@ export function AppointmentOperations({
               name="notes"
               defaultValue={appointment.notes ?? ""}
               rows={3}
-              placeholder="Onay notu, musteri talebi veya operasyon bilgisi ekleyin."
+              placeholder="Onay notu, müşteri talebi veya operasyon bilgisi ekleyin."
               maxLength={500}
               className="resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
             />
@@ -166,7 +160,7 @@ function SubmitButton() {
       disabled={pending}
       className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
     >
-      {pending ? "Kaydediliyor..." : "Kaydi Guncelle"}
+      {pending ? "Kaydediliyor..." : "Kaydı Güncelle"}
     </button>
   )
 }

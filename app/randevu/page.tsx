@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
-import { Phone, MapPin, Clock, ShieldCheck } from "lucide-react"
+import { Clock, MapPin, Phone, ShieldCheck } from "lucide-react"
 import { BookingForm } from "@/components/booking-form"
-import { siteContent } from "@/lib/site-content"
+import { getBookingPageViewModel } from "@/lib/public-site"
 import { buildMetadata } from "@/lib/seo"
 
 export const metadata: Metadata = buildMetadata({
@@ -11,17 +11,15 @@ export const metadata: Metadata = buildMetadata({
 })
 
 export default function RandevuPage() {
+  const viewModel = getBookingPageViewModel()
+
   return (
     <>
       <section className="bg-primary pt-32 pb-16">
         <div className="mx-auto max-w-7xl px-6 text-center lg:px-8">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-accent">Randevu</p>
-          <h1 className="mt-3 font-serif text-4xl font-bold text-primary-foreground md:text-5xl text-balance">
-            Online randevu oluşturun
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-primary-foreground/70">
-            {siteContent.booking.introDescription}
-          </p>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-accent">{viewModel.eyebrow}</p>
+          <h1 className="mt-3 font-serif text-4xl font-bold text-primary-foreground md:text-5xl text-balance">{viewModel.title}</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-primary-foreground/70">{viewModel.description}</p>
         </div>
       </section>
 
@@ -40,8 +38,8 @@ export default function RandevuPage() {
                     <Phone className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                     <div>
                       <p className="text-sm font-medium text-foreground">Telefon</p>
-                      <a href={siteContent.contact.phoneHref} className="text-sm text-muted-foreground hover:text-accent">
-                        {siteContent.contact.phoneDisplay}
+                      <a href={viewModel.contact.phoneHref} className="text-sm text-muted-foreground hover:text-accent">
+                        {viewModel.contact.phoneDisplay}
                       </a>
                     </div>
                   </li>
@@ -49,14 +47,14 @@ export default function RandevuPage() {
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                     <div>
                       <p className="text-sm font-medium text-foreground">Adres</p>
-                      <p className="text-sm text-muted-foreground">{siteContent.contact.address}</p>
+                      <p className="text-sm text-muted-foreground">{viewModel.contact.address}</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                     <div>
                       <p className="text-sm font-medium text-foreground">Çalışma saatleri</p>
-                      {siteContent.contact.hours.map((item) => (
+                      {viewModel.contact.hours.map((item) => (
                         <p key={item.label} className="text-sm text-muted-foreground">
                           {item.label}: {item.value}
                         </p>
@@ -69,7 +67,7 @@ export default function RandevuPage() {
               <div className="rounded-[1.75rem] border border-accent/20 bg-accent/5 p-6">
                 <h3 className="font-serif text-lg font-bold text-foreground">Randevu bilgilendirmesi</h3>
                 <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-                  {siteContent.booking.notes.map((note) => (
+                  {viewModel.notes.map((note) => (
                     <li key={note}>- {note}</li>
                   ))}
                 </ul>
@@ -81,7 +79,7 @@ export default function RandevuPage() {
                   <div>
                     <h3 className="font-serif text-lg font-bold text-foreground">Güven ve süreç</h3>
                     <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-                      {siteContent.booking.trustPoints.map((item) => (
+                      {viewModel.trustPoints.map((item) => (
                         <p key={item}>{item}</p>
                       ))}
                     </div>
@@ -91,14 +89,14 @@ export default function RandevuPage() {
 
               <div className="overflow-hidden rounded-[1.75rem] border border-border shadow-sm">
                 <iframe
-                  src={siteContent.contact.mapEmbed}
+                  src={viewModel.contact.mapEmbed}
                   width="100%"
                   height="200"
                   style={{ border: 0 }}
                   allowFullScreen
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
-                  title={siteContent.contact.mapTitle}
+                  title={viewModel.contact.mapTitle}
                 />
               </div>
             </div>

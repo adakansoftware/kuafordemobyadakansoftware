@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { Award, Settings, ShieldCheck, Sparkles } from "lucide-react"
+import { getAboutPageViewModel } from "@/lib/public-site"
 import { buildMetadata } from "@/lib/seo"
-import { siteContent } from "@/lib/site-content"
 
 export const metadata: Metadata = buildMetadata({
   title: "Hakkımızda",
@@ -14,17 +14,15 @@ export const metadata: Metadata = buildMetadata({
 const valueIcons = [Sparkles, Award, ShieldCheck, Settings]
 
 export default function HakkimizdaPage() {
+  const viewModel = getAboutPageViewModel()
+
   return (
     <>
       <section className="bg-primary pt-32 pb-16">
         <div className="mx-auto max-w-7xl px-6 text-center lg:px-8">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-accent">Hakkımızda</p>
-          <h1 className="mt-3 font-serif text-4xl font-bold text-primary-foreground md:text-5xl text-balance">
-            Hikayemiz
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-primary-foreground/70">
-            Butik salon deneyimini teknik uzmanlık, sakin iletişim ve özenli bakım anlayışıyla birleştiriyoruz.
-          </p>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-accent">{viewModel.eyebrow}</p>
+          <h1 className="mt-3 font-serif text-4xl font-bold text-primary-foreground md:text-5xl text-balance">{viewModel.title}</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-primary-foreground/70">{viewModel.description}</p>
         </div>
       </section>
 
@@ -35,11 +33,9 @@ export default function HakkimizdaPage() {
               <Image src="/images/about-salon.jpg" alt="Adakan Hair Studio" fill className="object-cover" />
             </div>
             <div>
-              <h2 className="font-serif text-3xl font-bold text-foreground md:text-4xl text-balance">
-                Güzelliğe özenli ve profesyonel bir yaklaşım
-              </h2>
-              <p className="mt-6 text-base leading-relaxed text-muted-foreground">{siteContent.brand.aboutLead}</p>
-              <p className="mt-4 text-base leading-relaxed text-muted-foreground">{siteContent.brand.aboutDescription}</p>
+              <h2 className="font-serif text-3xl font-bold text-foreground md:text-4xl text-balance">{viewModel.leadTitle}</h2>
+              <p className="mt-6 text-base leading-relaxed text-muted-foreground">{viewModel.aboutLead}</p>
+              <p className="mt-4 text-base leading-relaxed text-muted-foreground">{viewModel.aboutDescription}</p>
             </div>
           </div>
         </div>
@@ -48,13 +44,11 @@ export default function HakkimizdaPage() {
       <section className="bg-secondary py-24">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="text-center">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-accent">Değerlerimiz</p>
-            <h2 className="mt-3 font-serif text-3xl font-bold text-foreground md:text-4xl text-balance">
-              Temel değerlerimiz
-            </h2>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-accent">{viewModel.valuesEyebrow}</p>
+            <h2 className="mt-3 font-serif text-3xl font-bold text-foreground md:text-4xl text-balance">{viewModel.valuesTitle}</h2>
           </div>
           <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {siteContent.values.map((value, index) => {
+            {viewModel.values.map((value, index) => {
               const Icon = valueIcons[index]
 
               return (
@@ -70,15 +64,10 @@ export default function HakkimizdaPage() {
           </div>
 
           <div className="mt-16 grid gap-8 md:grid-cols-3">
-            {siteContent.team.map((member) => (
+            {viewModel.team.map((member) => (
               <div key={member.name} className="group overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-sm">
                 <div className="relative aspect-[3/4] overflow-hidden">
-                  <Image
-                    src={member.image}
-                    alt={member.name}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                  <Image src={member.image} alt={member.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
                 </div>
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-foreground">{member.name}</h3>
@@ -93,17 +82,13 @@ export default function HakkimizdaPage() {
 
       <section className="py-20">
         <div className="mx-auto max-w-4xl px-6 text-center lg:px-8">
-          <h2 className="font-serif text-3xl font-bold text-foreground md:text-4xl text-balance">
-            Ekibimizle tanışmak ister misiniz?
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            İhtiyacınıza uygun hizmeti birlikte planlamak için hemen randevu talebinizi oluşturun.
-          </p>
+          <h2 className="font-serif text-3xl font-bold text-foreground md:text-4xl text-balance">{viewModel.ctaTitle}</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">{viewModel.ctaDescription}</p>
           <Link
-            href="/randevu"
+            href={viewModel.ctaHref}
             className="mt-8 inline-block rounded-full bg-primary px-8 py-3.5 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-all duration-200 hover:opacity-90"
           >
-            Randevu oluştur
+            {viewModel.ctaLabel}
           </Link>
         </div>
       </section>

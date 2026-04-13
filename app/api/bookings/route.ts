@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
-import { AppointmentConflictError, createAppointmentFromWeb, getPublicAvailabilityByDate } from "@/lib/bookings-repository"
 import { type BookingFormDraft, validateBookingForm } from "@/lib/booking"
+import { AppointmentConflictError, createAppointmentFromWeb, getPublicAvailabilityByDate } from "@/lib/bookings-repository"
+import { jsonNoStore } from "@/lib/http"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { getRequestIpFromHeaders, isTrustedRequestOriginHeaders } from "@/lib/security"
 
@@ -9,9 +10,7 @@ export const dynamic = "force-dynamic"
 const MAX_BOOKING_BODY_BYTES = 8 * 1024
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
-  const response = NextResponse.json(body, init)
-  response.headers.set("Cache-Control", "no-store")
-  response.headers.set("X-Robots-Tag", "noindex, nofollow")
+  const response = jsonNoStore(body, init)
   response.headers.set("Vary", "Origin")
   return response
 }
