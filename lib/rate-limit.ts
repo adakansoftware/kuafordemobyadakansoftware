@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import { logEvent } from "@/lib/observability"
 
 type RateLimitEntry = {
   count: number
@@ -13,9 +14,53 @@ export type RateLimitResult = {
 }
 
 const memoryStores = new Map<string, Map<string, RateLimitEntry>>()
+const MAX_NAMESPACES = 100
 const MAX_KEYS_PER_NAMESPACE = 5000
 let lastPruneAt = 0
 const PRUNE_INTERVAL_MS = 5 * 60 * 1000
+const fallbackLogState = new Map<string, number>()
+
+function pruneMemoryStores(now: number) {
+  for (const [namespace, namespaceStore] of memoryStores.entries()) {
+    pruneMemoryNamespace(namespaceStore, now)
+
+    if (namespaceStore.size === 0) {
+      memoryStores.delete(namespace)
+    }
+  }
+
+  if (memoryStores.size <= MAX_NAMESPACES) {
+    return
+  }
+
+  const namespaces = Array.from(memoryStores.keys())
+  const overflow = namespaces.length - MAX_NAMESPACES
+
+  for (let index = 0; index < overflow; index += 1) {
+    memoryStores.delete(namespaces[index])
+  }
+}
+
+function logRateLimitFallback(namespace: string, error: unknown) {
+  const now = Date.now()
+  const lastLoggedAt = fallbackLogState.get(namespace) ?? 0
+
+  if (now - lastLoggedAt < 60_000) {
+    return
+  }
+
+  fallbackLogState.set(namespace, now)
+
+  logEvent({
+    level: "warn",
+    event: "rate_limit_memory_fallback",
+    route: "rate-limit",
+    message: error instanceof Error ? error.message : "Rate limit database fallback triggered.",
+    meta: {
+      namespace,
+    },
+  })
+}
 
 function pruneMemoryNamespace(namespaceStore: Map<string, RateLimitEntry>, now: number) {
   for (const [key, entry] of namespaceStore.entries()) {
@@ -51,6 +96,7 @@ function applyMemoryRateLimit(input: {
     memoryStores.set(input.namespace, namespaceStore)
   }
 
+  pruneMemoryStores(now)
   pruneMemoryNamespace(namespaceStore, now)
 
   if (!existing || existing.resetAt <= now) {
@@ -96,13 +142,25 @@ async function pruneExpiredRateLimits(now: Date) {
 
   lastPruneAt = nowTime
 
-  await db.rateLimitBucket.deleteMany({
-    where: {
-      resetAt: {
-        lt: now,
+  try {
+    await db.rateLimitBucket.deleteMany({
+      where: {
+        resetAt: {
+          lt: now,
+        },
       },
-    },
-  })
+    })
+  } catch (error) {
+    logEvent({
+      level: "warn",
+      event: "rate_limit_prune_failed",
+      route: "rate-limit",
+      message: error instanceof Error ? error.message : "Rate limit prune failed.",
+      meta: {
+        now: now.toISOString(),
+      },
+    })
+  }
 }
 
 export async function applyRateLimit(input: {
@@ -187,7 +245,8 @@ export async function applyRateLimit(input: {
         source: "database",
       }
     })
-  } catch {
+  } catch (error) {
+    logRateLimitFallback(input.namespace, error)
     return applyMemoryRateLimit(input)
   }
 }

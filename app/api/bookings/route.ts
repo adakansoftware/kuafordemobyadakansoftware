@@ -382,13 +382,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const booking = await createAppointmentFromWeb(validation.data)
+    const result = await createAppointmentFromWeb(validation.data)
+    const booking = result.appointment
 
     logEvent({
-      event: "booking_create_succeeded",
+      event: result.wasDeduplicated ? "booking_create_replayed" : "booking_create_succeeded",
       requestId,
       route: "/api/bookings",
-      message: "Booking created successfully.",
+      message: result.wasDeduplicated ? "Booking request matched a recent existing appointment." : "Booking created successfully.",
       meta: {
         method: "POST",
         clientId,
@@ -396,6 +397,7 @@ export async function POST(request: Request) {
         service: booking.service.slug,
         date: booking.scheduledDate,
         time: booking.scheduledTime,
+        wasDeduplicated: result.wasDeduplicated,
         rateLimitSource: rateLimit.source,
         responseTimeMs: getDurationMs(startedAt),
       },
@@ -415,7 +417,7 @@ export async function POST(request: Request) {
       },
       requestId,
       {
-        status: 201,
+        status: result.wasDeduplicated ? 200 : 201,
         headers: buildRateLimitHeaders({ ...rateLimit, limit: rateLimitConfig.limit }),
       }
     )

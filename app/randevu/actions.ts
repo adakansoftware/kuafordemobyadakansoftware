@@ -75,17 +75,21 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
   }
 
   try {
-    const booking = await createAppointmentFromWeb(validation.data)
+    const result = await createAppointmentFromWeb(validation.data)
+    const booking = result.appointment
 
     logEvent({
-      event: "booking_action_created",
+      event: result.wasDeduplicated ? "booking_action_replayed" : "booking_action_created",
       route: "/randevu",
-      message: "Booking server action created appointment.",
+      message: result.wasDeduplicated
+        ? "Booking server action matched a recent existing appointment."
+        : "Booking server action created appointment.",
       meta: {
         bookingId: booking.id,
         service: booking.service.slug,
         date: booking.scheduledDate,
         time: booking.scheduledTime,
+        wasDeduplicated: result.wasDeduplicated,
       },
     })
 

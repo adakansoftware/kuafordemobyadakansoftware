@@ -3,6 +3,7 @@ import { bookingTimeSlots, type BookingFormValues } from "@/lib/booking"
 import { db } from "@/lib/db"
 
 const ACTIVE_APPOINTMENT_STATUSES = [AppointmentStatus.NEW, AppointmentStatus.CONFIRMED] as const
+const BOOKING_IDEMPOTENCY_WINDOW_MS = 2 * 60 * 1000
 
 export type AppointmentListFilters = {
   search?: string
@@ -15,6 +16,11 @@ export class AppointmentConflictError extends Error {
     super(message)
     this.name = "AppointmentConflictError"
   }
+}
+
+export type CreateAppointmentResult = {
+  appointment: AppointmentWithRelations
+  wasDeduplicated: boolean
 }
 
 export async function createAppointmentFromWeb(input: BookingFormValues) {
@@ -36,6 +42,20 @@ export async function createAppointmentFromWeb(input: BookingFormValues) {
           phone: input.phone,
         })
 
+        const recentDuplicate = await findRecentDuplicateWebAppointment(tx, {
+          customerId: customer.id,
+          serviceId: service.id,
+          scheduledDate: input.date,
+          scheduledTime: input.time,
+        })
+
+        if (recentDuplicate) {
+          return {
+            appointment: recentDuplicate,
+            wasDeduplicated: true,
+          } satisfies CreateAppointmentResult
+        }
+
         await ensureCustomerDoesNotHaveDuplicateSlot(tx, {
           customerId: customer.id,
           scheduledDate: input.date,
@@ -49,7 +69,7 @@ export async function createAppointmentFromWeb(input: BookingFormValues) {
           durationMinutes: service.durationMinutes,
         })
 
-        return tx.appointment.create({
+        const appointment = await tx.appointment.create({
           data: {
             customerId: customer.id,
             serviceId: service.id,
@@ -61,6 +81,11 @@ export async function createAppointmentFromWeb(input: BookingFormValues) {
           },
           include: appointmentInclude,
         })
+
+        return {
+          appointment,
+          wasDeduplicated: false,
+        } satisfies CreateAppointmentResult
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -646,6 +671,31 @@ async function findOrCreateCustomer(
   })
 }
 
+async function findRecentDuplicateWebAppointment(
+  client: Prisma.TransactionClient,
+  input: {
+    customerId: string
+    serviceId: string
+    scheduledDate: string
+    scheduledTime: string
+  }
+) {
+  return client.appointment.findFirst({
+    where: {
+      customerId: input.customerId,
+      serviceId: input.serviceId,
+      source: AppointmentSource.WEB,
+      scheduledDate: input.scheduledDate,
+      scheduledTime: input.scheduledTime,
+      createdAt: {
+        gte: new Date(Date.now() - BOOKING_IDEMPOTENCY_WINDOW_MS),
+      },
+    },
+    include: appointmentInclude,
+    orderBy: [{ createdAt: "desc" }],
+  })
+}
+
 function buildAppointmentWhere(filters: AppointmentListFilters): Prisma.AppointmentWhereInput {
   const search = filters.search?.trim()
   const conditions: Prisma.AppointmentWhereInput[] = []
@@ -728,3 +778,6 @@ const appointmentInclude = {
   service: true,
   staff: true,
 } as const
+type AppointmentWithRelations = Prisma.AppointmentGetPayload<{
+  include: typeof appointmentInclude
+}>
