@@ -6,6 +6,7 @@ import { AppointmentConflictError, updateAppointmentFromAdmin } from "@/lib/book
 import { adminNotesSchema } from "@/lib/booking"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
+import { applyRateLimit } from "@/lib/rate-limit"
 import {
   AdminAccessError,
   getAdminActorIdentifier,
@@ -32,6 +33,9 @@ export async function updateAppointmentAction(
   _previousState: UpdateAppointmentActionState,
   formData: FormData
 ): Promise<UpdateAppointmentActionState> {
+  const requestId = await getCurrentRequestId()
+  const ipAddress = await getRequestIpAddress()
+
   try {
     await requireAdminAccess()
     await verifyTrustedOrigin({ allowHostFallback: true })
@@ -39,8 +43,12 @@ export async function updateAppointmentAction(
     logEvent({
       level: "warn",
       event: "admin_appointment_security_failed",
+      requestId,
       route: "/admin",
       message: error instanceof Error ? error.message : "Admin appointment action security failed.",
+      meta: {
+        ipAddress,
+      },
     })
 
     const message =
@@ -60,13 +68,19 @@ export async function updateAppointmentAction(
   const statusValue = String(formData.get("status") ?? "").trim()
   const staffId = String(formData.get("staffId") ?? "").trim()
   const notes = String(formData.get("notes") ?? "").trim()
+  const actorIdentifier = await getAdminActorIdentifier()
 
   if (!appointmentId) {
     logEvent({
       level: "warn",
       event: "admin_appointment_missing_id",
+      requestId,
       route: "/admin",
       message: "Admin appointment update called without appointment id.",
+      meta: {
+        actorIdentifier,
+        ipAddress,
+      },
     })
 
     return {
@@ -79,10 +93,13 @@ export async function updateAppointmentAction(
     logEvent({
       level: "warn",
       event: "admin_appointment_invalid_status",
+      requestId,
       route: "/admin",
       message: "Admin appointment update received invalid status.",
       meta: {
         appointmentId,
+        actorIdentifier,
+        ipAddress,
         statusValue,
       },
     })
@@ -100,10 +117,13 @@ export async function updateAppointmentAction(
     logEvent({
       level: "warn",
       event: "admin_appointment_invalid_notes",
+      requestId,
       route: "/admin",
       message: "Admin appointment update notes validation failed.",
       meta: {
         appointmentId,
+        actorIdentifier,
+        ipAddress,
       },
     })
 
@@ -114,15 +134,44 @@ export async function updateAppointmentAction(
     }
   }
 
+  const rateLimit = await applyRateLimit({
+    key: `${ipAddress}:${actorIdentifier ?? "admin"}`,
+    namespace: "admin-appointment-write",
+    limit: 60,
+    windowMs: 60_000,
+  })
+
+  if (!rateLimit.allowed) {
+    logEvent({
+      level: "warn",
+      event: "admin_appointment_rate_limited",
+      requestId,
+      route: "/admin",
+      message: "Admin appointment update was rate limited.",
+      meta: {
+        appointmentId,
+        actorIdentifier,
+        ipAddress,
+        rateLimitSource: rateLimit.source,
+      },
+    })
+
+    return {
+      success: false,
+      message: "Kisa sure icinde cok fazla guncelleme denemesi algilandi. Lutfen biraz sonra tekrar deneyin.",
+      appointmentId,
+    }
+  }
+
   try {
     await updateAppointmentFromAdmin({
       appointmentId,
       status: statusValue as AppointmentStatus,
       staffId: staffId || null,
       notes: validatedNotes.data,
-      actorIdentifier: await getAdminActorIdentifier(),
-      requestId: await getCurrentRequestId(),
-      ipAddress: await getRequestIpAddress(),
+      actorIdentifier,
+      requestId,
+      ipAddress,
     })
 
     revalidatePath("/admin")
@@ -130,10 +179,14 @@ export async function updateAppointmentAction(
 
     logEvent({
       event: "admin_appointment_updated",
+      requestId,
       route: "/admin",
       message: "Admin appointment updated successfully.",
       meta: {
         appointmentId,
+        actorIdentifier,
+        ipAddress,
+        rateLimitSource: rateLimit.source,
         statusValue,
         hasStaffAssignment: Boolean(staffId),
       },
@@ -149,10 +202,13 @@ export async function updateAppointmentAction(
       logEvent({
         level: "warn",
         event: "admin_appointment_conflict",
+        requestId,
         route: "/admin",
         message: error.message,
         meta: {
           appointmentId,
+          actorIdentifier,
+          ipAddress,
           statusValue,
         },
       })
@@ -167,10 +223,13 @@ export async function updateAppointmentAction(
     logEvent({
       level: "error",
       event: "admin_appointment_update_failed",
+      requestId,
       route: "/admin",
       message: error instanceof Error ? error.message : "Unexpected admin appointment update error.",
       meta: {
         appointmentId,
+        actorIdentifier,
+        ipAddress,
         statusValue,
       },
     })

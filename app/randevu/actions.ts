@@ -4,6 +4,7 @@ import { AppointmentConflictError, createAppointmentFromWeb } from "@/lib/bookin
 import { validateBookingForm, type BookingFormDraft } from "@/lib/booking"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
+import { applyRateLimit } from "@/lib/rate-limit"
 import { getRequestIpAddress, RequestSecurityError, verifyTrustedOrigin } from "@/lib/security"
 
 export type SubmitBookingResult =
@@ -23,12 +24,19 @@ export type SubmitBookingResult =
     }
 
 export async function submitBookingAction(values: BookingFormDraft): Promise<SubmitBookingResult> {
+  const requestId = await getCurrentRequestId()
+  const ipAddress = await getRequestIpAddress()
+
   if (values.website?.trim()) {
     logEvent({
       level: "warn",
       event: "booking_action_honeypot_triggered",
+      requestId,
       route: "/randevu",
       message: "Booking server action honeypot was filled.",
+      meta: {
+        ipAddress,
+      },
     })
 
     return {
@@ -44,8 +52,12 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
       logEvent({
         level: "warn",
         event: "booking_action_untrusted_origin",
+        requestId,
         route: "/randevu",
         message: error.message,
+        meta: {
+          ipAddress,
+        },
       })
 
       return {
@@ -61,9 +73,11 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
     logEvent({
       level: "warn",
       event: "booking_action_validation_failed",
+      requestId,
       route: "/randevu",
       message: "Booking server action validation failed.",
       meta: {
+        ipAddress,
         fieldErrors: validation.errors,
       },
     })
@@ -75,25 +89,54 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
     }
   }
 
+  const rateLimit = await applyRateLimit({
+    key: ipAddress,
+    namespace: "booking-action-write",
+    limit: 3,
+    windowMs: 60_000,
+  })
+
+  if (!rateLimit.allowed) {
+    logEvent({
+      level: "warn",
+      event: "booking_action_rate_limited",
+      requestId,
+      route: "/randevu",
+      message: "Booking server action was rate limited.",
+      meta: {
+        ipAddress,
+        rateLimitSource: rateLimit.source,
+      },
+    })
+
+    return {
+      success: false,
+      message: "Kisa sure icinde cok fazla talep gonderildi. Lutfen bir dakika sonra tekrar deneyin.",
+    }
+  }
+
   try {
     const result = await createAppointmentFromWeb(validation.data, {
-      requestId: await getCurrentRequestId(),
-      ipAddress: await getRequestIpAddress(),
+      requestId,
+      ipAddress,
     })
     const booking = result.appointment
 
     logEvent({
       event: result.wasDeduplicated ? "booking_action_replayed" : "booking_action_created",
+      requestId,
       route: "/randevu",
       message: result.wasDeduplicated
         ? "Booking server action matched a recent existing appointment."
         : "Booking server action created appointment.",
       meta: {
+        ipAddress,
         bookingId: booking.id,
         service: booking.service.slug,
         date: booking.scheduledDate,
         time: booking.scheduledTime,
         wasDeduplicated: result.wasDeduplicated,
+        rateLimitSource: rateLimit.source,
       },
     })
 
@@ -111,9 +154,11 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
       logEvent({
         level: "warn",
         event: "booking_action_conflict",
+        requestId,
         route: "/randevu",
         message: error.message,
         meta: {
+          ipAddress,
           service: validation.data.service,
           date: validation.data.date,
           time: validation.data.time,
@@ -129,9 +174,11 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
     logEvent({
       level: "error",
       event: "booking_action_failed",
+      requestId,
       route: "/randevu",
       message: error instanceof Error ? error.message : "Unexpected booking server action error.",
       meta: {
+        ipAddress,
         service: validation.data.service,
         date: validation.data.date,
         time: validation.data.time,
