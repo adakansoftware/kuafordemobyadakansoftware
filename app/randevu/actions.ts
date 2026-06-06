@@ -2,8 +2,9 @@
 
 import { AppointmentConflictError, createAppointmentFromWeb } from "@/lib/bookings-repository"
 import { validateBookingForm, type BookingFormDraft } from "@/lib/booking"
+import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
-import { RequestSecurityError, verifyTrustedOrigin } from "@/lib/security"
+import { getRequestIpAddress, RequestSecurityError, verifyTrustedOrigin } from "@/lib/security"
 
 export type SubmitBookingResult =
   | {
@@ -75,7 +76,10 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
   }
 
   try {
-    const result = await createAppointmentFromWeb(validation.data)
+    const result = await createAppointmentFromWeb(validation.data, {
+      requestId: await getCurrentRequestId(),
+      ipAddress: await getRequestIpAddress(),
+    })
     const booking = result.appointment
 
     logEvent({

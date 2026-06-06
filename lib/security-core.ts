@@ -160,6 +160,10 @@ function decodeBasicAuth(value: string) {
   }
 }
 
+export function getBasicAuthUsername(authHeader: string | null) {
+  return authHeader ? decodeBasicAuth(authHeader)?.username ?? null : null
+}
+
 function hasAdminCredentialsConfigured() {
   const env = getEnv()
   return Boolean(env.ADMIN_USERNAME?.trim() && env.ADMIN_PASSWORD?.trim())

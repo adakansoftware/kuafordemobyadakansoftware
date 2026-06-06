@@ -1,4 +1,5 @@
-import { AppointmentSource, AppointmentStatus, Prisma } from "@prisma/client"
+import { AppointmentSource, AppointmentStatus, AuditActorType, AuditEvent, Prisma } from "@prisma/client"
+import { createAuditLog } from "@/lib/audit-log"
 import { bookingTimeSlots, type BookingFormValues } from "@/lib/booking"
 import { db } from "@/lib/db"
 
@@ -23,7 +24,13 @@ export type CreateAppointmentResult = {
   wasDeduplicated: boolean
 }
 
-export async function createAppointmentFromWeb(input: BookingFormValues) {
+export async function createAppointmentFromWeb(
+  input: BookingFormValues,
+  options: {
+    requestId?: string
+    ipAddress?: string
+  } = {}
+) {
   try {
     return await db.$transaction(
       async (tx) => {
@@ -50,6 +57,21 @@ export async function createAppointmentFromWeb(input: BookingFormValues) {
         })
 
         if (recentDuplicate) {
+          void createAuditLog({
+            actorType: AuditActorType.CUSTOMER,
+            actorIdentifier: customer.email ?? customer.phone ?? customer.id,
+            event: AuditEvent.BOOKING_REPLAYED,
+            targetType: "appointment",
+            targetId: recentDuplicate.id,
+            requestId: options.requestId,
+            ipAddress: options.ipAddress,
+            metadata: {
+              serviceSlug: input.service,
+              scheduledDate: input.date,
+              scheduledTime: input.time,
+            },
+          })
+
           return {
             appointment: recentDuplicate,
             wasDeduplicated: true,
@@ -80,6 +102,21 @@ export async function createAppointmentFromWeb(input: BookingFormValues) {
             scheduledTime: input.time,
           },
           include: appointmentInclude,
+        })
+
+        void createAuditLog({
+          actorType: AuditActorType.CUSTOMER,
+          actorIdentifier: customer.email ?? customer.phone ?? customer.id,
+          event: AuditEvent.BOOKING_CREATED,
+          targetType: "appointment",
+          targetId: appointment.id,
+          requestId: options.requestId,
+          ipAddress: options.ipAddress,
+          metadata: {
+            serviceSlug: input.service,
+            scheduledDate: input.date,
+            scheduledTime: input.time,
+          },
         })
 
         return {
@@ -428,6 +465,9 @@ export async function updateAppointmentFromAdmin(input: {
   status: AppointmentStatus
   staffId?: string | null
   notes?: string
+  actorIdentifier?: string | null
+  requestId?: string
+  ipAddress?: string
 }) {
   return db.$transaction(async (tx) => {
     const appointment = await tx.appointment.findUniqueOrThrow({
@@ -457,7 +497,7 @@ export async function updateAppointmentFromAdmin(input: {
       })
     }
 
-    return tx.appointment.update({
+    const updatedAppointment = await tx.appointment.update({
       where: { id: appointment.id },
       data: {
         status: input.status,
@@ -466,6 +506,26 @@ export async function updateAppointmentFromAdmin(input: {
       },
       include: appointmentInclude,
     })
+
+    void createAuditLog({
+      actorType: AuditActorType.ADMIN,
+      actorIdentifier: input.actorIdentifier ?? "admin",
+      event: AuditEvent.APPOINTMENT_UPDATED,
+      targetType: "appointment",
+      targetId: updatedAppointment.id,
+      requestId: input.requestId,
+      ipAddress: input.ipAddress,
+      metadata: {
+        previousStatus: appointment.status,
+        nextStatus: updatedAppointment.status,
+        previousStaffId: appointment.staffId,
+        nextStaffId: updatedAppointment.staffId,
+        hadNotes: Boolean(appointment.notes),
+        hasNotes: Boolean(updatedAppointment.notes),
+      },
+    })
+
+    return updatedAppointment
   })
 }
 

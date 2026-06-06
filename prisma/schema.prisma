@@ -19,6 +19,19 @@ enum AppointmentSource {
   ADMIN
 }
 
+enum AuditActorType {
+  SYSTEM
+  ADMIN
+  CUSTOMER
+  ANONYMOUS
+}
+
+enum AuditEvent {
+  BOOKING_CREATED
+  BOOKING_REPLAYED
+  APPOINTMENT_UPDATED
+}
+
 model BusinessSettings {
   id           String   @id @default(cuid())
   businessName String
@@ -123,4 +136,21 @@ model RateLimitBucket {
 
   @@unique([namespace, key])
   @@index([resetAt])
+}
+
+model AuditLog {
+  id              String         @id @default(cuid())
+  actorType       AuditActorType
+  actorIdentifier String?
+  event           AuditEvent
+  targetType      String
+  targetId        String?
+  requestId       String?
+  ipAddress       String?
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+
+  @@index([event, createdAt])
+  @@index([targetType, targetId, createdAt])
+  @@index([actorType, createdAt])
 }

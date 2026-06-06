@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 
 export type ApiSuccess<T> = {
@@ -19,6 +20,11 @@ export function getRequestIdFromHeaders(headers: Headers) {
   }
 
   return requestId.slice(0, 120)
+}
+
+export async function getCurrentRequestId() {
+  const requestHeaders = await headers()
+  return getRequestIdFromHeaders(requestHeaders)
 }
 
 export function jsonNoStore(body: unknown, init?: ResponseInit & { requestId?: string }) {

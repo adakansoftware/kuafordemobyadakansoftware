@@ -382,7 +382,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await createAppointmentFromWeb(validation.data)
+    const result = await createAppointmentFromWeb(validation.data, {
+      requestId,
+      ipAddress: clientId,
+    })
     const booking = result.appointment
 
     logEvent({

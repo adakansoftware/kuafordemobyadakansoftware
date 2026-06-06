@@ -2,6 +2,7 @@ import { headers } from "next/headers"
 import { getEnv } from "./env.ts"
 import {
   authorizeAdminRequest,
+  getBasicAuthUsername,
   getAllowedHosts,
   getAllowedOrigins,
   getRequestIpFromHeaders,
@@ -81,4 +82,14 @@ export async function verifyTrustedOrigin(options: { allowHostFallback?: boolean
   if (!isTrustedRequestOriginHeaders(requestHeaders, options)) {
     throw new RequestSecurityError("Istek kaynagi dogrulanamadi.")
   }
+}
+
+export async function getAdminActorIdentifier() {
+  const requestHeaders = await headers()
+  return getBasicAuthUsername(requestHeaders.get("authorization"))
+}
+
+export async function getRequestIpAddress() {
+  const requestHeaders = await headers()
+  return getRequestIpFromHeaders(requestHeaders)
 }

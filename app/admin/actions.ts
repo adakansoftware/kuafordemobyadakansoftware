@@ -4,8 +4,16 @@ import { AppointmentStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { AppointmentConflictError, updateAppointmentFromAdmin } from "@/lib/bookings-repository"
 import { adminNotesSchema } from "@/lib/booking"
+import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
-import { AdminAccessError, requireAdminAccess, RequestSecurityError, verifyTrustedOrigin } from "@/lib/security"
+import {
+  AdminAccessError,
+  getAdminActorIdentifier,
+  getRequestIpAddress,
+  RequestSecurityError,
+  requireAdminAccess,
+  verifyTrustedOrigin,
+} from "@/lib/security"
 
 export type UpdateAppointmentActionState = {
   success: boolean
@@ -112,6 +120,9 @@ export async function updateAppointmentAction(
       status: statusValue as AppointmentStatus,
       staffId: staffId || null,
       notes: validatedNotes.data,
+      actorIdentifier: await getAdminActorIdentifier(),
+      requestId: await getCurrentRequestId(),
+      ipAddress: await getRequestIpAddress(),
     })
 
     revalidatePath("/admin")
