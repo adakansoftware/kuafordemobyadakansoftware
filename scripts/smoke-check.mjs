@@ -9,6 +9,7 @@ const filesToCheck = [
   "app/api/bookings/route.ts",
   "app/admin/actions.ts",
   "components/admin/appointment-operations.tsx",
+  "lib/booking.ts",
   "lib/security.ts",
   "lib/site-content.ts",
 ]

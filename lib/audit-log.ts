@@ -17,6 +17,8 @@ const missingAuditTableLogState = {
   lastLoggedAt: 0,
 }
 
+type AuditLogWriter = Pick<typeof db, "auditLog">
+
 function shouldTreatAsMissingAuditTable(error: unknown) {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -24,9 +26,9 @@ function shouldTreatAsMissingAuditTable(error: unknown) {
   )
 }
 
-export async function createAuditLog(input: AuditLogInput) {
+export async function createAuditLog(input: AuditLogInput, client: AuditLogWriter = db) {
   try {
-    await db.auditLog.create({
+    await client.auditLog.create({
       data: {
         actorType: input.actorType,
         actorIdentifier: input.actorIdentifier ?? null,

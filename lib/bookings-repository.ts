@@ -57,20 +57,23 @@ export async function createAppointmentFromWeb(
         })
 
         if (recentDuplicate) {
-          void createAuditLog({
-            actorType: AuditActorType.CUSTOMER,
-            actorIdentifier: customer.email ?? customer.phone ?? customer.id,
-            event: AuditEvent.BOOKING_REPLAYED,
-            targetType: "appointment",
-            targetId: recentDuplicate.id,
-            requestId: options.requestId,
-            ipAddress: options.ipAddress,
-            metadata: {
-              serviceSlug: input.service,
-              scheduledDate: input.date,
-              scheduledTime: input.time,
+          await createAuditLog(
+            {
+              actorType: AuditActorType.CUSTOMER,
+              actorIdentifier: customer.email ?? customer.phone ?? customer.id,
+              event: AuditEvent.BOOKING_REPLAYED,
+              targetType: "appointment",
+              targetId: recentDuplicate.id,
+              requestId: options.requestId,
+              ipAddress: options.ipAddress,
+              metadata: {
+                serviceSlug: input.service,
+                scheduledDate: input.date,
+                scheduledTime: input.time,
+              },
             },
-          })
+            tx
+          )
 
           return {
             appointment: recentDuplicate,
@@ -104,20 +107,23 @@ export async function createAppointmentFromWeb(
           include: appointmentInclude,
         })
 
-        void createAuditLog({
-          actorType: AuditActorType.CUSTOMER,
-          actorIdentifier: customer.email ?? customer.phone ?? customer.id,
-          event: AuditEvent.BOOKING_CREATED,
-          targetType: "appointment",
-          targetId: appointment.id,
-          requestId: options.requestId,
-          ipAddress: options.ipAddress,
-          metadata: {
-            serviceSlug: input.service,
-            scheduledDate: input.date,
-            scheduledTime: input.time,
+        await createAuditLog(
+          {
+            actorType: AuditActorType.CUSTOMER,
+            actorIdentifier: customer.email ?? customer.phone ?? customer.id,
+            event: AuditEvent.BOOKING_CREATED,
+            targetType: "appointment",
+            targetId: appointment.id,
+            requestId: options.requestId,
+            ipAddress: options.ipAddress,
+            metadata: {
+              serviceSlug: input.service,
+              scheduledDate: input.date,
+              scheduledTime: input.time,
+            },
           },
-        })
+          tx
+        )
 
         return {
           appointment,
@@ -507,23 +513,26 @@ export async function updateAppointmentFromAdmin(input: {
       include: appointmentInclude,
     })
 
-    void createAuditLog({
-      actorType: AuditActorType.ADMIN,
-      actorIdentifier: input.actorIdentifier ?? "admin",
-      event: AuditEvent.APPOINTMENT_UPDATED,
-      targetType: "appointment",
-      targetId: updatedAppointment.id,
-      requestId: input.requestId,
-      ipAddress: input.ipAddress,
-      metadata: {
-        previousStatus: appointment.status,
-        nextStatus: updatedAppointment.status,
-        previousStaffId: appointment.staffId,
-        nextStaffId: updatedAppointment.staffId,
-        hadNotes: Boolean(appointment.notes),
-        hasNotes: Boolean(updatedAppointment.notes),
+    await createAuditLog(
+      {
+        actorType: AuditActorType.ADMIN,
+        actorIdentifier: input.actorIdentifier ?? "admin",
+        event: AuditEvent.APPOINTMENT_UPDATED,
+        targetType: "appointment",
+        targetId: updatedAppointment.id,
+        requestId: input.requestId,
+        ipAddress: input.ipAddress,
+        metadata: {
+          previousStatus: appointment.status,
+          nextStatus: updatedAppointment.status,
+          previousStaffId: appointment.staffId,
+          nextStaffId: updatedAppointment.staffId,
+          hadNotes: Boolean(appointment.notes),
+          hasNotes: Boolean(updatedAppointment.notes),
+        },
       },
-    })
+      tx
+    )
 
     return updatedAppointment
   })
