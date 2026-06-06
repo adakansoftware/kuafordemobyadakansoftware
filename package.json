@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/unit-test.mjs",
     "test:smoke": "node scripts/smoke-check.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:unit && npm run test:smoke && npm run build",
+    "ops:preflight": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/ops-preflight.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run test:unit && npm run test:smoke && npm run ops:preflight && npm run build",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "db:seed": "node prisma/seed.mjs"

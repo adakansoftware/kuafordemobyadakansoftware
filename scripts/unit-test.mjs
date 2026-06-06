@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 
 import { getEnvIssues, resetEnvCacheForTests } from "../lib/env.ts"
+import { buildHealthSummary } from "../lib/health.ts"
 import {
   getAllowedHosts,
   getRequestIpFromHeaders,
@@ -106,9 +107,38 @@ function testSecurityHelpers() {
   assert.equal(isTrustedRequestOriginHeaders(untrustedHeaders), false)
 }
 
+function testHealthSummary() {
+  const liveSummary = buildHealthSummary({
+    scope: "live",
+    databaseOk: true,
+    envIssues: ["NEXT_PUBLIC_SITE_URL eksik."],
+    hasCanonicalUrl: false,
+    adminConfigured: true,
+    allowedHostsConfigured: true,
+    rateLimitStorageOk: false,
+    auditLogStorageOk: false,
+  })
+
+  assert.equal(liveSummary.status, "warn")
+
+  const readinessSummary = buildHealthSummary({
+    scope: "ready",
+    databaseOk: true,
+    envIssues: [],
+    hasCanonicalUrl: true,
+    adminConfigured: true,
+    allowedHostsConfigured: true,
+    rateLimitStorageOk: true,
+    auditLogStorageOk: false,
+  })
+
+  assert.equal(readinessSummary.status, "error")
+}
+
 try {
   testEnvRules()
   testSecurityHelpers()
+  testHealthSummary()
   restoreEnv()
   console.log("Unit checks passed.")
 } catch (error) {

@@ -30,6 +30,7 @@ npm run lint
 npm run typecheck
 npm run test:unit
 npm run test:smoke
+npm run ops:preflight
 npm run build
 npm run verify
 npm run prisma:generate
@@ -49,8 +50,10 @@ Gerekli degiskenlerin ornekleri `.env.example` dosyasinda bulunur.
 
 ## Saglik ve Operasyon
 
-- Health endpoint: `/api/health`
+- Health endpoint: `/api/health?scope=ready`
+- Liveness probe: `/api/health?scope=live`
 - Public booking endpoint: `/api/bookings`
+- Deploy preflight: `npm run ops:preflight`
 - Operasyon notlari: [docs/OPERATIONS.md](/C:/Users/adaka/Desktop/aktif%20projeler/kuafordemobyadakansoftware/docs/OPERATIONS.md)
 
 ## Notlar

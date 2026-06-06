@@ -15,6 +15,7 @@ Bu proje UI degisimi gerektirmeden gercek kullanim icin daha saglam bir cekirdek
 - `npm run typecheck`
 - `npm run test:unit`
 - `npm run test:smoke`
+- `npm run ops:preflight`
 - `npm run build`
 - `npx prisma generate`
 - `npx prisma db push`
@@ -25,21 +26,34 @@ Bu proje UI degisimi gerektirmeden gercek kullanim icin daha saglam bir cekirdek
 - Bu sayede uzun sureli islemler sonraki slotlari da bloke eder.
 - Eszamanli rezervasyonlarda PostgreSQL advisory lock ile ayni zaman pencereleri transaction bazinda kilitlenir.
 
-## 4. Gunluk Operasyon
+## 4. Health ve Readiness
 
-- `/api/health` endpointini uptime monitor ile 1 dakikalik aralikta izleyin.
+- `/api/health?scope=live` endpointini basic uptime monitor ile 1 dakikalik aralikta izleyin.
+- `/api/health?scope=ready` endpointini deploy sonrasi readiness kontrolde kullanin.
+- Readiness sonucu `rate_limit_storage` veya `audit_log_storage` icin hata donuyorsa `npx prisma db push` adimini yeniden calistirin.
+- `HEAD /api/health?scope=ready` probe'u da desteklenir; body ihtiyaci olmayan monitorlerde bunu tercih edin.
+
+## 5. Gunluk Operasyon
+
 - Admin erisim loglarini hosting tarafinda saklayin.
 - Veritabani yedeklemesini gunluk otomatik alin.
 - Rate-limit tablosunu periyodik olarak kontrol edin; beklenmeyen artis bot trafigine isaret edebilir.
+- Haftalik olarak audit log buyumesini kontrol edin; beklenmeyen artis abuse veya operasyon hatasina isaret edebilir.
 
-## 5. Guvenlik
+## 6. Guvenlik
 
 - Admin sifresini duz metin paylasmayin; sadece secret manager uzerinden dagitin.
 - Production ortaminda HTTPS zorunlu olsun.
 - Domain degisirse `NEXT_PUBLIC_SITE_URL` ve `ALLOWED_ORIGIN_HOSTS` birlikte guncellensin.
 - Gerekmiyorsa preview deployment'lari public booking icin kullanmayin.
 
-## 6. Isletme Tavsiyeleri
+## 7. Kurtarma ve Bakim
+
+- Yeni ortama geciste sira: `npx prisma generate` -> `npx prisma db push` -> `npm run ops:preflight` -> `npm run verify`.
+- Audit log yazimi warning veriyorsa uygulama calismaya devam eder, ancak operasyon izi eksik kalir; ilk firsatta Prisma schema degisikliklerini hedef veritabanina uygulayin.
+- Rate-limit tablo erisiminde sorun varsa sistem memory fallback ile calisir; bu durum gecicidir ve node yeniden basladiginda sayaçlar sifirlanir.
+
+## 8. Isletme Tavsiyeleri
 
 - Randevu onay surecini en fazla 15-30 dakika icinde tamamlayin.
 - Iptal ve degisiklik politikasini ekip ici standartlastirin.

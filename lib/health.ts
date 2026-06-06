@@ -9,12 +9,17 @@ export type HealthSummary = {
   checks: HealthCheckItem[]
 }
 
+export type HealthScope = "live" | "ready"
+
 export function buildHealthSummary(options: {
+  scope: HealthScope
   databaseOk: boolean
   envIssues: string[]
   hasCanonicalUrl: boolean
   adminConfigured: boolean
   allowedHostsConfigured: boolean
+  rateLimitStorageOk: boolean
+  auditLogStorageOk: boolean
 }) {
   const checks: HealthCheckItem[] = [
     {
@@ -44,9 +49,28 @@ export function buildHealthSummary(options: {
       ok: options.allowedHostsConfigured,
       detail: options.allowedHostsConfigured ? "Izinli host listesi hazir." : "Izinli host listesi eksik.",
     },
+    {
+      key: "rate_limit_storage",
+      ok: options.rateLimitStorageOk,
+      detail: options.rateLimitStorageOk
+        ? "Rate-limit depolama tablosu hazir."
+        : "Rate-limit depolama tablosu eksik veya erisilemiyor.",
+    },
+    {
+      key: "audit_log_storage",
+      ok: options.auditLogStorageOk,
+      detail: options.auditLogStorageOk
+        ? "Audit log depolama tablosu hazir."
+        : "Audit log depolama tablosu eksik veya erisilemiyor.",
+    },
   ]
 
-  const hasError = checks.some((check) => check.key === "database" && !check.ok)
+  const requiredKeys =
+    options.scope === "live"
+      ? new Set<HealthCheckItem["key"]>(["database"])
+      : new Set<HealthCheckItem["key"]>(["database", "rate_limit_storage", "audit_log_storage"])
+
+  const hasError = checks.some((check) => requiredKeys.has(check.key) && !check.ok)
   const hasWarning = checks.some((check) => !check.ok)
 
   return {

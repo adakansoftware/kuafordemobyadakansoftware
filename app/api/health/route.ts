@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getEnvIssues, getOptionalEnv } from "@/lib/env"
-import { buildHealthSummary } from "@/lib/health"
+import { buildHealthSummary, type HealthScope } from "@/lib/health"
 import { getDurationMs, logEvent } from "@/lib/observability"
 
 export const dynamic = "force-dynamic"
@@ -13,7 +13,32 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   return response
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const url = new URL(request.url)
+  const scope = url.searchParams.get("scope") === "live" ? "live" : "ready"
+  return handleHealthRequest(scope)
+}
+
+export async function HEAD(request: Request) {
+  const url = new URL(request.url)
+  const scope = url.searchParams.get("scope") === "live" ? "live" : "ready"
+  const response = await handleHealthRequest(scope)
+  return new NextResponse(null, {
+    status: response.status,
+    headers: response.headers,
+  })
+}
+
+async function checkTableAvailability(tableName: "RateLimitBucket" | "AuditLog") {
+  try {
+    await db.$queryRawUnsafe(`SELECT 1 FROM "${tableName}" LIMIT 1`)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function handleHealthRequest(scope: HealthScope) {
   const startedAt = Date.now()
   const optionalEnv = getOptionalEnv()
   const envIssues = getEnvIssues()
@@ -22,14 +47,24 @@ export async function GET() {
   const allowedHostsConfigured = Boolean(optionalEnv.ALLOWED_ORIGIN_HOSTS || optionalEnv.NEXT_PUBLIC_SITE_URL)
 
   try {
-    await db.$queryRaw`SELECT 1`
+    const [databaseOk, rateLimitStorageOk, auditLogStorageOk] = await Promise.all([
+      db
+        .$queryRaw`SELECT 1`
+        .then(() => true)
+        .catch(() => false),
+      checkTableAvailability("RateLimitBucket"),
+      checkTableAvailability("AuditLog"),
+    ])
 
     const summary = buildHealthSummary({
-      databaseOk: true,
+      scope,
+      databaseOk,
       envIssues,
       hasCanonicalUrl,
       adminConfigured,
       allowedHostsConfigured,
+      rateLimitStorageOk,
+      auditLogStorageOk,
     })
 
     logEvent({
@@ -37,25 +72,35 @@ export async function GET() {
       route: "/api/health",
       message: "Health endpoint completed.",
       meta: {
+        scope,
         status: summary.status,
         responseTimeMs: getDurationMs(startedAt),
       },
     })
 
-    return jsonResponse({
-      success: true,
-      status: summary.status,
-      timestamp: new Date().toISOString(),
-      checks: summary.checks,
-      responseTimeMs: getDurationMs(startedAt),
-    })
+    const statusCode = summary.status === "error" ? 503 : 200
+
+    return jsonResponse(
+      {
+        success: summary.status !== "error",
+        scope,
+        status: summary.status,
+        timestamp: new Date().toISOString(),
+        checks: summary.checks,
+        responseTimeMs: getDurationMs(startedAt),
+      },
+      { status: statusCode }
+    )
   } catch (error) {
     const summary = buildHealthSummary({
+      scope,
       databaseOk: false,
       envIssues,
       hasCanonicalUrl,
       adminConfigured,
       allowedHostsConfigured,
+      rateLimitStorageOk: false,
+      auditLogStorageOk: false,
     })
 
     logEvent({
@@ -64,6 +109,7 @@ export async function GET() {
       route: "/api/health",
       message: error instanceof Error ? error.message : "Unknown health error.",
       meta: {
+        scope,
         status: summary.status,
         responseTimeMs: getDurationMs(startedAt),
       },
@@ -72,6 +118,7 @@ export async function GET() {
     return jsonResponse(
       {
         success: false,
+        scope,
         status: summary.status,
         timestamp: new Date().toISOString(),
         checks: summary.checks,
