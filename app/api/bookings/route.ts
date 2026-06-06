@@ -121,20 +121,71 @@ export async function GET(request: Request) {
     )
   }
 
-  const url = new URL(request.url)
-  const date = url.searchParams.get("date")?.trim()
+  try {
+    const url = new URL(request.url)
+    const date = url.searchParams.get("date")?.trim()
 
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      logEvent({
+        level: "warn",
+        event: "booking_availability_invalid_date",
+        requestId,
+        route: "/api/bookings",
+        message: "Booking availability request received invalid date.",
+        meta: {
+          method: "GET",
+          clientId,
+          date,
+          responseTimeMs: getDurationMs(startedAt),
+        },
+      })
+
+      return jsonResponse(
+        {
+          success: false,
+          message: "Gecerli bir tarih parametresi gonderin.",
+        },
+        requestId,
+        { status: 400 }
+      )
+    }
+
+    const availability = await getPublicAvailabilityByDate(date)
+
     logEvent({
-      level: "warn",
-      event: "booking_availability_invalid_date",
+      event: "booking_availability_served",
       requestId,
       route: "/api/bookings",
-      message: "Booking availability request received invalid date.",
+      message: "Booking availability response generated.",
       meta: {
         method: "GET",
         clientId,
         date,
+        rateLimitSource: rateLimit.source,
+        responseTimeMs: getDurationMs(startedAt),
+      },
+    })
+
+    return jsonResponse(
+      {
+        success: true,
+        data: availability,
+      },
+      requestId,
+      {
+        headers: buildRateLimitHeaders({ ...rateLimit, limit: rateLimitConfig.limit }),
+      }
+    )
+  } catch (error) {
+    logEvent({
+      level: "error",
+      event: "booking_availability_failed",
+      requestId,
+      route: "/api/bookings",
+      message: error instanceof Error ? error.message : "Unexpected availability error.",
+      meta: {
+        method: "GET",
+        clientId,
         responseTimeMs: getDurationMs(startedAt),
       },
     })
@@ -142,39 +193,15 @@ export async function GET(request: Request) {
     return jsonResponse(
       {
         success: false,
-        message: "Gecerli bir tarih parametresi gonderin.",
+        message: "Uygunluk bilgisi alinirken beklenmeyen bir hata olustu.",
       },
       requestId,
-      { status: 400 }
+      {
+        status: 500,
+        headers: buildRateLimitHeaders({ ...rateLimit, limit: rateLimitConfig.limit }),
+      }
     )
   }
-
-  const availability = await getPublicAvailabilityByDate(date)
-
-  logEvent({
-    event: "booking_availability_served",
-    requestId,
-    route: "/api/bookings",
-    message: "Booking availability response generated.",
-    meta: {
-      method: "GET",
-      clientId,
-      date,
-      rateLimitSource: rateLimit.source,
-      responseTimeMs: getDurationMs(startedAt),
-    },
-  })
-
-  return jsonResponse(
-    {
-      success: true,
-      data: availability,
-    },
-    requestId,
-    {
-      headers: buildRateLimitHeaders({ ...rateLimit, limit: rateLimitConfig.limit }),
-    }
-  )
 }
 
 export async function POST(request: Request) {
