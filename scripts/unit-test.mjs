@@ -10,6 +10,7 @@ import {
   normalizeOrigin,
 } from "../lib/security-core.ts"
 import { runBookingTests } from "../tests/booking.test.mts"
+import { runBookingsApiTests } from "../tests/bookings-api.test.mts"
 import { runEnvTests } from "../tests/env.test.mts"
 import { runHealthTests } from "../tests/health.test.mts"
 import { runSecurityTests } from "../tests/security.test.mts"
@@ -144,6 +145,7 @@ try {
   testSecurityHelpers()
   testHealthSummary()
   runBookingTests()
+  runBookingsApiTests()
   runEnvTests()
   runHealthTests()
   runSecurityTests()
