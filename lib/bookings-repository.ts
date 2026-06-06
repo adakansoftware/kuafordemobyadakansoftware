@@ -21,14 +21,14 @@ export async function createAppointmentFromWeb(input: BookingFormValues) {
   try {
     return await db.$transaction(
       async (tx) => {
-        await lockAppointmentSlot(tx, input.date, input.time)
-
         const service = await tx.service.findFirstOrThrow({
           where: {
             slug: input.service,
             isActive: true,
           },
         })
+
+        await lockAppointmentWindow(tx, input.date, input.time, service.durationMinutes)
 
         const customer = await findOrCreateCustomer(tx, {
           name: input.name,
@@ -345,26 +345,37 @@ export async function getPublicAvailabilityByDate(date: string) {
     db.staff.count({
       where: { isActive: true },
     }),
-    db.appointment.groupBy({
-      by: ["scheduledTime"],
+    db.appointment.findMany({
       where: {
         scheduledDate: date,
         status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
       },
-      _count: {
-        scheduledTime: true,
+      include: {
+        service: {
+          select: {
+            durationMinutes: true,
+          },
+        },
       },
     }),
   ])
 
   const capacity = Math.max(activeStaffCount, 1)
-  const bookedMap = new Map(bookings.map((item) => [item.scheduledTime, item._count.scheduledTime]))
 
   return {
     date,
     capacity,
     slots: bookingTimeSlots.map((time) => {
-      const booked = bookedMap.get(time) ?? 0
+      const booked = bookings.filter((appointment) =>
+        hasAppointmentOverlap(
+          date,
+          time,
+          SLOT_DURATION_MINUTES,
+          appointment.scheduledDate,
+          appointment.scheduledTime,
+          appointment.service.durationMinutes
+        )
+      ).length
 
       return {
         time,
@@ -399,7 +410,12 @@ export async function updateAppointmentFromAdmin(input: {
       include: appointmentInclude,
     })
 
-    await lockAppointmentSlot(tx, appointment.scheduledDate, appointment.scheduledTime)
+    await lockAppointmentWindow(
+      tx,
+      appointment.scheduledDate,
+      appointment.scheduledTime,
+      appointment.service.durationMinutes
+    )
 
     const normalizedStaffId = input.staffId?.trim() ? input.staffId : null
     const normalizedNotes = input.notes?.trim() ? input.notes.trim() : null
@@ -561,14 +577,27 @@ async function ensureStaffAvailability(input: {
   }
 }
 
-async function lockAppointmentSlot(
+const SLOT_DURATION_MINUTES = 30
+
+function getOverlappingSlotTimes(date: string, time: string, durationMinutes: number) {
+  return bookingTimeSlots.filter((slot) =>
+    hasAppointmentOverlap(date, time, durationMinutes, date, slot, SLOT_DURATION_MINUTES)
+  )
+}
+
+async function lockAppointmentWindow(
   client: Prisma.TransactionClient,
   scheduledDate: string,
-  scheduledTime: string
+  scheduledTime: string,
+  durationMinutes: number
 ) {
-  await client.$queryRaw`
-    SELECT pg_advisory_xact_lock(hashtext(${scheduledDate}), hashtext(${scheduledTime}))
-  `
+  const slotTimes = getOverlappingSlotTimes(scheduledDate, scheduledTime, durationMinutes)
+
+  for (const slotTime of slotTimes) {
+    await client.$queryRaw`
+      SELECT pg_advisory_xact_lock(hashtext(${scheduledDate}), hashtext(${slotTime}))
+    `
+  }
 }
 
 async function ensureStaffIsActive(staffId: string) {
@@ -665,7 +694,7 @@ function createScheduledAt(date: string, time: string) {
 
 function getScheduledRange(date: string, time: string, durationMinutes: number) {
   const start = createScheduledAt(date, time)
-  const end = new Date(start.getTime() + durationMinutes * 60 * 1000)
+  const end = new Date(start.getTime() + Math.max(durationMinutes, SLOT_DURATION_MINUTES) * 60 * 1000)
 
   return { start, end }
 }
