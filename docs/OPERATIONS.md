@@ -15,10 +15,11 @@ Bu proje UI degisimi gerektirmeden gercek kullanim icin daha saglam bir cekirdek
 - `npm run typecheck`
 - `npm run test:unit`
 - `npm run test:smoke`
+- `npm run ops:migration-check`
 - `npm run ops:preflight`
 - `npm run build`
 - `npx prisma generate`
-- `npx prisma db push`
+- `npx prisma migrate deploy`
 
 ## 3. Rezervasyon Mantigi
 
@@ -30,7 +31,7 @@ Bu proje UI degisimi gerektirmeden gercek kullanim icin daha saglam bir cekirdek
 
 - `/api/health?scope=live` endpointini basic uptime monitor ile 1 dakikalik aralikta izleyin.
 - `/api/health?scope=ready` endpointini deploy sonrasi readiness kontrolde kullanin.
-- Readiness sonucu `rate_limit_storage` veya `audit_log_storage` icin hata donuyorsa `npx prisma db push` adimini yeniden calistirin.
+- Readiness sonucu `rate_limit_storage` veya `audit_log_storage` icin hata donuyorsa `npx prisma migrate deploy` adimini yeniden calistirin.
 - `HEAD /api/health?scope=ready` probe'u da desteklenir; body ihtiyaci olmayan monitorlerde bunu tercih edin.
 
 ## 5. Gunluk Operasyon
@@ -39,6 +40,8 @@ Bu proje UI degisimi gerektirmeden gercek kullanim icin daha saglam bir cekirdek
 - Veritabani yedeklemesini gunluk otomatik alin.
 - Rate-limit tablosunu periyodik olarak kontrol edin; beklenmeyen artis bot trafigine isaret edebilir.
 - Haftalik olarak audit log buyumesini kontrol edin; beklenmeyen artis abuse veya operasyon hatasina isaret edebilir.
+- `npm run ops:audit-summary -- --days=7` ile haftalik audit ozeti alin.
+- `npm run ops:retention -- --audit-days=90 --rate-limit-days=7` ile once dry-run yapin, sonra gerekiyorsa `--apply` ile temizlik calistirin.
 
 ## 6. Guvenlik
 
@@ -49,9 +52,10 @@ Bu proje UI degisimi gerektirmeden gercek kullanim icin daha saglam bir cekirdek
 
 ## 7. Kurtarma ve Bakim
 
-- Yeni ortama geciste sira: `npx prisma generate` -> `npx prisma db push` -> `npm run ops:preflight` -> `npm run verify`.
-- Audit log yazimi warning veriyorsa uygulama calismaya devam eder, ancak operasyon izi eksik kalir; ilk firsatta Prisma schema degisikliklerini hedef veritabanina uygulayin.
-- Rate-limit tablo erisiminde sorun varsa sistem memory fallback ile calisir; bu durum gecicidir ve node yeniden basladiginda sayaçlar sifirlanir.
+- Yeni ortama geciste sira: `npx prisma generate` -> `npx prisma migrate deploy` -> `npm run ops:migration-check` -> `npm run ops:preflight` -> `npm run verify`.
+- Audit log yazimi warning veriyorsa uygulama calismaya devam eder, ancak operasyon izi eksik kalir; ilk firsatta Prisma migration'larini hedef veritabanina uygulayin.
+- Rate-limit tablo erisiminde sorun varsa sistem memory fallback ile calisir; bu durum gecicidir ve node yeniden basladiginda sayaclar sifirlanir.
+- Migration klasoru artik repo icinde versiyonlanir. Yeni schema degisikliginde `db push` yerine migration uretip review ederek ilerleyin.
 
 ## 8. Isletme Tavsiyeleri
 

@@ -30,13 +30,22 @@ npm run lint
 npm run typecheck
 npm run test:unit
 npm run test:smoke
+npm run ops:migration-check
 npm run ops:preflight
+npm run ops:retention -- --audit-days=90 --rate-limit-days=7
+npm run ops:audit-summary -- --days=7
 npm run build
 npm run verify
 npm run prisma:generate
 npm run prisma:push
 npm run db:seed
 ```
+
+## Yeni Fazlar
+
+- `Faz 6`: Prisma migration disiplini ve baseline migration kaydi
+- `Faz 7`: Audit raporlama ve retention komutlari
+- `Faz 8`: Bu operasyon komutlarinin verify hattina baglanmasi
 
 ## Ortam Degiskenleri
 
@@ -53,11 +62,14 @@ Gerekli degiskenlerin ornekleri `.env.example` dosyasinda bulunur.
 - Health endpoint: `/api/health?scope=ready`
 - Liveness probe: `/api/health?scope=live`
 - Public booking endpoint: `/api/bookings`
+- Migration check: `npm run ops:migration-check`
 - Deploy preflight: `npm run ops:preflight`
+- Audit summary: `npm run ops:audit-summary -- --days=7`
+- Retention dry-run: `npm run ops:retention -- --audit-days=90 --rate-limit-days=7`
 - Operasyon notlari: [docs/OPERATIONS.md](/C:/Users/adaka/Desktop/aktif%20projeler/kuafordemobyadakansoftware/docs/OPERATIONS.md)
 
 ## Notlar
 
 - Admin alani Basic Auth ile korunur.
 - Booking akisi hizmet suresine gore cakisma ve kapasite kontrolu yapar.
-- Unit test, smoke test, typecheck ve build birlikte `npm run verify` ile calistirilir.
+- Unit test, smoke test, migration check, preflight, typecheck ve build birlikte `npm run verify` ile calistirilir.
