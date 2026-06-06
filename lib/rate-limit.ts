@@ -5,6 +5,13 @@ type RateLimitEntry = {
   resetAt: number
 }
 
+export type RateLimitResult = {
+  allowed: boolean
+  remaining: number
+  resetAt: number
+  source: "database" | "memory"
+}
+
 const memoryStores = new Map<string, Map<string, RateLimitEntry>>()
 const MAX_KEYS_PER_NAMESPACE = 5000
 let lastPruneAt = 0
@@ -34,7 +41,7 @@ function applyMemoryRateLimit(input: {
   namespace: string
   limit: number
   windowMs: number
-}) {
+}): RateLimitResult {
   const now = Date.now()
   const safeKey = input.key.trim().slice(0, 128) || "unknown"
   const namespaceStore = memoryStores.get(input.namespace) ?? new Map<string, RateLimitEntry>()
@@ -57,6 +64,7 @@ function applyMemoryRateLimit(input: {
       allowed: true,
       remaining: input.limit - 1,
       resetAt,
+      source: "memory",
     }
   }
 
@@ -65,6 +73,7 @@ function applyMemoryRateLimit(input: {
       allowed: false,
       remaining: 0,
       resetAt: existing.resetAt,
+      source: "memory",
     }
   }
 
@@ -74,6 +83,7 @@ function applyMemoryRateLimit(input: {
     allowed: true,
     remaining: Math.max(input.limit - existing.count, 0),
     resetAt: existing.resetAt,
+    source: "memory",
   }
 }
 
@@ -100,7 +110,7 @@ export async function applyRateLimit(input: {
   namespace: string
   limit: number
   windowMs: number
-}) {
+}): Promise<RateLimitResult> {
   const safeKey = input.key.trim().slice(0, 128) || "unknown"
   const now = new Date()
 
@@ -143,6 +153,7 @@ export async function applyRateLimit(input: {
           allowed: true,
           remaining: input.limit - 1,
           resetAt: resetAt.getTime(),
+          source: "database",
         }
       }
 
@@ -151,6 +162,7 @@ export async function applyRateLimit(input: {
           allowed: false,
           remaining: 0,
           resetAt: existing.resetAt.getTime(),
+          source: "database",
         }
       }
 
@@ -172,6 +184,7 @@ export async function applyRateLimit(input: {
         allowed: true,
         remaining: Math.max(input.limit - updated.count, 0),
         resetAt: updated.resetAt.getTime(),
+        source: "database",
       }
     })
   } catch {

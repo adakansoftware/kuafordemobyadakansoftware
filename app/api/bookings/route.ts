@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { type BookingFormDraft, validateBookingForm } from "@/lib/booking"
 import { AppointmentConflictError, createAppointmentFromWeb, getPublicAvailabilityByDate } from "@/lib/bookings-repository"
-import { jsonNoStore } from "@/lib/http"
+import { getRequestIdFromHeaders, jsonNoStore } from "@/lib/http"
+import { getDurationMs, logEvent } from "@/lib/observability"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { getRequestIpFromHeaders, isTrustedRequestOriginHeaders } from "@/lib/security"
 
@@ -9,8 +10,24 @@ export const dynamic = "force-dynamic"
 
 const MAX_BOOKING_BODY_BYTES = 8 * 1024
 
-function jsonResponse(body: unknown, init?: ResponseInit) {
-  const response = jsonNoStore(body, init)
+function buildRateLimitHeaders(rateLimit?: {
+  remaining: number
+  resetAt: number
+  limit: number
+}) {
+  if (!rateLimit) {
+    return undefined
+  }
+
+  return {
+    "X-RateLimit-Limit": String(rateLimit.limit),
+    "X-RateLimit-Remaining": String(Math.max(rateLimit.remaining, 0)),
+    "X-RateLimit-Reset": String(Math.ceil(rateLimit.resetAt / 1000)),
+  }
+}
+
+function jsonResponse(body: unknown, requestId: string, init?: ResponseInit) {
+  const response = jsonNoStore(body, { ...init, requestId })
   response.headers.set("Vary", "Origin")
   return response
 }
@@ -59,24 +76,46 @@ function parseJsonText(text: string) {
 }
 
 export async function GET(request: Request) {
+  const startedAt = Date.now()
+  const requestId = getRequestIdFromHeaders(request.headers)
   const clientId = getRequestIpFromHeaders(request.headers)
+  const rateLimitConfig = {
+    limit: 20,
+    windowMs: 60_000,
+  }
+
   const rateLimit = await applyRateLimit({
     key: clientId,
     namespace: "public-bookings-read",
-    limit: 20,
-    windowMs: 60_000,
+    ...rateLimitConfig,
   })
 
   if (!rateLimit.allowed) {
+    logEvent({
+      level: "warn",
+      event: "booking_availability_rate_limited",
+      requestId,
+      route: "/api/bookings",
+      message: "Booking availability request was rate limited.",
+      meta: {
+        method: "GET",
+        clientId,
+        rateLimitSource: rateLimit.source,
+        responseTimeMs: getDurationMs(startedAt),
+      },
+    })
+
     return jsonResponse(
       {
         success: false,
-        message: "Kısa süre içinde çok fazla sorgu gönderildi. Lütfen biraz sonra tekrar deneyin.",
+        message: "Kisa sure icinde cok fazla sorgu gonderildi. Lutfen biraz sonra tekrar deneyin.",
       },
+      requestId,
       {
         status: 429,
         headers: {
           "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+          ...buildRateLimitHeaders({ ...rateLimit, limit: rateLimitConfig.limit }),
         },
       }
     )
@@ -86,30 +125,85 @@ export async function GET(request: Request) {
   const date = url.searchParams.get("date")?.trim()
 
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    logEvent({
+      level: "warn",
+      event: "booking_availability_invalid_date",
+      requestId,
+      route: "/api/bookings",
+      message: "Booking availability request received invalid date.",
+      meta: {
+        method: "GET",
+        clientId,
+        date,
+        responseTimeMs: getDurationMs(startedAt),
+      },
+    })
+
     return jsonResponse(
       {
         success: false,
-        message: "Geçerli bir tarih parametresi gönderin.",
+        message: "Gecerli bir tarih parametresi gonderin.",
       },
+      requestId,
       { status: 400 }
     )
   }
 
   const availability = await getPublicAvailabilityByDate(date)
 
-  return jsonResponse({
-    success: true,
-    data: availability,
+  logEvent({
+    event: "booking_availability_served",
+    requestId,
+    route: "/api/bookings",
+    message: "Booking availability response generated.",
+    meta: {
+      method: "GET",
+      clientId,
+      date,
+      rateLimitSource: rateLimit.source,
+      responseTimeMs: getDurationMs(startedAt),
+    },
   })
+
+  return jsonResponse(
+    {
+      success: true,
+      data: availability,
+    },
+    requestId,
+    {
+      headers: buildRateLimitHeaders({ ...rateLimit, limit: rateLimitConfig.limit }),
+    }
+  )
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now()
+  const requestId = getRequestIdFromHeaders(request.headers)
+  const clientId = getRequestIpFromHeaders(request.headers)
+
   if (!isTrustedRequestOriginHeaders(request.headers)) {
+    logEvent({
+      level: "warn",
+      event: "booking_create_untrusted_origin",
+      requestId,
+      route: "/api/bookings",
+      message: "Booking create request failed origin verification.",
+      meta: {
+        method: "POST",
+        clientId,
+        origin: request.headers.get("origin"),
+        host: request.headers.get("host"),
+        responseTimeMs: getDurationMs(startedAt),
+      },
+    })
+
     return jsonResponse(
       {
         success: false,
-        message: "İstek kaynağı doğrulanamadı.",
+        message: "Istek kaynagi dogrulanamadi.",
       },
+      requestId,
       { status: 403 }
     )
   }
@@ -120,8 +214,9 @@ export async function POST(request: Request) {
     return jsonResponse(
       {
         success: false,
-        message: "İstek biçimi desteklenmiyor.",
+        message: "Istek bicimi desteklenmiyor.",
       },
+      requestId,
       { status: 415 }
     )
   }
@@ -130,30 +225,50 @@ export async function POST(request: Request) {
     return jsonResponse(
       {
         success: false,
-        message: "İstek boyutu sınırı aşıldı.",
+        message: "Istek boyutu siniri asildi.",
       },
+      requestId,
       { status: 413 }
     )
   }
 
-  const clientId = getRequestIpFromHeaders(request.headers)
+  const rateLimitConfig = {
+    limit: 3,
+    windowMs: 60_000,
+  }
+
   const rateLimit = await applyRateLimit({
     key: clientId,
     namespace: "public-bookings-write",
-    limit: 3,
-    windowMs: 60_000,
+    ...rateLimitConfig,
   })
 
   if (!rateLimit.allowed) {
+    logEvent({
+      level: "warn",
+      event: "booking_create_rate_limited",
+      requestId,
+      route: "/api/bookings",
+      message: "Booking create request was rate limited.",
+      meta: {
+        method: "POST",
+        clientId,
+        rateLimitSource: rateLimit.source,
+        responseTimeMs: getDurationMs(startedAt),
+      },
+    })
+
     return jsonResponse(
       {
         success: false,
-        message: "Kısa süre içinde çok fazla talep gönderildi. Lütfen bir dakika sonra tekrar deneyin.",
+        message: "Kisa sure icinde cok fazla talep gonderildi. Lutfen bir dakika sonra tekrar deneyin.",
       },
+      requestId,
       {
         status: 429,
         headers: {
           "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+          ...buildRateLimitHeaders({ ...rateLimit, limit: rateLimitConfig.limit }),
         },
       }
     )
@@ -167,8 +282,9 @@ export async function POST(request: Request) {
     return jsonResponse(
       {
         success: false,
-        message: "İstek gövdesi okunamadı.",
+        message: "Istek govdesi okunamadi.",
       },
+      requestId,
       { status: 400 }
     )
   }
@@ -177,8 +293,9 @@ export async function POST(request: Request) {
     return jsonResponse(
       {
         success: false,
-        message: "İstek boyutu sınırı aşıldı.",
+        message: "Istek boyutu siniri asildi.",
       },
+      requestId,
       { status: 413 }
     )
   }
@@ -189,8 +306,9 @@ export async function POST(request: Request) {
     return jsonResponse(
       {
         success: false,
-        message: "İstek gövdesi okunamadı.",
+        message: "Istek govdesi okunamadi.",
       },
+      requestId,
       { status: 400 }
     )
   }
@@ -201,8 +319,9 @@ export async function POST(request: Request) {
     return jsonResponse(
       {
         success: false,
-        message: "Form verisi geçersiz.",
+        message: "Form verisi gecersiz.",
       },
+      requestId,
       { status: 400 }
     )
   }
@@ -210,18 +329,50 @@ export async function POST(request: Request) {
   const validation = validateBookingForm(parsedPayload)
 
   if (!validation.success) {
+    logEvent({
+      level: "warn",
+      event: "booking_create_validation_failed",
+      requestId,
+      route: "/api/bookings",
+      message: "Booking create validation failed.",
+      meta: {
+        method: "POST",
+        clientId,
+        fieldErrors: validation.errors,
+        responseTimeMs: getDurationMs(startedAt),
+      },
+    })
+
     return jsonResponse(
       {
         success: false,
-        message: "Form verisi geçersiz.",
+        message: "Form verisi gecersiz.",
         errors: validation.errors,
       },
+      requestId,
       { status: 400 }
     )
   }
 
   try {
     const booking = await createAppointmentFromWeb(validation.data)
+
+    logEvent({
+      event: "booking_create_succeeded",
+      requestId,
+      route: "/api/bookings",
+      message: "Booking created successfully.",
+      meta: {
+        method: "POST",
+        clientId,
+        bookingId: booking.id,
+        service: booking.service.slug,
+        date: booking.scheduledDate,
+        time: booking.scheduledTime,
+        rateLimitSource: rateLimit.source,
+        responseTimeMs: getDurationMs(startedAt),
+      },
+    })
 
     return jsonResponse(
       {
@@ -235,35 +386,74 @@ export async function POST(request: Request) {
           status: booking.status,
         },
       },
-      { status: 201 }
+      requestId,
+      {
+        status: 201,
+        headers: buildRateLimitHeaders({ ...rateLimit, limit: rateLimitConfig.limit }),
+      }
     )
   } catch (error) {
     if (error instanceof AppointmentConflictError) {
+      logEvent({
+        level: "warn",
+        event: "booking_create_conflict",
+        requestId,
+        route: "/api/bookings",
+        message: error.message,
+        meta: {
+          method: "POST",
+          clientId,
+          service: validation.data.service,
+          date: validation.data.date,
+          time: validation.data.time,
+          responseTimeMs: getDurationMs(startedAt),
+        },
+      })
+
       return jsonResponse(
         {
           success: false,
           message: error.message,
         },
+        requestId,
         { status: 409 }
       )
     }
 
+    logEvent({
+      level: "error",
+      event: "booking_create_failed",
+      requestId,
+      route: "/api/bookings",
+      message: error instanceof Error ? error.message : "Unexpected booking create error.",
+      meta: {
+        method: "POST",
+        clientId,
+        service: validation.data.service,
+        date: validation.data.date,
+        time: validation.data.time,
+        responseTimeMs: getDurationMs(startedAt),
+      },
+    })
+
     return jsonResponse(
       {
         success: false,
-        message: "Randevu kaydı sırasında beklenmeyen bir hata oluştu.",
+        message: "Randevu kaydi sirasinda beklenmeyen bir hata olustu.",
       },
+      requestId,
       { status: 500 }
     )
   }
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(request: Request) {
   return new NextResponse(null, {
     status: 204,
     headers: {
       Allow: "GET, POST, OPTIONS",
       "Cache-Control": "no-store",
+      "X-Request-Id": getRequestIdFromHeaders(request.headers),
     },
   })
 }

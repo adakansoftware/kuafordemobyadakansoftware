@@ -4,6 +4,7 @@ import { AppointmentStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { AppointmentConflictError, updateAppointmentFromAdmin } from "@/lib/bookings-repository"
 import { adminNotesSchema } from "@/lib/booking"
+import { logEvent } from "@/lib/observability"
 import { AdminAccessError, requireAdminAccess, RequestSecurityError, verifyTrustedOrigin } from "@/lib/security"
 
 export type UpdateAppointmentActionState = {
@@ -27,12 +28,19 @@ export async function updateAppointmentAction(
     await requireAdminAccess()
     await verifyTrustedOrigin({ allowHostFallback: true })
   } catch (error) {
+    logEvent({
+      level: "warn",
+      event: "admin_appointment_security_failed",
+      route: "/admin",
+      message: error instanceof Error ? error.message : "Admin appointment action security failed.",
+    })
+
     const message =
       error instanceof AdminAccessError
-        ? "Bu işlem için yönetim erişimi doğrulanamadı."
+        ? "Bu islem icin yonetim erisimi dogrulanamadi."
         : error instanceof RequestSecurityError
-          ? "İstek kaynağı doğrulanamadı."
-          : "Güvenlik doğrulaması başarısız oldu."
+          ? "Istek kaynagi dogrulanamadi."
+          : "Guvenlik dogrulamasi basarisiz oldu."
 
     return {
       success: false,
@@ -46,16 +54,34 @@ export async function updateAppointmentAction(
   const notes = String(formData.get("notes") ?? "").trim()
 
   if (!appointmentId) {
+    logEvent({
+      level: "warn",
+      event: "admin_appointment_missing_id",
+      route: "/admin",
+      message: "Admin appointment update called without appointment id.",
+    })
+
     return {
       success: false,
-      message: "Randevu kaydı bulunamadı.",
+      message: "Randevu kaydi bulunamadi.",
     }
   }
 
   if (!validStatuses.has(statusValue as AppointmentStatus)) {
+    logEvent({
+      level: "warn",
+      event: "admin_appointment_invalid_status",
+      route: "/admin",
+      message: "Admin appointment update received invalid status.",
+      meta: {
+        appointmentId,
+        statusValue,
+      },
+    })
+
     return {
       success: false,
-      message: "Geçersiz durum seçildi.",
+      message: "Gecersiz durum secildi.",
       appointmentId,
     }
   }
@@ -63,9 +89,19 @@ export async function updateAppointmentAction(
   const validatedNotes = adminNotesSchema.safeParse(notes)
 
   if (!validatedNotes.success) {
+    logEvent({
+      level: "warn",
+      event: "admin_appointment_invalid_notes",
+      route: "/admin",
+      message: "Admin appointment update notes validation failed.",
+      meta: {
+        appointmentId,
+      },
+    })
+
     return {
       success: false,
-      message: validatedNotes.error.issues[0]?.message ?? "Operasyon notu geçersiz.",
+      message: validatedNotes.error.issues[0]?.message ?? "Operasyon notu gecersiz.",
       appointmentId,
     }
   }
@@ -81,13 +117,35 @@ export async function updateAppointmentAction(
     revalidatePath("/admin")
     revalidatePath("/randevu")
 
+    logEvent({
+      event: "admin_appointment_updated",
+      route: "/admin",
+      message: "Admin appointment updated successfully.",
+      meta: {
+        appointmentId,
+        statusValue,
+        hasStaffAssignment: Boolean(staffId),
+      },
+    })
+
     return {
       success: true,
-      message: "Randevu kaydı güncellendi.",
+      message: "Randevu kaydi guncellendi.",
       appointmentId,
     }
   } catch (error) {
     if (error instanceof AppointmentConflictError) {
+      logEvent({
+        level: "warn",
+        event: "admin_appointment_conflict",
+        route: "/admin",
+        message: error.message,
+        meta: {
+          appointmentId,
+          statusValue,
+        },
+      })
+
       return {
         success: false,
         message: error.message,
@@ -95,9 +153,20 @@ export async function updateAppointmentAction(
       }
     }
 
+    logEvent({
+      level: "error",
+      event: "admin_appointment_update_failed",
+      route: "/admin",
+      message: error instanceof Error ? error.message : "Unexpected admin appointment update error.",
+      meta: {
+        appointmentId,
+        statusValue,
+      },
+    })
+
     return {
       success: false,
-      message: "Güncelleme sırasında beklenmeyen bir hata oluştu.",
+      message: "Guncelleme sirasinda beklenmeyen bir hata olustu.",
       appointmentId,
     }
   }
