@@ -59,9 +59,9 @@ export const siteContent = {
     { href: "/randevu", label: "Randevu" },
   ] satisfies NavLink[],
   contact: {
-    phoneDisplay: "+90 (216) 777 40 40",
-    phoneHref: "tel:+902167774040",
-    email: "info@adakan.studio",
+    phoneDisplay: "539 941 65 21",
+    phoneHref: "tel:+905399416521",
+    email: "adakansoftware@gamil.com",
     address: "Bağdat Caddesi No:128, Caddebostan / İstanbul",
     city: "İstanbul",
     mapTitle: "Adakan Hair Studio konumu",

@@ -80,9 +80,40 @@ export function sanitizeBookingForm(values: BookingFormDraft): BookingFormDraft 
 }
 
 export function getBookingMinDate() {
-  return new Intl.DateTimeFormat("en-CA", {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Istanbul",
-  }).format(new Date())
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+
+  const parts = formatter.formatToParts(new Date())
+  const year = parts.find((part) => part.type === "year")?.value ?? ""
+  const month = parts.find((part) => part.type === "month")?.value ?? ""
+  const day = parts.find((part) => part.type === "day")?.value ?? ""
+
+  return `${year}-${month}-${day}`
+}
+
+export function normalizeBookingDateInput(value: string) {
+  const trimmed = value.trim()
+
+  if (!trimmed) {
+    return ""
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed
+  }
+
+  const localizedMatch = trimmed.match(/^(\d{2})[./-](\d{2})[./-](\d{4})$/)
+
+  if (localizedMatch) {
+    const [, day, month, year] = localizedMatch
+    return `${year}-${month}-${day}`
+  }
+
+  return ""
 }
 
 export function isBookingTimeInPast(date: string, time: string) {
@@ -94,6 +125,7 @@ export function isBookingTimeInPast(date: string, time: string) {
 
 export function validateBookingForm(values: BookingFormDraft) {
   const sanitizedValues = sanitizeBookingForm(values)
+  sanitizedValues.date = normalizeBookingDateInput(sanitizedValues.date)
   const result = bookingSchema.safeParse(sanitizedValues)
 
   if (result.success) {

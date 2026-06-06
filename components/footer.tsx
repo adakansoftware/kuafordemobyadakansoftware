@@ -12,6 +12,8 @@ function TikTokIcon({ className }: { className?: string }) {
 }
 
 export function Footer() {
+  const designerInstagramUrl = "https://www.instagram.com/adakansoftware/"
+
   const socialLinks = [
     siteContent.social.instagram
       ? {
@@ -143,9 +145,22 @@ export function Footer() {
         </div>
 
         <div className="mt-12 border-t border-primary-foreground/10 pt-8 text-center">
-          <p className="text-sm text-primary-foreground/50">
-            © {new Date().getFullYear()} {siteContent.brand.name}. Tüm hakları saklıdır.
-          </p>
+          <div className="flex flex-col items-center justify-center gap-2 text-center">
+            <p className="text-sm text-primary-foreground/50">
+              © {new Date().getFullYear()} {siteContent.brand.name}. Tüm hakları saklıdır.
+            </p>
+            <p className="text-xs uppercase tracking-[0.18em] text-primary-foreground/45">
+              Designed by{" "}
+              <a
+                href={designerInstagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-accent transition-colors hover:text-primary-foreground"
+              >
+                Adakan Software
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>

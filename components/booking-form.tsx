@@ -7,6 +7,7 @@ import {
   bookingServiceSlugs,
   bookingTimeSlots,
   getBookingMinDate,
+  normalizeBookingDateInput,
   type BookingFieldErrors,
   type BookingFormDraft,
   validateBookingForm,
@@ -57,6 +58,7 @@ export function BookingForm() {
   })
 
   const minDate = getBookingMinDate()
+  const normalizedSelectedDate = normalizeBookingDateInput(formData.date)
   const selectedService =
     siteContent.services.find((service) => service.slug === formData.service) ?? siteContent.services[0]
 
@@ -64,7 +66,7 @@ export function BookingForm() {
     let cancelled = false
 
     async function loadAvailability() {
-      if (!formData.date) {
+      if (!normalizedSelectedDate) {
         setAvailability(null)
         setAvailabilityMessage("")
         return
@@ -74,7 +76,7 @@ export function BookingForm() {
       setAvailabilityMessage("")
 
       try {
-        const response = await fetch(`/api/bookings?date=${encodeURIComponent(formData.date)}`, {
+        const response = await fetch(`/api/bookings?date=${encodeURIComponent(normalizedSelectedDate)}`, {
           method: "GET",
           cache: "no-store",
         })
@@ -118,22 +120,27 @@ export function BookingForm() {
     return () => {
       cancelled = true
     }
-  }, [formData.date, formData.time])
+  }, [formData.time, normalizedSelectedDate])
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     setFormMessage("")
 
-    const result = validateBookingForm(formData)
+    const payload: BookingFormDraft = {
+      ...formData,
+      date: normalizedSelectedDate,
+    }
+
+    const result = validateBookingForm(payload)
 
     if (!result.success) {
       setErrors(result.errors)
       return
     }
 
-    const selectedSlot = availability?.slots.find((slot) => slot.time === formData.time)
+    const selectedSlot = availability?.slots.find((slot) => slot.time === payload.time)
 
-    if (formData.date && selectedSlot && !selectedSlot.isAvailable) {
+    if (payload.date && selectedSlot && !selectedSlot.isAvailable) {
       setErrors((prev) => ({
         ...prev,
         time: "Bu saat dolu görünüyor. Lütfen uygun bir saat seçin.",
@@ -144,7 +151,7 @@ export function BookingForm() {
     setErrors({})
 
     startTransition(async () => {
-      const response = await submitBookingAction(formData)
+      const response = await submitBookingAction(payload)
 
       if (!response.success) {
         setErrors((response.errors ?? {}) as BookingFieldErrors)
@@ -166,6 +173,21 @@ export function BookingForm() {
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
+
+    if (name === "date") {
+      const normalizedDate = normalizeBookingDateInput(value)
+
+      setFormData((prev) => ({
+        ...prev,
+        date: normalizedDate,
+        time: prev.date === normalizedDate ? prev.time : "",
+      }))
+      setAvailability(null)
+      setAvailabilityMessage("")
+      setErrors((prev) => ({ ...prev, date: undefined, time: undefined }))
+      return
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }))
     setErrors((prev) => ({ ...prev, [name]: undefined }))
   }
@@ -278,7 +300,7 @@ export function BookingForm() {
               type="date"
               id="date"
               name="date"
-              value={formData.date}
+              value={normalizedSelectedDate}
               onChange={handleChange}
               required
               min={minDate}
@@ -296,11 +318,11 @@ export function BookingForm() {
               value={formData.time}
               onChange={handleChange}
               required
-              disabled={!formData.date || availabilityLoading}
+              disabled={!normalizedSelectedDate || availabilityLoading}
               className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
             >
               <option value="" disabled>
-                {!formData.date ? "Önce tarih seçin" : availabilityLoading ? "Uygunluk yükleniyor" : "Saat seçin"}
+                {!normalizedSelectedDate ? "Önce tarih seçin" : availabilityLoading ? "Uygunluk yükleniyor" : "Saat seçin"}
               </option>
               {(availability?.slots ?? bookingTimeSlots.map((time) => ({ time, isAvailable: true, available: 1 }))).map(
                 (slot) => (
@@ -321,9 +343,9 @@ export function BookingForm() {
           </div>
         </div>
 
-        {availability && formData.date ? (
+        {availability && normalizedSelectedDate ? (
           <div className="rounded-[1.5rem] border border-border/80 bg-secondary/50 p-4 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">{formData.date} için canlı uygunluk özeti</p>
+            <p className="font-medium text-foreground">{normalizedSelectedDate} için canlı uygunluk özeti</p>
             <p className="mt-1">
               Müsait slot sayısı: {availability.slots.filter((slot) => slot.isAvailable).length} / {availability.slots.length}
             </p>
