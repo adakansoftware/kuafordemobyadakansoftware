@@ -65,13 +65,27 @@ function testSecurityHelpers() {
 
   assert.equal(normalizeOrigin("https://example.com/"), "https://example.com")
   assert.equal(normalizeHost("Example.com:3000"), "example.com")
+  assert.equal(normalizeHost("[2001:db8::1]:3000"), "2001:db8::1")
 
   const ipHeaders = new Headers({
     "x-forwarded-for": "203.0.113.10, 10.0.0.2",
     "x-real-ip": "198.51.100.1",
   })
 
-  assert.equal(getRequestIpFromHeaders(ipHeaders), "203.0.113.10")
+  assert.equal(getRequestIpFromHeaders(ipHeaders), "198.51.100.1")
+
+  const providerIpHeaders = new Headers({
+    "cf-connecting-ip": "198.51.100.9",
+    "x-forwarded-for": "203.0.113.10:443, 10.0.0.2",
+  })
+
+  assert.equal(getRequestIpFromHeaders(providerIpHeaders), "198.51.100.9")
+
+  const forwardedHeaders = new Headers({
+    forwarded: 'for="[2001:db8::1]:1234";proto=https',
+  })
+
+  assert.equal(getRequestIpFromHeaders(forwardedHeaders), "2001:db8::1")
 
   const allowedHosts = getAllowedHosts()
   assert.equal(allowedHosts.has("example.com"), true)

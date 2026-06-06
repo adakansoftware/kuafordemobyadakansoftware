@@ -48,13 +48,34 @@ test("normalizeHost trims port and lowercases", () => {
   assert.equal(normalizeHost("Example.com:3000"), "example.com")
 })
 
+test("normalizeHost preserves ipv6 hosts while removing brackets", () => {
+  assert.equal(normalizeHost("[2001:db8::1]:3000"), "2001:db8::1")
+})
+
 test("getRequestIpFromHeaders prefers forwarded chain", () => {
   const headers = new Headers({
     "x-forwarded-for": "203.0.113.10, 10.0.0.2",
     "x-real-ip": "198.51.100.1",
   })
 
-  assert.equal(getRequestIpFromHeaders(headers), "203.0.113.10")
+  assert.equal(getRequestIpFromHeaders(headers), "198.51.100.1")
+})
+
+test("getRequestIpFromHeaders prefers provider headers and strips port", () => {
+  const headers = new Headers({
+    "cf-connecting-ip": "198.51.100.9",
+    "x-forwarded-for": "203.0.113.10:443, 10.0.0.2",
+  })
+
+  assert.equal(getRequestIpFromHeaders(headers), "198.51.100.9")
+})
+
+test("getRequestIpFromHeaders parses RFC forwarded header", () => {
+  const headers = new Headers({
+    forwarded: 'for="[2001:db8::1]:1234";proto=https',
+  })
+
+  assert.equal(getRequestIpFromHeaders(headers), "2001:db8::1")
 })
 
 test("getAllowedHosts includes env hosts and public site host", () => {

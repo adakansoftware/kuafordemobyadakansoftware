@@ -7,7 +7,23 @@ export function normalizeOrigin(value: string | null | undefined) {
 }
 
 export function normalizeHost(value: string | null | undefined) {
-  return value?.trim().toLowerCase().replace(/:\d+$/, "") ?? ""
+  const trimmed = value?.trim().toLowerCase() ?? ""
+
+  if (!trimmed) {
+    return ""
+  }
+
+  if (trimmed.startsWith("[")) {
+    const closingIndex = trimmed.indexOf("]")
+    return closingIndex === -1 ? trimmed : trimmed.slice(1, closingIndex)
+  }
+
+  const colonCount = (trimmed.match(/:/g) ?? []).length
+  if (colonCount > 1) {
+    return trimmed
+  }
+
+  return trimmed.replace(/:\d+$/, "")
 }
 
 function extractHostFromOrigin(origin: string) {
@@ -43,14 +59,72 @@ export function getAllowedHosts() {
   return hosts
 }
 
+function stripPortFromIp(value: string) {
+  const trimmed = value.trim().replace(/^for=/i, "").replace(/^"|"$/g, "")
+
+  if (!trimmed) {
+    return ""
+  }
+
+  if (trimmed.startsWith("[")) {
+    const closingIndex = trimmed.indexOf("]")
+    return closingIndex === -1 ? trimmed : trimmed.slice(1, closingIndex)
+  }
+
+  const colonCount = (trimmed.match(/:/g) ?? []).length
+  if (colonCount > 1) {
+    return trimmed
+  }
+
+  return trimmed.replace(/:\d+$/, "")
+}
+
+function parseForwardedHeader(value: string | null) {
+  if (!value) {
+    return ""
+  }
+
+  const firstPart = value.split(",")[0] ?? ""
+  const forToken = firstPart
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.toLowerCase().startsWith("for="))
+
+  return stripPortFromIp(forToken ?? "")
+}
+
 export function getRequestIpFromHeaders(input: Headers) {
+  const prioritizedHeaders = [
+    input.get("cf-connecting-ip"),
+    input.get("true-client-ip"),
+    input.get("x-real-ip"),
+  ]
+
+  for (const headerValue of prioritizedHeaders) {
+    const normalized = stripPortFromIp(headerValue ?? "")
+
+    if (normalized) {
+      return normalized
+    }
+  }
+
   const forwardedFor = input.get("x-forwarded-for")
 
   if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() ?? "unknown"
+    const normalized = stripPortFromIp(forwardedFor.split(",")[0] ?? "")
+
+    if (normalized) {
+      return normalized
+    }
   }
 
-  return input.get("x-real-ip")?.trim() ?? "unknown"
+  const forwarded = parseForwardedHeader(input.get("forwarded"))
+
+  if (forwarded) {
+    return forwarded
+  }
+
+  return "unknown"
 }
 
 function isSameCredential(left: string, right: string) {
