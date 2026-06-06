@@ -1,5 +1,4 @@
 import assert from "node:assert/strict"
-import test from "node:test"
 import { resetEnvCacheForTests } from "../lib/env.ts"
 import {
   getAllowedHosts,
@@ -7,7 +6,7 @@ import {
   isTrustedRequestOriginHeaders,
   normalizeHost,
   normalizeOrigin,
-} from "../lib/security.ts"
+} from "../lib/security-core.ts"
 
 const originalEnv = {
   DATABASE_URL: process.env.DATABASE_URL,
@@ -40,45 +39,28 @@ function restoreEnv() {
   resetEnvCacheForTests()
 }
 
-test("normalizeOrigin trims trailing slash", () => {
+export function runSecurityTests() {
   assert.equal(normalizeOrigin("https://example.com/"), "https://example.com")
-})
-
-test("normalizeHost trims port and lowercases", () => {
   assert.equal(normalizeHost("Example.com:3000"), "example.com")
-})
-
-test("normalizeHost preserves ipv6 hosts while removing brackets", () => {
   assert.equal(normalizeHost("[2001:db8::1]:3000"), "2001:db8::1")
-})
 
-test("getRequestIpFromHeaders prefers forwarded chain", () => {
-  const headers = new Headers({
+  const forwardedHeaders = new Headers({
     "x-forwarded-for": "203.0.113.10, 10.0.0.2",
     "x-real-ip": "198.51.100.1",
   })
+  assert.equal(getRequestIpFromHeaders(forwardedHeaders), "198.51.100.1")
 
-  assert.equal(getRequestIpFromHeaders(headers), "198.51.100.1")
-})
-
-test("getRequestIpFromHeaders prefers provider headers and strips port", () => {
-  const headers = new Headers({
+  const providerHeaders = new Headers({
     "cf-connecting-ip": "198.51.100.9",
     "x-forwarded-for": "203.0.113.10:443, 10.0.0.2",
   })
+  assert.equal(getRequestIpFromHeaders(providerHeaders), "198.51.100.9")
 
-  assert.equal(getRequestIpFromHeaders(headers), "198.51.100.9")
-})
-
-test("getRequestIpFromHeaders parses RFC forwarded header", () => {
-  const headers = new Headers({
+  const rfcForwardedHeaders = new Headers({
     forwarded: 'for="[2001:db8::1]:1234";proto=https',
   })
+  assert.equal(getRequestIpFromHeaders(rfcForwardedHeaders), "2001:db8::1")
 
-  assert.equal(getRequestIpFromHeaders(headers), "2001:db8::1")
-})
-
-test("getAllowedHosts includes env hosts and public site host", () => {
   primeEnv()
 
   const hosts = getAllowedHosts()
@@ -86,31 +68,29 @@ test("getAllowedHosts includes env hosts and public site host", () => {
   assert.equal(hosts.has("api.example.com"), true)
   assert.equal(hosts.has("booking.example.com"), true)
 
-  restoreEnv()
-})
-
-test("isTrustedRequestOriginHeaders accepts matching origin and host", () => {
-  primeEnv()
-
-  const headers = new Headers({
+  const trustedHeaders = new Headers({
     origin: "https://example.com",
     host: "example.com",
   })
+  assert.equal(isTrustedRequestOriginHeaders(trustedHeaders), true)
 
-  assert.equal(isTrustedRequestOriginHeaders(headers), true)
-
-  restoreEnv()
-})
-
-test("isTrustedRequestOriginHeaders rejects unrelated host", () => {
-  primeEnv()
-
-  const headers = new Headers({
+  const untrustedHeaders = new Headers({
     origin: "https://example.com",
     host: "evil.example",
   })
+  assert.equal(isTrustedRequestOriginHeaders(untrustedHeaders), false)
 
-  assert.equal(isTrustedRequestOriginHeaders(headers), false)
+  const refererFallbackHeaders = new Headers({
+    referer: "https://example.com/randevu",
+    host: "example.com",
+  })
+  assert.equal(isTrustedRequestOriginHeaders(refererFallbackHeaders), true)
+
+  const hostFallbackHeaders = new Headers({
+    host: "booking.example.com",
+  })
+  assert.equal(isTrustedRequestOriginHeaders(hostFallbackHeaders), false)
+  assert.equal(isTrustedRequestOriginHeaders(hostFallbackHeaders, { allowHostFallback: true }), true)
 
   restoreEnv()
-})
+}

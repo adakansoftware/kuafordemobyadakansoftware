@@ -9,6 +9,10 @@ import {
   normalizeHost,
   normalizeOrigin,
 } from "../lib/security-core.ts"
+import { runBookingTests } from "../tests/booking.test.mts"
+import { runEnvTests } from "../tests/env.test.mts"
+import { runHealthTests } from "../tests/health.test.mts"
+import { runSecurityTests } from "../tests/security.test.mts"
 
 const originalEnv = {
   DATABASE_URL: process.env.DATABASE_URL,
@@ -139,6 +143,10 @@ try {
   testEnvRules()
   testSecurityHelpers()
   testHealthSummary()
+  runBookingTests()
+  runEnvTests()
+  runHealthTests()
+  runSecurityTests()
   restoreEnv()
   console.log("Unit checks passed.")
 } catch (error) {

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { siteContent } from "@/lib/site-content"
+import { siteContent } from "./site-content.ts"
 
 export const bookingTimeSlots = [
   "09:00",

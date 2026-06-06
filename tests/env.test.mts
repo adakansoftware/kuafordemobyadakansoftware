@@ -1,5 +1,4 @@
 import assert from "node:assert/strict"
-import test from "node:test"
 import { getEnvIssues, resetEnvCacheForTests } from "../lib/env.ts"
 
 const originalEnv = {
@@ -23,42 +22,28 @@ function restoreEnv() {
   resetEnvCacheForTests()
 }
 
-test("getEnvIssues requires both admin credentials together", () => {
+export function runEnvTests() {
   process.env.DATABASE_URL = "postgresql://demo"
   process.env.NODE_ENV = "development"
   process.env.ADMIN_USERNAME = "admin"
   delete process.env.ADMIN_PASSWORD
   resetEnvCacheForTests()
 
-  const issues = getEnvIssues()
+  let issues = getEnvIssues()
   assert.equal(issues.includes("ADMIN_USERNAME ve ADMIN_PASSWORD birlikte tanimlanmalidir."), true)
 
-  restoreEnv()
-})
-
-test("getEnvIssues requires strong admin password", () => {
-  process.env.DATABASE_URL = "postgresql://demo"
-  process.env.NODE_ENV = "development"
-  process.env.ADMIN_USERNAME = "admin"
   process.env.ADMIN_PASSWORD = "short"
   resetEnvCacheForTests()
-
-  const issues = getEnvIssues()
+  issues = getEnvIssues()
   assert.equal(issues.includes("ADMIN_PASSWORD en az 12 karakter olmalidir."), true)
 
-  restoreEnv()
-})
-
-test("production requires public site url", () => {
-  process.env.DATABASE_URL = "postgresql://demo"
   process.env.NODE_ENV = "production"
   delete process.env.NEXT_PUBLIC_SITE_URL
   delete process.env.ADMIN_USERNAME
   delete process.env.ADMIN_PASSWORD
   resetEnvCacheForTests()
-
-  const issues = getEnvIssues()
+  issues = getEnvIssues()
   assert.equal(issues.includes("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur."), true)
 
   restoreEnv()
-})
+}
