@@ -27,8 +27,11 @@ npm run dev
 ```bash
 npm run dev
 npm run lint
+npm run typecheck
+npm run test:unit
 npm run test:smoke
 npm run build
+npm run verify
 npm run prisma:generate
 npm run prisma:push
 npm run db:seed
@@ -41,7 +44,7 @@ Gerekli degiskenlerin ornekleri `.env.example` dosyasinda bulunur.
 - `DATABASE_URL`: PostgreSQL baglantisi
 - `NEXT_PUBLIC_SITE_URL`: canli site adresi
 - `ADMIN_USERNAME`: admin kullanici adi
-- `ADMIN_PASSWORD`: admin sifresi
+- `ADMIN_PASSWORD`: admin sifresi, en az 12 karakter
 - `ALLOWED_ORIGIN_HOSTS`: ek izinli hostlar
 
 ## Saglik ve Operasyon
@@ -54,4 +57,4 @@ Gerekli degiskenlerin ornekleri `.env.example` dosyasinda bulunur.
 
 - Admin alani Basic Auth ile korunur.
 - Booking akisi hizmet suresine gore cakisma ve kapasite kontrolu yapar.
-- CI, lint ve build kontrollerini otomatik calistirir.
+- Unit test, smoke test, typecheck ve build birlikte `npm run verify` ile calistirilir.

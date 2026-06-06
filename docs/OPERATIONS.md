@@ -6,12 +6,14 @@ Bu proje UI degisimi gerektirmeden gercek kullanim icin daha saglam bir cekirdek
 
 - `DATABASE_URL` icin yonetilen bir PostgreSQL servisi kullanin.
 - `NEXT_PUBLIC_SITE_URL` degerini canli domain ile birebir eslestirin.
-- `ADMIN_USERNAME` ve `ADMIN_PASSWORD` icin guclu, benzersiz degerler tanimlayin.
+- `ADMIN_USERNAME` ve en az 12 karakterlik `ADMIN_PASSWORD` icin guclu, benzersiz degerler tanimlayin.
 - `ALLOWED_ORIGIN_HOSTS` icine kullandiginiz ek hostlari ekleyin.
 
 ## 2. Canliya Cikis Kontrolu
 
 - `npm run lint`
+- `npm run typecheck`
+- `npm run test:unit`
 - `npm run test:smoke`
 - `npm run build`
 - `npx prisma generate`

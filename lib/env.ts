@@ -1,25 +1,109 @@
 import { z } from "zod"
 
+const optionalTrimmedString = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value
+  }
+
+  const trimmed = value.trim()
+  return trimmed === "" ? undefined : trimmed
+}, z.string().optional())
+
+const optionalUrlString = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value
+  }
+
+  const trimmed = value.trim()
+  return trimmed === "" ? undefined : trimmed
+}, z.string().url().optional())
+
 const envSchema = z.object({
-  DATABASE_URL: z.string().min(1, "DATABASE_URL tanımlı olmalıdır."),
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
-  ADMIN_USERNAME: z.string().min(1).optional(),
-  ADMIN_PASSWORD: z.string().min(1).optional(),
-  ALLOWED_ORIGIN_HOSTS: z.string().optional(),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL tanimlanmalidir."),
+  NEXT_PUBLIC_SITE_URL: optionalUrlString,
+  ADMIN_USERNAME: optionalTrimmedString,
+  ADMIN_PASSWORD: optionalTrimmedString,
+  ALLOWED_ORIGIN_HOSTS: optionalTrimmedString,
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 })
 
-const parsedEnv = envSchema.safeParse({
-  DATABASE_URL: process.env.DATABASE_URL,
-  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-  ADMIN_USERNAME: process.env.ADMIN_USERNAME,
-  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
-  ALLOWED_ORIGIN_HOSTS: process.env.ALLOWED_ORIGIN_HOSTS,
-  NODE_ENV: process.env.NODE_ENV,
-})
+export type AppEnv = z.infer<typeof envSchema>
 
-if (!parsedEnv.success) {
-  throw new Error(`Ortam değişkenleri doğrulanamadı: ${parsedEnv.error.issues.map((issue) => issue.message).join(", ")}`)
+let cachedEnv: AppEnv | null = null
+
+function parseEnv() {
+  return envSchema.safeParse({
+    DATABASE_URL: process.env.DATABASE_URL,
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    ADMIN_USERNAME: process.env.ADMIN_USERNAME,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+    ALLOWED_ORIGIN_HOSTS: process.env.ALLOWED_ORIGIN_HOSTS,
+    NODE_ENV: process.env.NODE_ENV,
+  })
 }
 
-export const env = parsedEnv.data
+function collectEnvIssues(env: AppEnv) {
+  const issues: string[] = []
+  const hasAdminUsername = Boolean(env.ADMIN_USERNAME)
+  const hasAdminPassword = Boolean(env.ADMIN_PASSWORD)
+
+  if (hasAdminUsername !== hasAdminPassword) {
+    issues.push("ADMIN_USERNAME ve ADMIN_PASSWORD birlikte tanimlanmalidir.")
+  }
+
+  if (env.ADMIN_USERNAME && env.ADMIN_USERNAME.length < 3) {
+    issues.push("ADMIN_USERNAME en az 3 karakter olmalidir.")
+  }
+
+  if (env.ADMIN_PASSWORD && env.ADMIN_PASSWORD.length < 12) {
+    issues.push("ADMIN_PASSWORD en az 12 karakter olmalidir.")
+  }
+
+  if (env.NODE_ENV === "production" && !env.NEXT_PUBLIC_SITE_URL) {
+    issues.push("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur.")
+  }
+
+  return issues
+}
+
+export function resetEnvCacheForTests() {
+  cachedEnv = null
+}
+
+export function getEnvIssues() {
+  const parsed = parseEnv()
+
+  if (!parsed.success) {
+    return parsed.error.issues.map((issue) => issue.message)
+  }
+
+  return collectEnvIssues(parsed.data)
+}
+
+export function getOptionalEnv() {
+  return envSchema.partial().parse({
+    DATABASE_URL: process.env.DATABASE_URL,
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    ADMIN_USERNAME: process.env.ADMIN_USERNAME,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+    ALLOWED_ORIGIN_HOSTS: process.env.ALLOWED_ORIGIN_HOSTS,
+    NODE_ENV: process.env.NODE_ENV,
+  })
+}
+
+export function getEnv() {
+  if (cachedEnv) {
+    return cachedEnv
+  }
+
+  const parsed = parseEnv()
+
+  if (!parsed.success) {
+    throw new Error(`Ortam degiskenleri dogrulanamadi: ${parsed.error.issues.map((issue) => issue.message).join(", ")}`)
+  }
+
+  cachedEnv = parsed.data
+  return cachedEnv
+}
+
+export const env = getOptionalEnv()
