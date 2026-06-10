@@ -14,6 +14,7 @@ import {
   listAppointments,
   listStaffFromDb,
 } from "@/lib/bookings-repository"
+import { requireAdminAccess } from "@/lib/security"
 import { siteContent } from "@/lib/site-content"
 
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ type AdminPageProps = {
     q?: string
     status?: string
     staff?: string
+    page?: string
   }>
 }
 
@@ -43,10 +45,13 @@ const statusLabels: Record<AppointmentStatus, string> = {
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
+  await requireAdminAccess()
+
   const resolvedSearchParams = (await searchParams) ?? {}
   const query = (resolvedSearchParams.q ?? "").trim()
   const statusFilter = normalizeStatusFilter(resolvedSearchParams.status)
   const staffFilter = (resolvedSearchParams.staff ?? "all").trim() || "all"
+  const page = normalizePageParam(resolvedSearchParams.page)
 
   const [
     settings,
@@ -69,11 +74,17 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     getServicePerformance(),
     getUpcomingAgenda(),
     getFollowUpQueue(),
-    listAppointments({
-      search: query,
-      status: statusFilter,
-      staffId: staffFilter,
-    }),
+    listAppointments(
+      {
+        search: query,
+        status: statusFilter,
+        staffId: staffFilter,
+      },
+      {
+        page,
+        pageSize: 25,
+      }
+    ),
   ])
 
   const capacityUsage = Math.min(100, Math.round((alerts.todaysLoad / Math.max(alerts.todayCapacity, 1)) * 100))
@@ -159,7 +170,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     </p>
                   </div>
                   <div className="rounded-full bg-secondary px-4 py-2 text-sm text-foreground">
-                    {appointments.length} kayıt bulundu
+                    {appointments.total} kayıt bulundu
                   </div>
                 </div>
 
@@ -238,8 +249,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 </div>
 
                 <div className="mt-6 space-y-4">
-                  {appointments.length ? (
-                    appointments.map((appointment) => (
+                  {appointments.items.length ? (
+                    appointments.items.map((appointment) => (
                       <AppointmentOperations
                         key={appointment.id}
                         appointment={appointment}
@@ -256,6 +267,37 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       edebilirsiniz.
                     </div>
                   )}
+                </div>
+
+                <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-border/80 bg-secondary/30 px-4 py-4 md:flex-row md:items-center md:justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Sayfa {appointments.page} / {appointments.totalPages} · Bu sayfada {appointments.items.length} kayıt
+                  </div>
+
+                  <div className="flex gap-3">
+                    <PaginationLink
+                      href={buildAdminPageHref({
+                        query,
+                        status: statusFilter,
+                        staff: staffFilter,
+                        page: appointments.page - 1,
+                      })}
+                      disabled={appointments.page <= 1}
+                    >
+                      Önceki
+                    </PaginationLink>
+                    <PaginationLink
+                      href={buildAdminPageHref({
+                        query,
+                        status: statusFilter,
+                        staff: staffFilter,
+                        page: appointments.page + 1,
+                      })}
+                      disabled={appointments.page >= appointments.totalPages}
+                    >
+                      Sonraki
+                    </PaginationLink>
+                  </div>
                 </div>
               </div>
 
@@ -421,6 +463,44 @@ function normalizeStatusFilter(value?: string) {
   return "ALL"
 }
 
+function normalizePageParam(value?: string) {
+  const page = Number(value)
+
+  if (!Number.isFinite(page)) {
+    return 1
+  }
+
+  return Math.max(Math.floor(page), 1)
+}
+
+function buildAdminPageHref(input: {
+  query: string
+  status: "ALL" | AppointmentStatus
+  staff: string
+  page: number
+}) {
+  const params = new URLSearchParams()
+
+  if (input.query) {
+    params.set("q", input.query)
+  }
+
+  if (input.status !== "ALL") {
+    params.set("status", input.status)
+  }
+
+  if (input.staff !== "all") {
+    params.set("staff", input.staff)
+  }
+
+  if (input.page > 1) {
+    params.set("page", String(input.page))
+  }
+
+  const query = params.toString()
+  return query ? `/admin?${query}` : "/admin"
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("tr-TR", {
     style: "currency",
@@ -511,5 +591,25 @@ function PanelCard({ title, items }: { title: string; items: string[] }) {
         ))}
       </ul>
     </div>
+  )
+}
+
+function PaginationLink({
+  href,
+  disabled,
+  children,
+}: {
+  href: string
+  disabled: boolean
+  children: ReactNode
+}) {
+  const className = disabled
+    ? "pointer-events-none rounded-xl border border-input bg-background px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground opacity-50"
+    : "rounded-xl border border-input bg-background px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:border-accent"
+
+  return (
+    <a aria-disabled={disabled} href={href} className={className}>
+      {children}
+    </a>
   )
 }

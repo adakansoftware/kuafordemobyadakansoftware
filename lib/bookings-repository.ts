@@ -1,5 +1,6 @@
 import { AppointmentSource, AppointmentStatus, AuditActorType, AuditEvent, Prisma } from "@prisma/client"
 import { createAuditLog } from "@/lib/audit-log"
+import { normalizeAppointmentPagination } from "@/lib/appointment-pagination"
 import { type BookingFormValues } from "@/lib/booking"
 import {
   calculatePublicAvailability,
@@ -17,6 +18,14 @@ export type AppointmentListFilters = {
   search?: string
   status?: "ALL" | AppointmentStatus
   staffId?: string
+}
+
+export type AppointmentListPage = {
+  items: AppointmentWithRelations[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
 export class AppointmentConflictError extends Error {
@@ -159,12 +168,33 @@ export async function createAppointmentFromWeb(
   }
 }
 
-export async function listAppointments(filters: AppointmentListFilters = {}) {
-  return db.appointment.findMany({
-    where: buildAppointmentWhere(filters),
-    include: appointmentInclude,
-    orderBy: [{ scheduledAt: "asc" }, { createdAt: "desc" }],
-  })
+export async function listAppointments(
+  filters: AppointmentListFilters = {},
+  pagination?: {
+    page?: number
+    pageSize?: number
+  }
+) {
+  const normalizedPagination = normalizeAppointmentPagination(pagination)
+  const where = buildAppointmentWhere(filters)
+  const [total, items] = await Promise.all([
+    db.appointment.count({ where }),
+    db.appointment.findMany({
+      where,
+      include: appointmentInclude,
+      orderBy: [{ scheduledAt: "asc" }, { createdAt: "desc" }],
+      skip: (normalizedPagination.page - 1) * normalizedPagination.pageSize,
+      take: normalizedPagination.pageSize,
+    }),
+  ])
+
+  return {
+    items,
+    total,
+    page: normalizedPagination.page,
+    pageSize: normalizedPagination.pageSize,
+    totalPages: Math.max(Math.ceil(total / normalizedPagination.pageSize), 1),
+  } satisfies AppointmentListPage
 }
 
 export async function getAppointmentMetrics() {
@@ -833,6 +863,7 @@ function buildAppointmentWhere(filters: AppointmentListFilters): Prisma.Appointm
     AND: conditions,
   }
 }
+
 
 function createScheduledAt(date: string, time: string) {
   return new Date(`${date}T${time}:00+03:00`)

@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import { getRequestIdFromHeaders } from "@/lib/http"
+import { getRetryAfterSeconds } from "@/lib/http-core"
 import { getDurationMs, logEvent } from "@/lib/observability"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { authorizeAdminRequest, getAdminBasicAuthHeader, getRequestIpFromHeaders } from "@/lib/security"
@@ -95,7 +96,7 @@ export async function proxy(request: NextRequest) {
           headers: {
             ...getBaseHeaders(requestId),
             ...buildRateLimitHeaders({ ...attempt, limit: rateLimitConfig.limit }),
-            "Retry-After": String(Math.ceil((attempt.resetAt - Date.now()) / 1000)),
+            "Retry-After": getRetryAfterSeconds(attempt.resetAt),
           },
         })
       }

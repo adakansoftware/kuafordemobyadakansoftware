@@ -1,8 +1,18 @@
 import assert from "node:assert/strict"
+import { normalizeAppointmentPagination } from "../lib/appointment-pagination.ts"
 import { assertMatchingCustomerIdentity, CustomerIdentityConflictError } from "../lib/customer-identity.ts"
 import { calculatePublicAvailability, findStaffScheduleConflict, getOverlappingSlotTimes, hasAppointmentWindowOverlap } from "../lib/booking-rules.ts"
 
 export function runRepositoryTests() {
+  assert.deepEqual(normalizeAppointmentPagination(), {
+    page: 1,
+    pageSize: 25,
+  })
+  assert.deepEqual(normalizeAppointmentPagination({ page: -4, pageSize: 999 }), {
+    page: 1,
+    pageSize: 50,
+  })
+
   const identityConflict = new CustomerIdentityConflictError("Kimlik cakismasi")
   assert.equal(identityConflict.name, "CustomerIdentityConflictError")
   assert.equal(identityConflict.message, "Kimlik cakismasi")

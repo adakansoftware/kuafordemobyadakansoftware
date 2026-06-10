@@ -9,3 +9,7 @@ export function getRequestIdFromHeaders(headers: Headers) {
 
   return requestId.slice(0, 120)
 }
+
+export function getRetryAfterSeconds(resetAt: number, now = Date.now()) {
+  return String(Math.max(Math.ceil((resetAt - now) / 1000), 0))
+}

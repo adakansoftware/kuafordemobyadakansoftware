@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { getRequestIdFromHeaders } from "../lib/http-core.ts"
+import { getRequestIdFromHeaders, getRetryAfterSeconds } from "../lib/http-core.ts"
 
 export function runHttpTests() {
   const generatedRequestId = getRequestIdFromHeaders(new Headers())
@@ -19,4 +19,6 @@ export function runHttpTests() {
     })
   )
   assert.equal(longRequestId.length, 120)
+  assert.equal(getRetryAfterSeconds(65_000, 5_000), "60")
+  assert.equal(getRetryAfterSeconds(5_000, 65_000), "0")
 }

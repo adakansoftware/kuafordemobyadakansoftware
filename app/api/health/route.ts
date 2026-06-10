@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getEnvIssues, getOptionalEnv } from "@/lib/env"
-import { buildHealthSummary, resolveHealthScope, type HealthScope } from "@/lib/health"
+import { authorizeAdminRequest } from "@/lib/security"
+import { buildHealthSummary, resolveHealthScope, shouldExposeDetailedHealth, type HealthScope } from "@/lib/health"
 import { getDurationMs, logEvent } from "@/lib/observability"
 
 export const dynamic = "force-dynamic"
@@ -16,13 +17,13 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const scope = resolveHealthScope(url.searchParams.get("scope"))
-  return handleHealthRequest(scope)
+  return handleHealthRequest(scope, request.headers)
 }
 
 export async function HEAD(request: Request) {
   const url = new URL(request.url)
   const scope = resolveHealthScope(url.searchParams.get("scope"))
-  const response = await handleHealthRequest(scope)
+  const response = await handleHealthRequest(scope, request.headers)
   return new NextResponse(null, {
     status: response.status,
     headers: response.headers,
@@ -43,13 +44,17 @@ async function checkTableAvailability(tableName: "RateLimitBucket" | "AuditLog")
   }
 }
 
-async function handleHealthRequest(scope: HealthScope) {
+async function handleHealthRequest(scope: HealthScope, headers: Headers) {
   const startedAt = Date.now()
   const optionalEnv = getOptionalEnv()
   const envIssues = getEnvIssues()
   const adminConfigured = Boolean(optionalEnv.ADMIN_USERNAME && optionalEnv.ADMIN_PASSWORD)
   const hasCanonicalUrl = Boolean(optionalEnv.NEXT_PUBLIC_SITE_URL)
   const allowedHostsConfigured = Boolean(optionalEnv.ALLOWED_ORIGIN_HOSTS || optionalEnv.NEXT_PUBLIC_SITE_URL)
+  const canViewDetailedChecks = shouldExposeDetailedHealth(
+    scope,
+    authorizeAdminRequest(headers.get("authorization"))
+  )
 
   try {
     const [databaseOk, rateLimitStorageOk, auditLogStorageOk] = await Promise.all([
@@ -91,7 +96,7 @@ async function handleHealthRequest(scope: HealthScope) {
         scope,
         status: summary.status,
         timestamp: new Date().toISOString(),
-        checks: summary.checks,
+        ...(canViewDetailedChecks ? { checks: summary.checks } : {}),
         responseTimeMs: getDurationMs(startedAt),
       },
       { status: statusCode }
@@ -126,7 +131,7 @@ async function handleHealthRequest(scope: HealthScope) {
         scope,
         status: summary.status,
         timestamp: new Date().toISOString(),
-        checks: summary.checks,
+        ...(canViewDetailedChecks ? { checks: summary.checks } : {}),
         responseTimeMs: getDurationMs(startedAt),
       },
       { status: 503 }

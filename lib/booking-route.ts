@@ -1,3 +1,5 @@
+import { getRetryAfterSeconds as getSharedRetryAfterSeconds } from "./http-core.ts"
+
 export const MAX_BOOKING_BODY_BYTES = 8 * 1024
 export const BOOKING_ROUTE_ALLOW_HEADER = "GET, POST, OPTIONS"
 
@@ -6,7 +8,7 @@ export function isValidAvailabilityDate(date: string | null | undefined) {
 }
 
 export function getBookingRetryAfterSeconds(resetAt: number, now = Date.now()) {
-  return String(Math.max(Math.ceil((resetAt - now) / 1000), 0))
+  return getSharedRetryAfterSeconds(resetAt, now)
 }
 
 export function getBookingPostGuardFailure(input: {

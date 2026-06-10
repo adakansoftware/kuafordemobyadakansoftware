@@ -15,6 +15,10 @@ export function resolveHealthScope(scope: string | null | undefined): HealthScop
   return scope === "live" ? "live" : "ready"
 }
 
+export function shouldExposeDetailedHealth(scope: HealthScope, isAuthorized: boolean) {
+  return scope === "ready" && isAuthorized
+}
+
 export function buildHealthSummary(options: {
   scope: HealthScope
   databaseOk: boolean
