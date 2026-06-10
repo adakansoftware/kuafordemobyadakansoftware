@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { getEnvIssues, resetEnvCacheForTests } from "../lib/env.ts"
+import { getEnv, getEnvIssues, resetEnvCacheForTests } from "../lib/env.ts"
 
 const originalEnv = {
   DATABASE_URL: process.env.DATABASE_URL,
@@ -44,6 +44,13 @@ export function runEnvTests() {
   resetEnvCacheForTests()
   issues = getEnvIssues()
   assert.equal(issues.includes("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur."), true)
+  assert.throws(() => getEnv(), /NEXT_PUBLIC_SITE_URL zorunludur/)
+
+  process.env.NEXT_PUBLIC_SITE_URL = "https://example.com"
+  process.env.ADMIN_USERNAME = "admin"
+  process.env.ADMIN_PASSWORD = "short"
+  resetEnvCacheForTests()
+  assert.throws(() => getEnv(), /ADMIN_PASSWORD en az 12 karakter olmalidir/)
 
   restoreEnv()
 }

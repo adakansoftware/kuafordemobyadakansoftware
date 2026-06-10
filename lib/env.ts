@@ -102,6 +102,12 @@ export function getEnv() {
     throw new Error(`Ortam degiskenleri dogrulanamadi: ${parsed.error.issues.map((issue) => issue.message).join(", ")}`)
   }
 
+  const issues = collectEnvIssues(parsed.data)
+
+  if (issues.length > 0) {
+    throw new Error(`Ortam degiskenleri dogrulanamadi: ${issues.join(", ")}`)
+  }
+
   cachedEnv = parsed.data
   return cachedEnv
 }

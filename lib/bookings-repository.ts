@@ -337,18 +337,20 @@ export async function getCustomerInsights() {
           },
         })
       : Promise.resolve([]),
-    Promise.all(
-      customerIds.map((customerId) =>
-        db.appointment.findFirst({
-          where: { customerId },
+    customerIds.length
+      ? db.appointment.findMany({
+          where: {
+            customerId: {
+              in: customerIds,
+            },
+          },
           include: {
             service: true,
             staff: true,
           },
-          orderBy: [{ scheduledAt: "desc" }, { createdAt: "desc" }],
+          orderBy: [{ customerId: "asc" }, { scheduledAt: "desc" }, { createdAt: "desc" }],
         })
-      )
-    ),
+      : Promise.resolve([]),
   ])
 
   const appointmentStatsByCustomerId = new Map<
@@ -382,7 +384,7 @@ export async function getCustomerInsights() {
 
   const latestAppointmentByCustomerId = new Map(
     latestAppointments
-      .filter((appointment): appointment is NonNullable<typeof appointment> => Boolean(appointment))
+      .filter((appointment, index, appointments) => appointments.findIndex((entry) => entry.customerId === appointment.customerId) === index)
       .map((appointment) => [appointment.customerId, appointment])
   )
 
