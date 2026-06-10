@@ -41,11 +41,12 @@ npm run prisma:generate
 npm run db:seed
 ```
 
-## Yeni Fazlar
+## Son Tamamlananlar
 
 - `Faz 6`: Prisma migration disiplini ve baseline migration kaydi
 - `Faz 7`: Audit raporlama ve retention komutlari
-- `Faz 8`: Bu operasyon komutlarinin verify hattina baglanmasi
+- `Faz 8`: Operasyon komutlarinin `verify` hattina baglanmasi
+- `Faz 9`: Rezervasyon route/action kararlarinin ayrik helper'lara tasinmasi ve unit test kapsamining genisletilmesi
 
 ## Ortam Degiskenleri
 

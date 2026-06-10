@@ -3,13 +3,18 @@ import { readFile } from "node:fs/promises"
 const filesToCheck = [
   "app/page.tsx",
   "app/randevu/page.tsx",
+  "app/randevu/actions.ts",
   "app/hizmetler/page.tsx",
   "app/hakkimizda/page.tsx",
   "app/admin/page.tsx",
   "app/api/bookings/route.ts",
   "app/admin/actions.ts",
   "components/admin/appointment-operations.tsx",
+  "lib/admin-appointment-action.ts",
   "lib/booking.ts",
+  "lib/booking-action.ts",
+  "lib/booking-route.ts",
+  "lib/booking-rules.ts",
   "lib/security.ts",
   "lib/site-content.ts",
 ]
