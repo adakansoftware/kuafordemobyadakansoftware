@@ -1,12 +1,28 @@
 import assert from "node:assert/strict"
-import {
-  calculatePublicAvailability,
-  findStaffScheduleConflict,
-  getOverlappingSlotTimes,
-  hasAppointmentWindowOverlap,
-} from "../lib/booking-rules.ts"
+import { assertMatchingCustomerIdentity, CustomerIdentityConflictError } from "../lib/customer-identity.ts"
+import { calculatePublicAvailability, findStaffScheduleConflict, getOverlappingSlotTimes, hasAppointmentWindowOverlap } from "../lib/booking-rules.ts"
 
 export function runRepositoryTests() {
+  const identityConflict = new CustomerIdentityConflictError("Kimlik cakismasi")
+  assert.equal(identityConflict.name, "CustomerIdentityConflictError")
+  assert.equal(identityConflict.message, "Kimlik cakismasi")
+
+  assert.doesNotThrow(() =>
+    assertMatchingCustomerIdentity({
+      emailCustomerId: "customer_1",
+      phoneCustomerId: "customer_1",
+    })
+  )
+
+  assert.throws(
+    () =>
+      assertMatchingCustomerIdentity({
+        emailCustomerId: "customer_1",
+        phoneCustomerId: "customer_2",
+      }),
+    CustomerIdentityConflictError
+  )
+
   assert.equal(
     hasAppointmentWindowOverlap(
       {

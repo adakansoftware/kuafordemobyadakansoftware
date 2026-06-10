@@ -35,6 +35,13 @@ export function getBookingPostGuardFailure(input: {
 }
 
 export function mapBookingCreateError(error: unknown) {
+  if (error instanceof Error && error.name === "CustomerIdentityConflictError") {
+    return {
+      status: 409,
+      message: error.message,
+    }
+  }
+
   if (error instanceof Error && error.name === "AppointmentConflictError") {
     return {
       status: 409,

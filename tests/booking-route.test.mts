@@ -47,6 +47,13 @@ export function runBookingRouteTests() {
   const conflictError = new Error("Slot dolu")
   conflictError.name = "AppointmentConflictError"
 
+  const identityConflictError = new Error("Kimlik cakismasi")
+  identityConflictError.name = "CustomerIdentityConflictError"
+
+  assert.deepEqual(mapBookingCreateError(identityConflictError), {
+    status: 409,
+    message: "Kimlik cakismasi",
+  })
   assert.deepEqual(mapBookingCreateError(conflictError), {
     status: 409,
     message: "Slot dolu",

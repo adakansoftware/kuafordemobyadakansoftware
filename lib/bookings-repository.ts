@@ -7,6 +7,7 @@ import {
   getOverlappingSlotTimes,
   hasAppointmentWindowOverlap,
 } from "@/lib/booking-rules"
+import { assertMatchingCustomerIdentity, CustomerIdentityConflictError } from "@/lib/customer-identity"
 import { db } from "@/lib/db"
 
 const ACTIVE_APPOINTMENT_STATUSES = [AppointmentStatus.NEW, AppointmentStatus.CONFIRMED] as const
@@ -141,6 +142,10 @@ export async function createAppointmentFromWeb(
       }
     )
   } catch (error) {
+    if (error instanceof CustomerIdentityConflictError) {
+      throw error
+    }
+
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       (error.code === "P2034" || error.code === "P2002")
@@ -713,16 +718,21 @@ async function findOrCreateCustomer(
     where: { email: input.email },
   })
 
+  const existingByPhone = await client.customer.findUnique({
+    where: { phone: input.phone },
+  })
+
+  assertMatchingCustomerIdentity({
+    emailCustomerId: existingByEmail?.id,
+    phoneCustomerId: existingByPhone?.id,
+  })
+
   if (existingByEmail) {
     return client.customer.update({
       where: { id: existingByEmail.id },
       data: input,
     })
   }
-
-  const existingByPhone = await client.customer.findUnique({
-    where: { phone: input.phone },
-  })
 
   if (existingByPhone) {
     return client.customer.update({

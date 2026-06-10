@@ -11,6 +11,10 @@ export function getSubmitBookingRateLimitMessage() {
 }
 
 export function mapSubmitBookingCreateError(error: unknown) {
+  if (error instanceof Error && error.name === "CustomerIdentityConflictError") {
+    return error.message
+  }
+
   if (error instanceof Error && error.name === "AppointmentConflictError") {
     return error.message
   }
