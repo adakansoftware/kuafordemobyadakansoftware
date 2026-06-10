@@ -6,7 +6,7 @@ export function isValidAvailabilityDate(date: string | null | undefined) {
 }
 
 export function getBookingRetryAfterSeconds(resetAt: number, now = Date.now()) {
-  return String(Math.ceil((resetAt - now) / 1000))
+  return String(Math.max(Math.ceil((resetAt - now) / 1000), 0))
 }
 
 export function getBookingPostGuardFailure(input: {

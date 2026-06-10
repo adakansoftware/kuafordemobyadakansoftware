@@ -13,6 +13,7 @@ export function runBookingRouteTests() {
   assert.equal(isValidAvailabilityDate("2099-06-06"), true)
   assert.equal(isValidAvailabilityDate("06.06.2099"), false)
   assert.equal(getBookingRetryAfterSeconds(65_000, 5_000), "60")
+  assert.equal(getBookingRetryAfterSeconds(5_000, 65_000), "0")
 
   assert.deepEqual(
     getBookingPostGuardFailure({

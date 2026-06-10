@@ -470,67 +470,85 @@ export async function updateAppointmentFromAdmin(input: {
   requestId?: string
   ipAddress?: string
 }) {
-  return db.$transaction(async (tx) => {
-    const appointment = await tx.appointment.findUniqueOrThrow({
-      where: { id: input.appointmentId },
-      include: appointmentInclude,
-    })
+  try {
+    return await db.$transaction(
+      async (tx) => {
+        const appointment = await tx.appointment.findUniqueOrThrow({
+          where: { id: input.appointmentId },
+          include: appointmentInclude,
+        })
 
-    await lockAppointmentWindow(
-      tx,
-      appointment.scheduledDate,
-      appointment.scheduledTime,
-      appointment.service.durationMinutes
+        await lockAppointmentWindow(
+          tx,
+          appointment.scheduledDate,
+          appointment.scheduledTime,
+          appointment.service.durationMinutes
+        )
+
+        const normalizedStaffId = input.staffId?.trim() ? input.staffId : null
+        const normalizedNotes = input.notes?.trim() ? input.notes.trim() : null
+
+        if (normalizedStaffId) {
+          await ensureStaffIsActive(tx, normalizedStaffId)
+          await ensureStaffAvailability(tx, {
+            appointmentId: appointment.id,
+            staffId: normalizedStaffId,
+            scheduledDate: appointment.scheduledDate,
+            scheduledTime: appointment.scheduledTime,
+            durationMinutes: appointment.service.durationMinutes,
+            nextStatus: input.status,
+          })
+        }
+
+        const updatedAppointment = await tx.appointment.update({
+          where: { id: appointment.id },
+          data: {
+            status: input.status,
+            staffId: normalizedStaffId,
+            notes: normalizedNotes,
+          },
+          include: appointmentInclude,
+        })
+
+        await createAuditLog(
+          {
+            actorType: AuditActorType.ADMIN,
+            actorIdentifier: input.actorIdentifier ?? "admin",
+            event: AuditEvent.APPOINTMENT_UPDATED,
+            targetType: "appointment",
+            targetId: updatedAppointment.id,
+            requestId: input.requestId,
+            ipAddress: input.ipAddress,
+            metadata: {
+              previousStatus: appointment.status,
+              nextStatus: updatedAppointment.status,
+              previousStaffId: appointment.staffId,
+              nextStaffId: updatedAppointment.staffId,
+              hadNotes: Boolean(appointment.notes),
+              hasNotes: Boolean(updatedAppointment.notes),
+            },
+          },
+          tx
+        )
+
+        return updatedAppointment
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      }
     )
-
-    const normalizedStaffId = input.staffId?.trim() ? input.staffId : null
-    const normalizedNotes = input.notes?.trim() ? input.notes.trim() : null
-
-    if (normalizedStaffId) {
-      await ensureStaffIsActive(normalizedStaffId)
-      await ensureStaffAvailability({
-        appointmentId: appointment.id,
-        staffId: normalizedStaffId,
-        scheduledDate: appointment.scheduledDate,
-        scheduledTime: appointment.scheduledTime,
-        durationMinutes: appointment.service.durationMinutes,
-        nextStatus: input.status,
-      })
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2034" || error.code === "P2002")
+    ) {
+      throw new AppointmentConflictError(
+        "Bu randevu kaydi ayni anda baska bir islem tarafindan guncellendi. Lutfen tekrar deneyin."
+      )
     }
 
-    const updatedAppointment = await tx.appointment.update({
-      where: { id: appointment.id },
-      data: {
-        status: input.status,
-        staffId: normalizedStaffId,
-        notes: normalizedNotes,
-      },
-      include: appointmentInclude,
-    })
-
-    await createAuditLog(
-      {
-        actorType: AuditActorType.ADMIN,
-        actorIdentifier: input.actorIdentifier ?? "admin",
-        event: AuditEvent.APPOINTMENT_UPDATED,
-        targetType: "appointment",
-        targetId: updatedAppointment.id,
-        requestId: input.requestId,
-        ipAddress: input.ipAddress,
-        metadata: {
-          previousStatus: appointment.status,
-          nextStatus: updatedAppointment.status,
-          previousStaffId: appointment.staffId,
-          nextStaffId: updatedAppointment.staffId,
-          hadNotes: Boolean(appointment.notes),
-          hasNotes: Boolean(updatedAppointment.notes),
-        },
-      },
-      tx
-    )
-
-    return updatedAppointment
-  })
+    throw error
+  }
 }
 
 async function ensureCustomerDoesNotHaveDuplicateSlot(
@@ -627,19 +645,22 @@ async function ensurePublicSlotCapacity(
   }
 }
 
-async function ensureStaffAvailability(input: {
+async function ensureStaffAvailability(
+  client: Prisma.TransactionClient,
+  input: {
   appointmentId: string
   staffId: string
   scheduledDate: string
   scheduledTime: string
   durationMinutes: number
   nextStatus: AppointmentStatus
-}) {
+}
+) {
   if (!isActiveAppointmentStatus(input.nextStatus)) {
     return
   }
 
-  const appointments = await db.appointment.findMany({
+  const appointments = await client.appointment.findMany({
     where: {
       id: { not: input.appointmentId },
       staffId: input.staffId,
@@ -695,8 +716,8 @@ async function lockAppointmentWindow(
   }
 }
 
-async function ensureStaffIsActive(staffId: string) {
-  const staff = await db.staff.findUnique({
+async function ensureStaffIsActive(client: Prisma.TransactionClient, staffId: string) {
+  const staff = await client.staff.findUnique({
     where: { id: staffId },
     select: { id: true, isActive: true },
   })
