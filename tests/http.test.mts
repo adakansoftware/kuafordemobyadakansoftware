@@ -1,0 +1,22 @@
+import assert from "node:assert/strict"
+import { getRequestIdFromHeaders } from "../lib/http-core.ts"
+
+export function runHttpTests() {
+  const generatedRequestId = getRequestIdFromHeaders(new Headers())
+  assert.equal(typeof generatedRequestId, "string")
+  assert.equal(generatedRequestId.length > 10, true)
+
+  const explicitRequestId = getRequestIdFromHeaders(
+    new Headers({
+      "x-request-id": "  req-123  ",
+    })
+  )
+  assert.equal(explicitRequestId, "req-123")
+
+  const longRequestId = getRequestIdFromHeaders(
+    new Headers({
+      "x-request-id": "x".repeat(200),
+    })
+  )
+  assert.equal(longRequestId.length, 120)
+}

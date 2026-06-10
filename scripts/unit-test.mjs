@@ -16,6 +16,8 @@ import { runBookingRouteTests } from "../tests/booking-route.test.mts"
 import { runBookingsApiTests } from "../tests/bookings-api.test.mts"
 import { runEnvTests } from "../tests/env.test.mts"
 import { runHealthTests } from "../tests/health.test.mts"
+import { runHttpTests } from "../tests/http.test.mts"
+import { runObservabilityTests } from "../tests/observability.test.mts"
 import { runOpsPreflightTests } from "../tests/ops-preflight.test.mts"
 import { runRepositoryTests } from "../tests/repository.test.mts"
 import { runSecurityTests } from "../tests/security.test.mts"
@@ -156,6 +158,8 @@ try {
   runBookingsApiTests()
   runEnvTests()
   runHealthTests()
+  runHttpTests()
+  runObservabilityTests()
   runOpsPreflightTests()
   runRepositoryTests()
   runSecurityTests()

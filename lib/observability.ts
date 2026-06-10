@@ -40,6 +40,10 @@ function sanitizeMeta(meta: Record<string, unknown>) {
   )
 }
 
+export function sanitizeLogMeta(meta: Record<string, unknown>) {
+  return sanitizeMeta(meta)
+}
+
 export function logEvent({ level = "info", event, requestId, route, message, meta = {} }: LogEventOptions) {
   const payload = {
     ts: new Date().toISOString(),
@@ -48,7 +52,7 @@ export function logEvent({ level = "info", event, requestId, route, message, met
     requestId,
     route,
     message,
-    meta: sanitizeMeta(meta),
+    meta: sanitizeLogMeta(meta),
   }
 
   if (level === "error") {

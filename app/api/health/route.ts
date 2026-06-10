@@ -31,7 +31,12 @@ export async function HEAD(request: Request) {
 
 async function checkTableAvailability(tableName: "RateLimitBucket" | "AuditLog") {
   try {
-    await db.$queryRawUnsafe(`SELECT 1 FROM "${tableName}" LIMIT 1`)
+    if (tableName === "RateLimitBucket") {
+      await db.$queryRaw`SELECT 1 FROM "RateLimitBucket" LIMIT 1`
+    } else {
+      await db.$queryRaw`SELECT 1 FROM "AuditLog" LIMIT 1`
+    }
+
     return true
   } catch {
     return false

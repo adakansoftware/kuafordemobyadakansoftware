@@ -1,6 +1,8 @@
-import { randomUUID } from "node:crypto"
 import { headers } from "next/headers"
 import { NextResponse } from "next/server"
+import { getRequestIdFromHeaders } from "./http-core.ts"
+
+export { getRequestIdFromHeaders } from "./http-core.ts"
 
 export type ApiSuccess<T> = {
   success: true
@@ -11,16 +13,6 @@ export type ApiError<T extends Record<string, unknown> | undefined = undefined> 
   success: false
   message: string
 } & (T extends Record<string, unknown> ? T : Record<string, never>)
-
-export function getRequestIdFromHeaders(headers: Headers) {
-  const requestId = headers.get("x-request-id")?.trim()
-
-  if (!requestId) {
-    return randomUUID()
-  }
-
-  return requestId.slice(0, 120)
-}
 
 export async function getCurrentRequestId() {
   const requestHeaders = await headers()
