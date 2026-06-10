@@ -15,7 +15,9 @@ const filesToCheck = [
   "lib/booking-action.ts",
   "lib/booking-route.ts",
   "lib/booking-rules.ts",
+  "lib/public-site.ts",
   "lib/security.ts",
+  "lib/seo.ts",
   "lib/site-content.ts",
 ]
 

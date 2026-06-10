@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
-import { siteContent } from "@/lib/site-content"
+import { siteContent } from "./site-content.ts"
+import { getSiteUrl, getSiteUrlString } from "./site-url.ts"
 
-export const siteUrl = new URL(siteContent.seo.siteUrl)
+export const siteUrl = getSiteUrl()
 
 type BuildMetadataInput = {
   title?: string
@@ -51,13 +52,14 @@ export function buildMetadata(input: BuildMetadataInput = {}): Metadata {
 
 export function getOrganizationJsonLd() {
   const sameAs = [siteContent.social.instagram, siteContent.social.tiktok].filter(Boolean)
+  const canonicalSiteUrl = getSiteUrlString()
 
   return {
     "@context": "https://schema.org",
     "@type": "HairSalon",
     name: siteContent.brand.name,
-    url: siteContent.seo.siteUrl,
-    image: `${siteContent.seo.siteUrl}/images/hero-salon.jpg`,
+    url: canonicalSiteUrl,
+    image: `${canonicalSiteUrl}/images/hero-salon.jpg`,
     telephone: siteContent.contact.phoneDisplay,
     email: siteContent.contact.email,
     address: {

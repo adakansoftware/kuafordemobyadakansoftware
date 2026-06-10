@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto"
 import { getEnv } from "./env.ts"
-import { siteContent } from "./site-content.ts"
+import { getSiteUrlString } from "./site-url.ts"
 
 export function normalizeOrigin(value: string | null | undefined) {
   return value?.trim().replace(/\/$/, "") ?? ""
@@ -36,9 +36,10 @@ function extractHostFromOrigin(origin: string) {
 
 export function getAllowedOrigins() {
   const env = getEnv()
+  const canonicalSiteUrl = getSiteUrlString()
 
   return new Set(
-    [siteContent.seo.siteUrl, env.NEXT_PUBLIC_SITE_URL?.trim()]
+    [canonicalSiteUrl, env.NEXT_PUBLIC_SITE_URL?.trim()]
       .filter((value): value is string => Boolean(value))
       .map((value) => normalizeOrigin(value))
   )

@@ -21,6 +21,7 @@ import { runObservabilityTests } from "../tests/observability.test.mts"
 import { runOpsPreflightTests } from "../tests/ops-preflight.test.mts"
 import { runRepositoryTests } from "../tests/repository.test.mts"
 import { runSecurityTests } from "../tests/security.test.mts"
+import { runSiteConfigTests } from "../tests/site-config.test.mts"
 
 const originalEnv = {
   DATABASE_URL: process.env.DATABASE_URL,
@@ -163,6 +164,7 @@ try {
   runOpsPreflightTests()
   runRepositoryTests()
   runSecurityTests()
+  runSiteConfigTests()
   restoreEnv()
   console.log("Unit checks passed.")
 } catch (error) {

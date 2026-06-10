@@ -265,39 +265,55 @@ export async function getOperationalAlerts() {
 }
 
 export async function getStaffWorkload() {
-  const staff = await db.staff.findMany({
-    where: { isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    include: {
-      appointments: {
-        where: {
-          status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
-          scheduledDate: {
-            gte: getTodayInIstanbul(),
-          },
+  const today = getTodayInIstanbul()
+  const [staff, groupedAppointments] = await Promise.all([
+    db.staff.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        role: true,
+      },
+    }),
+    db.appointment.groupBy({
+      by: ["staffId"],
+      where: {
+        staffId: {
+          not: null,
+        },
+        status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
+        scheduledDate: {
+          gte: today,
         },
       },
-    },
-  })
+      _count: {
+        _all: true,
+      },
+    }),
+  ])
+
+  const appointmentCountByStaffId = new Map(
+    groupedAppointments
+      .filter((entry): entry is typeof entry & { staffId: string } => Boolean(entry.staffId))
+      .map((entry) => [entry.staffId, entry._count._all])
+  )
 
   return staff.map((person) => ({
     id: person.id,
     name: person.name,
     role: person.role,
-    activeAppointments: person.appointments.length,
+    activeAppointments: appointmentCountByStaffId.get(person.id) ?? 0,
   }))
 }
 
 export async function getCustomerInsights() {
   const customers = await db.customer.findMany({
-    include: {
-      appointments: {
-        include: {
-          service: true,
-          staff: true,
-        },
-        orderBy: [{ scheduledAt: "desc" }, { createdAt: "desc" }],
-      },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      email: true,
     },
     orderBy: {
       updatedAt: "desc",
@@ -305,24 +321,87 @@ export async function getCustomerInsights() {
     take: 6,
   })
 
+  const customerIds = customers.map((customer) => customer.id)
+
+  const [groupedAppointments, latestAppointments] = await Promise.all([
+    customerIds.length
+      ? db.appointment.groupBy({
+          by: ["customerId", "status"],
+          where: {
+            customerId: {
+              in: customerIds,
+            },
+          },
+          _count: {
+            _all: true,
+          },
+        })
+      : Promise.resolve([]),
+    Promise.all(
+      customerIds.map((customerId) =>
+        db.appointment.findFirst({
+          where: { customerId },
+          include: {
+            service: true,
+            staff: true,
+          },
+          orderBy: [{ scheduledAt: "desc" }, { createdAt: "desc" }],
+        })
+      )
+    ),
+  ])
+
+  const appointmentStatsByCustomerId = new Map<
+    string,
+    {
+      totalAppointments: number
+      completedAppointments: number
+      activeAppointments: number
+    }
+  >()
+
+  for (const entry of groupedAppointments) {
+    const current = appointmentStatsByCustomerId.get(entry.customerId) ?? {
+      totalAppointments: 0,
+      completedAppointments: 0,
+      activeAppointments: 0,
+    }
+
+    current.totalAppointments += entry._count._all
+
+    if (entry.status === AppointmentStatus.COMPLETED) {
+      current.completedAppointments += entry._count._all
+    }
+
+    if (isActiveAppointmentStatus(entry.status)) {
+      current.activeAppointments += entry._count._all
+    }
+
+    appointmentStatsByCustomerId.set(entry.customerId, current)
+  }
+
+  const latestAppointmentByCustomerId = new Map(
+    latestAppointments
+      .filter((appointment): appointment is NonNullable<typeof appointment> => Boolean(appointment))
+      .map((appointment) => [appointment.customerId, appointment])
+  )
+
   return customers.map((customer) => {
-    const latestAppointment = customer.appointments[0] ?? null
-    const totalAppointments = customer.appointments.length
-    const completedAppointments = customer.appointments.filter(
-      (appointment) => appointment.status === AppointmentStatus.COMPLETED
-    ).length
-    const activeAppointments = customer.appointments.filter((appointment) =>
-      isActiveAppointmentStatus(appointment.status)
-    ).length
+    const latestAppointment = latestAppointmentByCustomerId.get(customer.id) ?? null
+    const stats = appointmentStatsByCustomerId.get(customer.id) ?? {
+      totalAppointments: 0,
+      completedAppointments: 0,
+      activeAppointments: 0,
+    }
 
     return {
       id: customer.id,
       name: customer.name,
       phone: customer.phone,
       email: customer.email,
-      totalAppointments,
-      completedAppointments,
-      activeAppointments,
+      totalAppointments: stats.totalAppointments,
+      completedAppointments: stats.completedAppointments,
+      activeAppointments: stats.activeAppointments,
       latestAppointment: latestAppointment
         ? {
             id: latestAppointment.id,
@@ -340,29 +419,67 @@ export async function getCustomerInsights() {
 export async function getServicePerformance() {
   const services = await db.service.findMany({
     where: { isActive: true },
-    include: {
-      appointments: true,
-    },
     orderBy: [{ sortOrder: "asc" }, { priceFrom: "asc" }],
   })
+  const serviceIds = services.map((service) => service.id)
+  const groupedAppointments = serviceIds.length
+    ? await db.appointment.groupBy({
+        by: ["serviceId", "status"],
+        where: {
+          serviceId: {
+            in: serviceIds,
+          },
+        },
+        _count: {
+          _all: true,
+        },
+      })
+    : []
+
+  const appointmentStatsByServiceId = new Map<
+    string,
+    {
+      totalAppointments: number
+      activeAppointments: number
+      completedAppointments: number
+    }
+  >()
+
+  for (const entry of groupedAppointments) {
+    const current = appointmentStatsByServiceId.get(entry.serviceId) ?? {
+      totalAppointments: 0,
+      activeAppointments: 0,
+      completedAppointments: 0,
+    }
+
+    current.totalAppointments += entry._count._all
+
+    if (isActiveAppointmentStatus(entry.status)) {
+      current.activeAppointments += entry._count._all
+    }
+
+    if (entry.status === AppointmentStatus.COMPLETED) {
+      current.completedAppointments += entry._count._all
+    }
+
+    appointmentStatsByServiceId.set(entry.serviceId, current)
+  }
 
   return services.map((service) => {
-    const totalAppointments = service.appointments.length
-    const activeAppointments = service.appointments.filter((appointment) =>
-      isActiveAppointmentStatus(appointment.status)
-    ).length
-    const completedAppointments = service.appointments.filter(
-      (appointment) => appointment.status === AppointmentStatus.COMPLETED
-    ).length
-    const estimatedRevenue = completedAppointments * service.priceFrom
+    const stats = appointmentStatsByServiceId.get(service.id) ?? {
+      totalAppointments: 0,
+      activeAppointments: 0,
+      completedAppointments: 0,
+    }
+    const estimatedRevenue = stats.completedAppointments * service.priceFrom
 
     return {
       id: service.id,
       title: service.title,
       teaser: service.teaser,
-      totalAppointments,
-      activeAppointments,
-      completedAppointments,
+      totalAppointments: stats.totalAppointments,
+      activeAppointments: stats.activeAppointments,
+      completedAppointments: stats.completedAppointments,
       estimatedRevenue,
       durationMinutes: service.durationMinutes,
       priceLabel: service.priceLabel,

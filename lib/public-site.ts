@@ -1,4 +1,4 @@
-import { siteContent } from "@/lib/site-content"
+import { siteContent } from "./site-content.ts"
 
 export function getHomePageViewModel() {
   return {
@@ -8,61 +8,61 @@ export function getHomePageViewModel() {
       description: siteContent.brand.heroDescription,
       highlights: [...siteContent.brand.heroHighlights],
       tagline: siteContent.brand.tagline,
-      primaryCtaLabel: "Randevu Oluştur",
+      primaryCtaLabel: "Randevu Olustur",
       primaryCtaHref: "/randevu",
-      secondaryCtaLabel: "Hizmetleri İncele",
+      secondaryCtaLabel: "Hizmetleri Incele",
       secondaryCtaHref: "/hizmetler",
       noteTitle: "Salon Notu",
       noteDescription:
-        "İlk temastan son dokunuşa kadar net iletişim, düzenli operasyon ve profesyonel saç tasarımı odağını birlikte koruyoruz.",
+        "Ilk temastan son dokunusa kadar net iletisim, duzenli operasyon ve profesyonel sac tasarimi odagini birlikte koruyoruz.",
       metrics: [
-        { value: "09:00 - 21:00", label: "Hafta içi ve cumartesi çalışma saatleri" },
-        { value: "4.9/5", label: "Ortalama misafir değerlendirmesi" },
-        { value: "15 kişilik", label: "Alanında uzman ekip yapılanması" },
+        { value: "09:00 - 21:00", label: "Hafta ici ve cumartesi calisma saatleri" },
+        { value: "4.9/5", label: "Ortalama misafir degerlendirmesi" },
+        { value: "15 kisilik", label: "Alaninda uzman ekip yapilanmasi" },
       ],
     },
     stats: [...siteContent.stats],
     intro: {
-      eyebrow: "Marka Hakkında",
-      title: "Saç tasarımını güvenli süreç ve ölçülü estetikle buluşturuyoruz",
+      eyebrow: "Marka Hakkinda",
+      title: "Sac tasarimini guvenli surec ve olculu estetikle bulusturuyoruz",
       lead: siteContent.brand.aboutLead,
       description: siteContent.brand.aboutDescription,
       highlights: [
         {
-          title: "Kişiye özel",
-          description: "Yüz hattı, saç yapısı ve kullanım alışkanlığı birlikte değerlendirilir.",
+          title: "Kisiye ozel",
+          description: "Yuz hatti, sac yapisi ve kullanim aliskanligi birlikte degerlendirilir.",
         },
         {
           title: "Premium",
-          description: "Ürün seçimi, uygulama disiplini ve misafir iletişimi aynı çizgide ilerler.",
+          description: "Urun secimi, uygulama disiplini ve misafir iletisimi ayni cizgide ilerler.",
         },
       ],
     },
     reasons: {
-      eyebrow: "Farkımız",
+      eyebrow: "Farkimiz",
       title: "Neden Adakan Hair Studio?",
-      description: "Hizmet kalitesini yalnızca sonuçla değil, süreç disiplini ve iletişim güveniyle birlikte ele alıyoruz.",
+      description: "Hizmet kalitesini yalnizca sonucla degil, surec disiplini ve iletisim guveniyle birlikte ele aliyoruz.",
       items: [...siteContent.reasons],
     },
     featuredServices: {
       eyebrow: "Hizmetlerimiz",
-      title: "En çok talep gören hizmetler",
-      description: "Salon içi en sık tercih edilen uygulamaları, net fiyat başlangıçları ve kısa içerikleriyle inceleyin.",
+      title: "En cok talep goren hizmetler",
+      description: "Salon ici en sik tercih edilen uygulamalari, net fiyat baslangiclari ve kisa icerikleriyle inceleyin.",
       items: siteContent.services.slice(0, 3),
       allServicesHref: "/hizmetler",
-      allServicesLabel: "Tüm hizmetleri görüntüle",
+      allServicesLabel: "Tum hizmetleri goruntule",
       bookingHref: "/randevu",
-      bookingLabel: "Bu hizmet için talep oluştur",
+      bookingLabel: "Bu hizmet icin talep olustur",
     },
     gallery: {
       eyebrow: "Galeri",
-      title: "Öncesi ve sonrası",
-      description: "Uygulama disiplinimizi ve elde edilen sonuçları görsel örneklerle inceleyin.",
+      title: "Oncesi ve sonrasi",
+      description: "Uygulama disiplinimizi ve elde edilen sonuclari gorsel orneklerle inceleyin.",
       items: [...siteContent.gallery],
     },
     testimonials: {
-      eyebrow: "Misafir Yorumları",
-      title: "Misafirlerimiz deneyimi nasıl anlatıyor?",
+      eyebrow: "Misafir Yorumlari",
+      title: "Misafirlerimiz deneyimi nasil anlatiyor?",
       items: [...siteContent.testimonials],
     },
     cta: {
@@ -80,7 +80,7 @@ export function getHomePageViewModel() {
 export function getBookingPageViewModel() {
   return {
     eyebrow: "Randevu",
-    title: "Online randevu oluşturun",
+    title: "Online randevu olusturun",
     description: siteContent.booking.introDescription,
     contact: { ...siteContent.contact },
     notes: [...siteContent.booking.notes],
@@ -91,29 +91,29 @@ export function getBookingPageViewModel() {
 export function getServicesPageViewModel() {
   return {
     eyebrow: "Hizmetlerimiz",
-    title: "Premium saç bakım hizmetleri",
-    description: "Her uygulamayı saç yapınıza, kullanım alışkanlığınıza ve hedef sonuca göre planlıyoruz.",
+    title: "Premium sac bakim hizmetleri",
+    description: "Her uygulamayi sac yapiniza, kullanim aliskanliginiza ve hedef sonuca gore planliyoruz.",
     services: [...siteContent.services],
     bookingHref: "/randevu",
-    bookingLabel: "Bu hizmet için randevu oluştur",
+    bookingLabel: "Bu hizmet icin randevu olustur",
   }
 }
 
 export function getAboutPageViewModel() {
   return {
-    eyebrow: "Hakkımızda",
+    eyebrow: "Hakkimizda",
     title: "Hikayemiz",
-    description: "Butik salon deneyimini teknik uzmanlık, sakin iletişim ve özenli bakım anlayışıyla birleştiriyoruz.",
-    leadTitle: "Güzelliğe özenli ve profesyonel bir yaklaşım",
+    description: "Butik salon deneyimini teknik uzmanlik, sakin iletisim ve ozenli bakim anlayisiyla birlestiriyoruz.",
+    leadTitle: "Guzellige ozenli ve profesyonel bir yaklasim",
     aboutLead: siteContent.brand.aboutLead,
     aboutDescription: siteContent.brand.aboutDescription,
-    valuesEyebrow: "Değerlerimiz",
-    valuesTitle: "Temel değerlerimiz",
+    valuesEyebrow: "Degerlerimiz",
+    valuesTitle: "Temel degerlerimiz",
     values: [...siteContent.values],
     team: [...siteContent.team],
-    ctaTitle: "Ekibimizle tanışmak ister misiniz?",
-    ctaDescription: "İhtiyacınıza uygun hizmeti birlikte planlamak için hemen randevu talebinizi oluşturun.",
+    ctaTitle: "Ekibimizle tanismak ister misiniz?",
+    ctaDescription: "Ihtiyaciniza uygun hizmeti birlikte planlamak icin hemen randevu talebinizi olusturun.",
     ctaHref: "/randevu",
-    ctaLabel: "Randevu oluştur",
+    ctaLabel: "Randevu olustur",
   }
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { resetEnvCacheForTests } from "../lib/env.ts"
 import {
   getAllowedHosts,
+  getAllowedOrigins,
   getRequestIpFromHeaders,
   isTrustedRequestOriginHeaders,
   normalizeHost,
@@ -67,6 +68,11 @@ export function runSecurityTests() {
   assert.equal(hosts.has("example.com"), true)
   assert.equal(hosts.has("api.example.com"), true)
   assert.equal(hosts.has("booking.example.com"), true)
+  assert.equal(hosts.has("adakan.studio"), false)
+
+  const origins = getAllowedOrigins()
+  assert.equal(origins.has("https://example.com"), true)
+  assert.equal(origins.has("https://adakan.studio"), false)
 
   const trustedHeaders = new Headers({
     origin: "https://example.com",
