@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { getEnvIssues, getOptionalEnv } from "../lib/env.ts"
+import { collectPreflightWarnings, filterPreflightEnvIssues, resolvePreflightOptions } from "../lib/ops-preflight.ts"
 
 async function loadEnvFile(relativePath) {
   try {
@@ -32,25 +33,19 @@ async function loadEnvFile(relativePath) {
 }
 
 async function main() {
+  const options = resolvePreflightOptions(process.argv.slice(2))
+
   await loadEnvFile("../.env")
   await loadEnvFile("../.env.local")
 
-  const envIssues = getEnvIssues()
+  const envIssues = filterPreflightEnvIssues(getEnvIssues(), options)
 
   if (envIssues.length > 0) {
     throw new Error(`Env preflight failed: ${envIssues.join(" | ")}`)
   }
 
   const env = getOptionalEnv()
-  const warnings = []
-
-  if (!env.NEXT_PUBLIC_SITE_URL) {
-    warnings.push("NEXT_PUBLIC_SITE_URL tanimli degil.")
-  }
-
-  if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD) {
-    warnings.push("Admin kimlik bilgileri tam degil.")
-  }
+  const warnings = collectPreflightWarnings(env, options)
 
   const schema = await readFile(new URL("../prisma/schema.prisma", import.meta.url), "utf8")
 

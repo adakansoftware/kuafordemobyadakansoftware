@@ -33,6 +33,7 @@ npm run test:unit
 npm run test:smoke
 npm run ops:migration-check
 npm run ops:preflight
+npm run verify:ci
 npm run ops:retention -- --audit-days=90 --rate-limit-days=7
 npm run ops:audit-summary -- --days=7
 npm run build
@@ -69,6 +70,7 @@ dogrulayabilirsiniz.
 - Public booking endpoint: `/api/bookings`
 - Migration check: `npm run ops:migration-check`
 - Deploy preflight: `npm run ops:preflight`
+- CI verify: `npm run verify:ci`
 - Audit summary: `npm run ops:audit-summary -- --days=7`
 - Retention dry-run: `npm run ops:retention -- --audit-days=90 --rate-limit-days=7`
 - Operasyon notlari: [docs/OPERATIONS.md](/C:/Users/adaka/Desktop/aktif%20projeler/kuafordemobyadakansoftware/docs/OPERATIONS.md)
@@ -77,4 +79,5 @@ dogrulayabilirsiniz.
 
 - Admin alani Basic Auth ile korunur.
 - Booking akisi hizmet suresine gore cakisma ve kapasite kontrolu yapar.
-- Unit test, smoke test, migration check, preflight, typecheck ve build birlikte `npm run verify` ile calistirilir.
+- Unit test, smoke test, migration check, preflight ve typecheck birlikte `npm run verify` ile calistirilir.
+- Build adimi `npm run build` ile ayri calistirilir; CI hattinda da verify sonrasi bagimsiz adim olarak kosulur.

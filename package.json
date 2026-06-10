@@ -15,7 +15,8 @@
     "ops:preflight": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/ops-preflight.mjs",
     "ops:retention": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/ops-retention.mjs",
     "ops:audit-summary": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/audit-summary.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:unit && npm run test:smoke && npm run ops:migration-check && npm run ops:preflight && npm run build",
+    "verify": "node scripts/verify.mjs",
+    "verify:ci": "node scripts/verify.mjs --ci",
     "prisma:generate": "prisma generate",
     "db:seed": "node prisma/seed.mjs"
   },
