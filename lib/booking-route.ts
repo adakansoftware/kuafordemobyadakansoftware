@@ -1,4 +1,5 @@
 export const MAX_BOOKING_BODY_BYTES = 8 * 1024
+export const BOOKING_ROUTE_ALLOW_HEADER = "GET, POST, OPTIONS"
 
 export function isValidAvailabilityDate(date: string | null | undefined) {
   return Boolean(date && /^\d{4}-\d{2}-\d{2}$/.test(date.trim()))

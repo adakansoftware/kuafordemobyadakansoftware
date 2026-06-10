@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import {
+  BOOKING_ROUTE_ALLOW_HEADER,
   getBookingPostGuardFailure,
   getBookingRetryAfterSeconds,
   isValidAvailabilityDate,
@@ -8,6 +9,7 @@ import {
 } from "../lib/booking-route.ts"
 
 export function runBookingRouteTests() {
+  assert.equal(BOOKING_ROUTE_ALLOW_HEADER, "GET, POST, OPTIONS")
   assert.equal(isValidAvailabilityDate("2099-06-06"), true)
   assert.equal(isValidAvailabilityDate("06.06.2099"), false)
   assert.equal(getBookingRetryAfterSeconds(65_000, 5_000), "60")

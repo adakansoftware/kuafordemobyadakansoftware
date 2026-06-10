@@ -11,6 +11,10 @@ export type HealthSummary = {
 
 export type HealthScope = "live" | "ready"
 
+export function resolveHealthScope(scope: string | null | undefined): HealthScope {
+  return scope === "live" ? "live" : "ready"
+}
+
 export function buildHealthSummary(options: {
   scope: HealthScope
   databaseOk: boolean

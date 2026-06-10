@@ -1,7 +1,12 @@
 import assert from "node:assert/strict"
-import { buildHealthSummary } from "../lib/health.ts"
+import { buildHealthSummary, resolveHealthScope } from "../lib/health.ts"
 
 export function runHealthTests() {
+  assert.equal(resolveHealthScope("live"), "live")
+  assert.equal(resolveHealthScope("ready"), "ready")
+  assert.equal(resolveHealthScope("unexpected"), "ready")
+  assert.equal(resolveHealthScope(null), "ready")
+
   const liveSummary = buildHealthSummary({
     scope: "live",
     databaseOk: true,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { validateBookingForm } from "@/lib/booking"
 import {
+  BOOKING_ROUTE_ALLOW_HEADER,
   MAX_BOOKING_BODY_BYTES,
   getBookingPostGuardFailure,
   getBookingRetryAfterSeconds,
@@ -429,7 +430,7 @@ export async function OPTIONS(request: Request) {
   return new NextResponse(null, {
     status: 204,
     headers: {
-      Allow: "GET, POST, OPTIONS",
+      Allow: BOOKING_ROUTE_ALLOW_HEADER,
       "Cache-Control": "no-store",
       "X-Request-Id": getRequestIdFromHeaders(request.headers),
     },

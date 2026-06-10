@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getEnvIssues, getOptionalEnv } from "@/lib/env"
-import { buildHealthSummary, type HealthScope } from "@/lib/health"
+import { buildHealthSummary, resolveHealthScope, type HealthScope } from "@/lib/health"
 import { getDurationMs, logEvent } from "@/lib/observability"
 
 export const dynamic = "force-dynamic"
@@ -15,13 +15,13 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
-  const scope = url.searchParams.get("scope") === "live" ? "live" : "ready"
+  const scope = resolveHealthScope(url.searchParams.get("scope"))
   return handleHealthRequest(scope)
 }
 
 export async function HEAD(request: Request) {
   const url = new URL(request.url)
-  const scope = url.searchParams.get("scope") === "live" ? "live" : "ready"
+  const scope = resolveHealthScope(url.searchParams.get("scope"))
   const response = await handleHealthRequest(scope)
   return new NextResponse(null, {
     status: response.status,
