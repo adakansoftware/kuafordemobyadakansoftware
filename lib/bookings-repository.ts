@@ -1,6 +1,12 @@
 import { AppointmentSource, AppointmentStatus, AuditActorType, AuditEvent, Prisma } from "@prisma/client"
 import { createAuditLog } from "@/lib/audit-log"
-import { bookingTimeSlots, type BookingFormValues } from "@/lib/booking"
+import { type BookingFormValues } from "@/lib/booking"
+import {
+  calculatePublicAvailability,
+  findStaffScheduleConflict,
+  getOverlappingSlotTimes,
+  hasAppointmentWindowOverlap,
+} from "@/lib/booking-rules"
 import { db } from "@/lib/db"
 
 const ACTIVE_APPOINTMENT_STATUSES = [AppointmentStatus.NEW, AppointmentStatus.CONFIRMED] as const
@@ -428,31 +434,15 @@ export async function getPublicAvailabilityByDate(date: string) {
     }),
   ])
 
-  const capacity = Math.max(activeStaffCount, 1)
-
-  return {
+  return calculatePublicAvailability(
     date,
-    capacity,
-    slots: bookingTimeSlots.map((time) => {
-      const booked = bookings.filter((appointment) =>
-        hasAppointmentOverlap(
-          date,
-          time,
-          SLOT_DURATION_MINUTES,
-          appointment.scheduledDate,
-          appointment.scheduledTime,
-          appointment.service.durationMinutes
-        )
-      ).length
-
-      return {
-        time,
-        booked,
-        available: Math.max(capacity - booked, 0),
-        isAvailable: booked < capacity,
-      }
-    }),
-  }
+    activeStaffCount,
+    bookings.map((appointment) => ({
+      scheduledDate: appointment.scheduledDate,
+      scheduledTime: appointment.scheduledTime,
+      durationMinutes: appointment.service.durationMinutes,
+    }))
+  )
 }
 
 export async function listStaffFromDb() {
@@ -563,13 +553,17 @@ async function ensureCustomerDoesNotHaveDuplicateSlot(
   })
 
   const hasConflict = appointments.some((appointment) =>
-    hasAppointmentOverlap(
-      input.scheduledDate,
-      input.scheduledTime,
-      input.durationMinutes,
-      appointment.scheduledDate,
-      appointment.scheduledTime,
-      appointment.service.durationMinutes
+    hasAppointmentWindowOverlap(
+      {
+        scheduledDate: input.scheduledDate,
+        scheduledTime: input.scheduledTime,
+        durationMinutes: input.durationMinutes,
+      },
+      {
+        scheduledDate: appointment.scheduledDate,
+        scheduledTime: appointment.scheduledTime,
+        durationMinutes: appointment.service.durationMinutes,
+      }
     )
   )
 
@@ -607,13 +601,17 @@ async function ensurePublicSlotCapacity(
 
   const slotCapacity = Math.max(activeStaffCount, 1)
   const overlappingCount = appointments.filter((appointment) =>
-    hasAppointmentOverlap(
-      input.scheduledDate,
-      input.scheduledTime,
-      input.durationMinutes,
-      appointment.scheduledDate,
-      appointment.scheduledTime,
-      appointment.service.durationMinutes
+    hasAppointmentWindowOverlap(
+      {
+        scheduledDate: input.scheduledDate,
+        scheduledTime: input.scheduledTime,
+        durationMinutes: input.durationMinutes,
+      },
+      {
+        scheduledDate: appointment.scheduledDate,
+        scheduledTime: appointment.scheduledTime,
+        durationMinutes: appointment.service.durationMinutes,
+      }
     )
   ).length
 
@@ -653,15 +651,21 @@ async function ensureStaffAvailability(input: {
     },
   })
 
-  const conflict = appointments.find((appointment) =>
-    hasAppointmentOverlap(
-      input.scheduledDate,
-      input.scheduledTime,
-      input.durationMinutes,
-      appointment.scheduledDate,
-      appointment.scheduledTime,
-      appointment.service.durationMinutes
-    )
+  const conflict = findStaffScheduleConflict(
+    appointments.map((appointment) => ({
+      id: appointment.id,
+      customer: {
+        name: appointment.customer.name,
+      },
+      scheduledDate: appointment.scheduledDate,
+      scheduledTime: appointment.scheduledTime,
+      durationMinutes: appointment.service.durationMinutes,
+    })),
+    {
+      scheduledDate: input.scheduledDate,
+      scheduledTime: input.scheduledTime,
+      durationMinutes: input.durationMinutes,
+    }
   )
 
   if (conflict) {
@@ -669,14 +673,6 @@ async function ensureStaffAvailability(input: {
       `${conflict.customer.name} için aynı zaman aralığında bu personele aktif bir randevu zaten atanmış.`
     )
   }
-}
-
-const SLOT_DURATION_MINUTES = 30
-
-function getOverlappingSlotTimes(date: string, time: string, durationMinutes: number) {
-  return bookingTimeSlots.filter((slot) =>
-    hasAppointmentOverlap(date, time, durationMinutes, date, slot, SLOT_DURATION_MINUTES)
-  )
 }
 
 async function lockAppointmentWindow(
@@ -809,27 +805,6 @@ function buildAppointmentWhere(filters: AppointmentListFilters): Prisma.Appointm
 
 function createScheduledAt(date: string, time: string) {
   return new Date(`${date}T${time}:00+03:00`)
-}
-
-function getScheduledRange(date: string, time: string, durationMinutes: number) {
-  const start = createScheduledAt(date, time)
-  const end = new Date(start.getTime() + Math.max(durationMinutes, SLOT_DURATION_MINUTES) * 60 * 1000)
-
-  return { start, end }
-}
-
-function hasAppointmentOverlap(
-  leftDate: string,
-  leftTime: string,
-  leftDurationMinutes: number,
-  rightDate: string,
-  rightTime: string,
-  rightDurationMinutes: number
-) {
-  const left = getScheduledRange(leftDate, leftTime, leftDurationMinutes)
-  const right = getScheduledRange(rightDate, rightTime, rightDurationMinutes)
-
-  return left.start < right.end && right.start < left.end
 }
 
 function getTodayInIstanbul() {

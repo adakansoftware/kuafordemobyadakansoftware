@@ -17,7 +17,8 @@ Next.js tabanli kuafor sitesi ve randevu yonetim cekirdegi. Bu repo, vitrin site
 npm install
 cp .env.example .env.local
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
+npm run ops:migration-check
 npm run db:seed
 npm run dev
 ```
@@ -37,7 +38,6 @@ npm run ops:audit-summary -- --days=7
 npm run build
 npm run verify
 npm run prisma:generate
-npm run prisma:push
 npm run db:seed
 ```
 
@@ -56,6 +56,10 @@ Gerekli degiskenlerin ornekleri `.env.example` dosyasinda bulunur.
 - `ADMIN_USERNAME`: admin kullanici adi
 - `ADMIN_PASSWORD`: admin sifresi, en az 12 karakter
 - `ALLOWED_ORIGIN_HOSTS`: ek izinli hostlar
+
+Local gelistirme icin de `.env.local` icinde `NEXT_PUBLIC_SITE_URL`, `ADMIN_USERNAME` ve `ADMIN_PASSWORD`
+alanlarini doldurmaniz onerilir; boylece `npm run ops:preflight` uyari vermez ve admin akislarini yerelde de
+dogrulayabilirsiniz.
 
 ## Saglik ve Operasyon
 

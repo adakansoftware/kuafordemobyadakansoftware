@@ -26,11 +26,5 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Smoke check
-        run: npm run test:smoke
-
-      - name: Build
-        run: npm run build
+      - name: Verify
+        run: npm run verify
