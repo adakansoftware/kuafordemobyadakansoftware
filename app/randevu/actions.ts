@@ -1,11 +1,16 @@
 "use server"
 
+import {
+  getSubmitBookingRateLimitMessage,
+  mapSubmitBookingCreateError,
+  mapSubmitBookingSecurityError,
+} from "@/lib/booking-action"
 import { AppointmentConflictError, createAppointmentFromWeb } from "@/lib/bookings-repository"
 import { validateBookingForm, type BookingFormDraft } from "@/lib/booking"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
 import { applyRateLimit } from "@/lib/rate-limit"
-import { getRequestIpAddress, RequestSecurityError, verifyTrustedOrigin } from "@/lib/security"
+import { getRequestIpAddress, verifyTrustedOrigin } from "@/lib/security"
 
 export type SubmitBookingResult =
   | {
@@ -48,13 +53,15 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
   try {
     await verifyTrustedOrigin({ allowHostFallback: true })
   } catch (error) {
-    if (error instanceof RequestSecurityError) {
+    const securityMessage = mapSubmitBookingSecurityError(error)
+
+    if (securityMessage) {
       logEvent({
         level: "warn",
         event: "booking_action_untrusted_origin",
         requestId,
         route: "/randevu",
-        message: error.message,
+        message: error instanceof Error ? error.message : "Booking server action origin verification failed.",
         meta: {
           ipAddress,
         },
@@ -62,7 +69,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
       return {
         success: false,
-        message: "Istek kaynagi dogrulanamadi. Sayfayi yenileyip yeniden deneyin.",
+        message: securityMessage,
       }
     }
   }
@@ -111,7 +118,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
     return {
       success: false,
-      message: "Kisa sure icinde cok fazla talep gonderildi. Lutfen bir dakika sonra tekrar deneyin.",
+      message: getSubmitBookingRateLimitMessage(),
     }
   }
 
@@ -167,7 +174,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
       return {
         success: false,
-        message: error.message,
+        message: mapSubmitBookingCreateError(error),
       }
     }
 
@@ -187,7 +194,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
     return {
       success: false,
-      message: "Randevu kaydedilirken beklenmeyen bir sorun olustu.",
+      message: mapSubmitBookingCreateError(error),
     }
   }
 }

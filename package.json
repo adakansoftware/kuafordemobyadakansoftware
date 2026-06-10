@@ -17,7 +17,6 @@
     "ops:audit-summary": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/audit-summary.mjs",
     "verify": "npm run lint && npm run typecheck && npm run test:unit && npm run test:smoke && npm run ops:migration-check && npm run ops:preflight && npm run build",
     "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
     "db:seed": "node prisma/seed.mjs"
   },
   "dependencies": {

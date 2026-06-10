@@ -2,16 +2,20 @@
 
 import { AppointmentStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
+import {
+  getAdminAppointmentRateLimitMessage,
+  isValidAppointmentStatus,
+  mapAdminAppointmentSecurityError,
+  mapAdminAppointmentUpdateError,
+} from "@/lib/admin-appointment-action"
 import { AppointmentConflictError, updateAppointmentFromAdmin } from "@/lib/bookings-repository"
 import { adminNotesSchema } from "@/lib/booking"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
 import { applyRateLimit } from "@/lib/rate-limit"
 import {
-  AdminAccessError,
   getAdminActorIdentifier,
   getRequestIpAddress,
-  RequestSecurityError,
   requireAdminAccess,
   verifyTrustedOrigin,
 } from "@/lib/security"
@@ -21,13 +25,6 @@ export type UpdateAppointmentActionState = {
   message: string
   appointmentId?: string
 }
-
-const validStatuses = new Set<AppointmentStatus>([
-  AppointmentStatus.NEW,
-  AppointmentStatus.CONFIRMED,
-  AppointmentStatus.COMPLETED,
-  AppointmentStatus.CANCELLED,
-])
 
 export async function updateAppointmentAction(
   _previousState: UpdateAppointmentActionState,
@@ -51,16 +48,9 @@ export async function updateAppointmentAction(
       },
     })
 
-    const message =
-      error instanceof AdminAccessError
-        ? "Bu islem icin yonetim erisimi dogrulanamadi."
-        : error instanceof RequestSecurityError
-          ? "Istek kaynagi dogrulanamadi."
-          : "Guvenlik dogrulamasi basarisiz oldu."
-
     return {
       success: false,
-      message,
+      message: mapAdminAppointmentSecurityError(error),
     }
   }
 
@@ -89,7 +79,7 @@ export async function updateAppointmentAction(
     }
   }
 
-  if (!validStatuses.has(statusValue as AppointmentStatus)) {
+  if (!isValidAppointmentStatus(statusValue)) {
     logEvent({
       level: "warn",
       event: "admin_appointment_invalid_status",
@@ -158,7 +148,7 @@ export async function updateAppointmentAction(
 
     return {
       success: false,
-      message: "Kisa sure icinde cok fazla guncelleme denemesi algilandi. Lutfen biraz sonra tekrar deneyin.",
+      message: getAdminAppointmentRateLimitMessage(),
       appointmentId,
     }
   }
@@ -215,7 +205,7 @@ export async function updateAppointmentAction(
 
       return {
         success: false,
-        message: error.message,
+        message: mapAdminAppointmentUpdateError(error),
         appointmentId,
       }
     }
@@ -236,7 +226,7 @@ export async function updateAppointmentAction(
 
     return {
       success: false,
-      message: "Guncelleme sirasinda beklenmeyen bir hata olustu.",
+      message: mapAdminAppointmentUpdateError(error),
       appointmentId,
     }
   }

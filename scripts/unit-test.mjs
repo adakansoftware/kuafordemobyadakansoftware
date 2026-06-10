@@ -9,7 +9,10 @@ import {
   normalizeHost,
   normalizeOrigin,
 } from "../lib/security-core.ts"
+import { runAdminAppointmentActionTests } from "../tests/admin-appointment-action.test.mts"
+import { runBookingActionTests } from "../tests/booking-action.test.mts"
 import { runBookingTests } from "../tests/booking.test.mts"
+import { runBookingRouteTests } from "../tests/booking-route.test.mts"
 import { runBookingsApiTests } from "../tests/bookings-api.test.mts"
 import { runEnvTests } from "../tests/env.test.mts"
 import { runHealthTests } from "../tests/health.test.mts"
@@ -145,7 +148,10 @@ try {
   testEnvRules()
   testSecurityHelpers()
   testHealthSummary()
+  runAdminAppointmentActionTests()
+  runBookingActionTests()
   runBookingTests()
+  runBookingRouteTests()
   runBookingsApiTests()
   runEnvTests()
   runHealthTests()

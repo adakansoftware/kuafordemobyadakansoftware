@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server"
 import { validateBookingForm } from "@/lib/booking"
+import {
+  MAX_BOOKING_BODY_BYTES,
+  getBookingPostGuardFailure,
+  getBookingRetryAfterSeconds,
+  isValidAvailabilityDate,
+  mapBookingCreateError,
+} from "@/lib/booking-route"
 import { buildRateLimitHeaders, getContentLength, parseBookingPayload, parseJsonText } from "@/lib/bookings-api"
 import { AppointmentConflictError, createAppointmentFromWeb, getPublicAvailabilityByDate } from "@/lib/bookings-repository"
 import { getRequestIdFromHeaders, jsonNoStore } from "@/lib/http"
@@ -8,8 +15,6 @@ import { applyRateLimit } from "@/lib/rate-limit"
 import { getRequestIpFromHeaders, isTrustedRequestOriginHeaders } from "@/lib/security"
 
 export const dynamic = "force-dynamic"
-
-const MAX_BOOKING_BODY_BYTES = 8 * 1024
 
 function jsonResponse(body: unknown, requestId: string, init?: ResponseInit) {
   const response = jsonNoStore(body, { ...init, requestId })
@@ -56,7 +61,7 @@ export async function GET(request: Request) {
       {
         status: 429,
         headers: {
-          "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+          "Retry-After": getBookingRetryAfterSeconds(rateLimit.resetAt),
           ...buildRateLimitHeaders({ ...rateLimit, limit: rateLimitConfig.limit }),
         },
       }
@@ -65,9 +70,10 @@ export async function GET(request: Request) {
 
   try {
     const url = new URL(request.url)
-    const date = url.searchParams.get("date")?.trim()
+    const rawDate = url.searchParams.get("date")
+    const date = rawDate?.trim()
 
-    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!isValidAvailabilityDate(date)) {
       logEvent({
         level: "warn",
         event: "booking_availability_invalid_date",
@@ -92,7 +98,7 @@ export async function GET(request: Request) {
       )
     }
 
-    const availability = await getPublicAvailabilityByDate(date)
+    const availability = await getPublicAvailabilityByDate(date ?? "")
 
     logEvent({
       event: "booking_availability_served",
@@ -179,25 +185,19 @@ export async function POST(request: Request) {
 
   const contentType = request.headers.get("content-type") ?? ""
 
-  if (!contentType.toLowerCase().includes("application/json")) {
-    return jsonResponse(
-      {
-        success: false,
-        message: "Istek bicimi desteklenmiyor.",
-      },
-      requestId,
-      { status: 415 }
-    )
-  }
+  const guardFailure = getBookingPostGuardFailure({
+    contentType,
+    contentLength: getContentLength(request),
+  })
 
-  if (getContentLength(request) > MAX_BOOKING_BODY_BYTES) {
+  if (guardFailure) {
     return jsonResponse(
       {
         success: false,
-        message: "Istek boyutu siniri asildi.",
+        message: guardFailure.message,
       },
       requestId,
-      { status: 413 }
+      { status: guardFailure.status }
     )
   }
 
@@ -236,7 +236,7 @@ export async function POST(request: Request) {
       {
         status: 429,
         headers: {
-          "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+          "Retry-After": getBookingRetryAfterSeconds(rateLimit.resetAt),
           ...buildRateLimitHeaders({ ...rateLimit, limit: rateLimitConfig.limit }),
         },
       }
@@ -384,13 +384,15 @@ export async function POST(request: Request) {
         },
       })
 
+      const mappedError = mapBookingCreateError(error)
+
       return jsonResponse(
         {
           success: false,
-          message: error.message,
+          message: mappedError.message,
         },
         requestId,
-        { status: 409 }
+        { status: mappedError.status }
       )
     }
 
@@ -410,13 +412,15 @@ export async function POST(request: Request) {
       },
     })
 
+    const mappedError = mapBookingCreateError(error)
+
     return jsonResponse(
       {
         success: false,
-        message: "Randevu kaydi sirasinda beklenmeyen bir hata olustu.",
+        message: mappedError.message,
       },
       requestId,
-      { status: 500 }
+      { status: mappedError.status }
     )
   }
 }
