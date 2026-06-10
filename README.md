@@ -73,6 +73,7 @@ dogrulayabilirsiniz.
 - CI verify: `npm run verify:ci`
 - Audit summary: `npm run ops:audit-summary -- --days=7`
 - Retention dry-run: `npm run ops:retention -- --audit-days=90 --rate-limit-days=7`
+- Preflight, `.env.example` benzeri placeholder URL/host/sifre degerlerini de uyari olarak raporlar
 - Operasyon notlari: [docs/OPERATIONS.md](/C:/Users/adaka/Desktop/aktif%20projeler/kuafordemobyadakansoftware/docs/OPERATIONS.md)
 
 ## Notlar
