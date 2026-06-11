@@ -1,8 +1,14 @@
 import { headers } from "next/headers"
+import { AdminUserRole } from "@prisma/client"
+import type { AdminAccessContext } from "./admin-access.ts"
+import { hasRequiredRole } from "./admin-access.ts"
+import { db } from "./db.ts"
 import { getEnv } from "./env.ts"
+import { verifyPassword } from "./password.ts"
 import {
   authorizeAdminRequest,
   getBasicAuthUsername,
+  getBasicAuthPassword,
   getAllowedHosts,
   getAllowedOrigins,
   getRequestIpFromHeaders,
@@ -10,6 +16,7 @@ import {
   normalizeHost,
   normalizeOrigin,
 } from "./security-core.ts"
+import { DEFAULT_TENANT_SLUG, getTenantContextBySlugOrDefault, getTenantRequestCandidate } from "./tenant.ts"
 
 const ADMIN_REALM = "Adakan Admin"
 
@@ -19,6 +26,13 @@ export class AdminAccessError extends Error {
   constructor(message = "Yonetim alanina erisim izni bulunamadi.") {
     super(message)
     this.name = "AdminAccessError"
+  }
+}
+
+export class AuthorizationError extends Error {
+  constructor(message = "Bu islem icin yetkiniz bulunmuyor.") {
+    super(message)
+    this.name = "AuthorizationError"
   }
 }
 
@@ -62,17 +76,66 @@ export function getSecurityHeaders() {
   ]
 }
 
-export async function requireAdminAccess() {
+export async function requireAdminAccess(): Promise<AdminAccessContext> {
   const env = getEnv()
+  const requestHeaders = await headers()
+  const authorization = requestHeaders.get("authorization")
+  const username = getBasicAuthUsername(authorization)
+  const password = getBasicAuthPassword(authorization)
+  const tenantSlug = await getTenantRequestCandidate()
+  const tenant = await getTenantContextBySlugOrDefault(tenantSlug)
+
+  if (username && password) {
+    const adminUser = await db.adminUser.findFirst({
+      where: {
+        tenantId: tenant.tenantId,
+        username,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        staffId: true,
+        passwordHash: true,
+        tenantId: true,
+      },
+    })
+
+    if (adminUser && verifyPassword(password, adminUser.passwordHash)) {
+      await db.adminUser.update({
+        where: { id: adminUser.id },
+        data: {
+          lastLoginAt: new Date(),
+        },
+      })
+
+      return {
+        tenantId: adminUser.tenantId,
+        tenantSlug: tenant.tenantSlug,
+        actorIdentifier: adminUser.username,
+        role: adminUser.role,
+        staffId: adminUser.staffId,
+        source: "admin_user",
+      }
+    }
+  }
 
   if (!env.ADMIN_USERNAME?.trim() || !env.ADMIN_PASSWORD?.trim()) {
     throw new AdminAccessError("Admin erisimi icin ortam degiskenleri eksik.")
   }
 
-  const requestHeaders = await headers()
-
   if (!authorizeAdminRequest(requestHeaders.get("authorization"))) {
     throw new AdminAccessError()
+  }
+
+  return {
+    tenantId: tenant.tenantId,
+    tenantSlug: tenant.tenantSlug,
+    actorIdentifier: env.ADMIN_USERNAME ?? "admin",
+    role: AdminUserRole.OWNER,
+    staffId: null,
+    source: "basic_auth_fallback",
   }
 }
 
@@ -85,11 +148,29 @@ export async function verifyTrustedOrigin(options: { allowHostFallback?: boolean
 }
 
 export async function getAdminActorIdentifier() {
-  const requestHeaders = await headers()
-  return getBasicAuthUsername(requestHeaders.get("authorization"))
+  const context = await requireAdminAccess()
+  return context.actorIdentifier
 }
 
 export async function getRequestIpAddress() {
   const requestHeaders = await headers()
   return getRequestIpFromHeaders(requestHeaders)
+}
+
+export async function requireAdminRoles(allowedRoles: AdminUserRole[]) {
+  const context = await requireAdminAccess()
+
+  if (!hasRequiredRole(context.role, allowedRoles)) {
+    throw new AuthorizationError()
+  }
+
+  return context
+}
+
+export async function getCurrentTenantContext() {
+  return getTenantContextBySlugOrDefault(await getTenantRequestCandidate())
+}
+
+export function getDefaultTenantSlug() {
+  return DEFAULT_TENANT_SLUG
 }

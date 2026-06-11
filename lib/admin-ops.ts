@@ -28,6 +28,36 @@ export const customerNotesSchema = z.object({
   notes: z.string().trim().max(1000, "Musteri notu en fazla 1000 karakter olabilir.").default(""),
 })
 
+export const staffAvailabilitySchema = z.object({
+  staffId: z.string().trim().min(1, "Personel kaydi bulunamadi."),
+  dayOfWeek: z.coerce.number().int().min(1).max(7),
+  startTime: z.string().trim().regex(/^\d{2}:\d{2}$/, "Baslangic saati gecersiz."),
+  endTime: z.string().trim().regex(/^\d{2}:\d{2}$/, "Bitis saati gecersiz."),
+  breakStartTime: z.string().trim().optional().default(""),
+  breakEndTime: z.string().trim().optional().default(""),
+})
+
+export const staffTimeOffSchema = z.object({
+  staffId: z.string().trim().min(1, "Personel kaydi bulunamadi."),
+  startDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Baslangic tarihi gecersiz."),
+  endDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Bitis tarihi gecersiz."),
+  isAllDay: z.union([z.literal("true"), z.literal("false"), z.boolean()]).optional().default("true"),
+  startTime: z.string().trim().optional().default(""),
+  endTime: z.string().trim().optional().default(""),
+  reason: z.string().trim().max(500, "Izin nedeni en fazla 500 karakter olabilir.").optional().default(""),
+})
+
+export const productSaleSchema = z.object({
+  productId: z.string().trim().min(1, "Urun secilmelidir."),
+  quantity: z.coerce.number().int().min(1, "Adet en az 1 olmalidir."),
+  customerId: z.string().trim().optional().default(""),
+  staffId: z.string().trim().optional().default(""),
+  method: z.nativeEnum(PaymentMethod, {
+    errorMap: () => ({ message: "Gecerli bir odeme yontemi secin." }),
+  }),
+  note: z.string().trim().max(500, "Satis notu en fazla 500 karakter olabilir.").optional().default(""),
+})
+
 export function mapAdminPaymentError(error: unknown) {
   if (error instanceof Error && error.name === "AdminPaymentError") {
     return error.message

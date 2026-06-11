@@ -8,7 +8,19 @@ const filesToCheck = [
   "app/hakkimizda/page.tsx",
   "app/admin/page.tsx",
   "app/admin/customers/[id]/page.tsx",
+  "app/admin/dashboard/page.tsx",
+  "app/admin/appointments/page.tsx",
+  "app/admin/customers/page.tsx",
+  "app/admin/staff/page.tsx",
+  "app/admin/services/page.tsx",
+  "app/admin/packages/page.tsx",
+  "app/admin/payments/page.tsx",
+  "app/admin/reports/page.tsx",
+  "app/admin/settings/page.tsx",
+  "app/admin/inventory/page.tsx",
   "app/api/bookings/route.ts",
+  "app/musteri/page.tsx",
+  "app/setup/page.tsx",
   "app/admin/actions.ts",
   "components/admin/appointment-operations.tsx",
   "components/home/cta-section.tsx",
@@ -53,8 +65,8 @@ async function main() {
     throw new Error('Smoke check failed: "Odeme Alindi" aksiyonu bulunamadi -> components/admin/appointment-operations.tsx')
   }
 
-  if (!adminPage.includes("Gun Sonu Ozeti")) {
-    throw new Error('Smoke check failed: "Gun Sonu Ozeti" karti bulunamadi -> app/admin/page.tsx')
+  if (!adminPage.includes("/admin/dashboard")) {
+    throw new Error('Smoke check failed: admin giris yonlendirmesi bulunamadi -> app/admin/page.tsx')
   }
 
   console.log("Smoke check passed.")

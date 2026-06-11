@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { AppointmentStatus } from "@prisma/client"
+import { AdminUserRole, AppointmentStatus } from "@prisma/client"
 import { CustomerNotesForm } from "@/components/admin/customer-notes-form"
-import { requireAdminAccess } from "@/lib/security"
+import { requireAdminRoles } from "@/lib/security"
 import { buildAppointmentWhatsAppMessages, buildCustomerWhatsAppUrl, getPaymentMethodLabel } from "@/lib/salon-ops"
 import { getBusinessSettings } from "@/lib/bookings-repository"
 import { getCustomerDetail } from "@/lib/salon-ops-repository"
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic"
 
 export default async function CustomerDetailPage({ params }: CustomerDetailPageProps) {
-  await requireAdminAccess()
+  await requireAdminRoles([AdminUserRole.OWNER, AdminUserRole.MANAGER])
 
   const { id } = await params
   let detail

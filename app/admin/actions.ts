@@ -9,6 +9,9 @@ import {
   mapBusinessSettingsError,
   mapCustomerNotesError,
   paymentSchema,
+  productSaleSchema,
+  staffAvailabilitySchema,
+  staffTimeOffSchema,
 } from "@/lib/admin-ops"
 import {
   getAdminAppointmentRateLimitMessage,
@@ -23,7 +26,11 @@ import { logEvent } from "@/lib/observability"
 import { applyRateLimit } from "@/lib/rate-limit"
 import {
   AdminPaymentError,
+  createStaffTimeOff,
+  recordInventorySale,
   recordAppointmentPayment,
+  SubscriptionFeatureError,
+  upsertStaffAvailability,
   updateBusinessSettings,
   updateCustomerNotes,
 } from "@/lib/salon-ops-repository"
@@ -57,15 +64,31 @@ export type CustomerNotesActionState = {
   customerId?: string
 }
 
+export type StaffAvailabilityActionState = {
+  success: boolean
+  message: string
+}
+
+export type StaffTimeOffActionState = {
+  success: boolean
+  message: string
+}
+
+export type ProductSaleActionState = {
+  success: boolean
+  message: string
+}
+
 export async function updateAppointmentAction(
   _previousState: UpdateAppointmentActionState,
   formData: FormData
 ): Promise<UpdateAppointmentActionState> {
   const requestId = await getCurrentRequestId()
   const ipAddress = await getRequestIpAddress()
+  let accessContext
 
   try {
-    await requireAdminAccess()
+    accessContext = await requireAdminAccess()
     await verifyTrustedOrigin({ allowHostFallback: true })
   } catch (error) {
     logEvent({
@@ -140,6 +163,8 @@ export async function updateAppointmentAction(
       actorIdentifier,
       requestId,
       ipAddress,
+      tenantId: accessContext?.tenantId,
+      accessContext,
     })
 
     revalidatePath("/admin")
@@ -187,9 +212,10 @@ export async function recordAppointmentPaymentAction(
 ): Promise<RecordPaymentActionState> {
   const requestId = await getCurrentRequestId()
   const ipAddress = await getRequestIpAddress()
+  let accessContext
 
   try {
-    await requireAdminAccess()
+    accessContext = await requireAdminAccess()
     await verifyTrustedOrigin({ allowHostFallback: true })
   } catch (error) {
     return {
@@ -235,6 +261,7 @@ export async function recordAppointmentPaymentAction(
       actorIdentifier,
       requestId,
       ipAddress,
+      tenantId: accessContext?.tenantId,
     })
 
     revalidatePath("/admin")
@@ -281,9 +308,10 @@ export async function updateBusinessSettingsAction(
 ): Promise<BusinessSettingsActionState> {
   const requestId = await getCurrentRequestId()
   const ipAddress = await getRequestIpAddress()
+  let accessContext
 
   try {
-    await requireAdminAccess()
+    accessContext = await requireAdminAccess()
     await verifyTrustedOrigin({ allowHostFallback: true })
   } catch (error) {
     return {
@@ -319,6 +347,8 @@ export async function updateBusinessSettingsAction(
       actorIdentifier,
       requestId,
       ipAddress,
+      tenantId: accessContext?.tenantId,
+      accessContext,
     })
 
     revalidatePath("/admin")
@@ -353,9 +383,10 @@ export async function updateCustomerNotesAction(
 ): Promise<CustomerNotesActionState> {
   const requestId = await getCurrentRequestId()
   const ipAddress = await getRequestIpAddress()
+  let accessContext
 
   try {
-    await requireAdminAccess()
+    accessContext = await requireAdminAccess()
     await verifyTrustedOrigin({ allowHostFallback: true })
   } catch (error) {
     return {
@@ -384,6 +415,7 @@ export async function updateCustomerNotesAction(
       actorIdentifier,
       requestId,
       ipAddress,
+      tenantId: accessContext?.tenantId,
     })
 
     revalidatePath(`/admin/customers/${validation.data.customerId}`)
@@ -412,6 +444,194 @@ export async function updateCustomerNotesAction(
       success: false,
       message: mapCustomerNotesError(),
       customerId: validation.data.customerId,
+    }
+  }
+}
+
+export async function updateStaffAvailabilityAction(
+  _previousState: StaffAvailabilityActionState,
+  formData: FormData
+): Promise<StaffAvailabilityActionState> {
+  const requestId = await getCurrentRequestId()
+  const ipAddress = await getRequestIpAddress()
+  let accessContext
+
+  try {
+    accessContext = await requireAdminAccess()
+    await verifyTrustedOrigin({ allowHostFallback: true })
+  } catch (error) {
+    return {
+      success: false,
+      message: mapAdminAppointmentSecurityError(error),
+    }
+  }
+
+  const validation = staffAvailabilitySchema.safeParse({
+    staffId: formData.get("staffId"),
+    dayOfWeek: formData.get("dayOfWeek"),
+    startTime: formData.get("startTime"),
+    endTime: formData.get("endTime"),
+    breakStartTime: formData.get("breakStartTime"),
+    breakEndTime: formData.get("breakEndTime"),
+  })
+
+  if (!validation.success) {
+    return {
+      success: false,
+      message: validation.error.issues[0]?.message ?? "Personel musaitlik formu gecersiz.",
+    }
+  }
+
+  try {
+    await upsertStaffAvailability({
+      ...validation.data,
+      actorIdentifier: accessContext.actorIdentifier,
+      requestId,
+      ipAddress,
+      tenantId: accessContext.tenantId,
+    })
+
+    revalidatePath("/admin/staff")
+
+    return {
+      success: true,
+      message: "Personel musaitligi guncellendi.",
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Musaitlik guncellenemedi.",
+    }
+  }
+}
+
+export async function createStaffTimeOffAction(
+  _previousState: StaffTimeOffActionState,
+  formData: FormData
+): Promise<StaffTimeOffActionState> {
+  const requestId = await getCurrentRequestId()
+  const ipAddress = await getRequestIpAddress()
+  let accessContext
+
+  try {
+    accessContext = await requireAdminAccess()
+    await verifyTrustedOrigin({ allowHostFallback: true })
+  } catch (error) {
+    return {
+      success: false,
+      message: mapAdminAppointmentSecurityError(error),
+    }
+  }
+
+  const validation = staffTimeOffSchema.safeParse({
+    staffId: formData.get("staffId"),
+    startDate: formData.get("startDate"),
+    endDate: formData.get("endDate"),
+    isAllDay: formData.get("isAllDay"),
+    startTime: formData.get("startTime"),
+    endTime: formData.get("endTime"),
+    reason: formData.get("reason"),
+  })
+
+  if (!validation.success) {
+    return {
+      success: false,
+      message: validation.error.issues[0]?.message ?? "Izin formu gecersiz.",
+    }
+  }
+
+  try {
+    await createStaffTimeOff({
+      staffId: validation.data.staffId,
+      startDate: validation.data.startDate,
+      endDate: validation.data.endDate,
+      isAllDay: validation.data.isAllDay === true || validation.data.isAllDay === "true",
+      startTime: validation.data.startTime,
+      endTime: validation.data.endTime,
+      reason: validation.data.reason,
+      actorIdentifier: accessContext.actorIdentifier,
+      requestId,
+      ipAddress,
+      tenantId: accessContext.tenantId,
+    })
+
+    revalidatePath("/admin/staff")
+
+    return {
+      success: true,
+      message: "Personel izin kaydi olusturuldu.",
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Izin kaydi olusturulamadi.",
+    }
+  }
+}
+
+export async function recordProductSaleAction(
+  _previousState: ProductSaleActionState,
+  formData: FormData
+): Promise<ProductSaleActionState> {
+  const requestId = await getCurrentRequestId()
+  const ipAddress = await getRequestIpAddress()
+  let accessContext
+
+  try {
+    accessContext = await requireAdminAccess()
+    await verifyTrustedOrigin({ allowHostFallback: true })
+  } catch (error) {
+    return {
+      success: false,
+      message: mapAdminAppointmentSecurityError(error),
+    }
+  }
+
+  const validation = productSaleSchema.safeParse({
+    productId: formData.get("productId"),
+    quantity: formData.get("quantity"),
+    customerId: formData.get("customerId"),
+    staffId: formData.get("staffId"),
+    method: formData.get("method"),
+    note: formData.get("note"),
+  })
+
+  if (!validation.success) {
+    return {
+      success: false,
+      message: validation.error.issues[0]?.message ?? "Satis formu gecersiz.",
+    }
+  }
+
+  try {
+    await recordInventorySale({
+      productId: validation.data.productId,
+      quantity: validation.data.quantity,
+      customerId: validation.data.customerId || null,
+      staffId: validation.data.staffId || null,
+      paymentMethod: validation.data.method,
+      note: validation.data.note,
+      actorIdentifier: accessContext.actorIdentifier,
+      requestId,
+      ipAddress,
+      tenantId: accessContext.tenantId,
+    })
+
+    revalidatePath("/admin/inventory")
+
+    return {
+      success: true,
+      message: "Urun satisi kaydedildi.",
+    }
+  } catch (error) {
+    const message =
+      error instanceof SubscriptionFeatureError || error instanceof Error
+        ? error.message
+        : "Urun satisi kaydedilemedi."
+
+    return {
+      success: false,
+      message,
     }
   }
 }

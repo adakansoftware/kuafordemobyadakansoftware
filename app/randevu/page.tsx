@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Clock, MapPin, Phone, ShieldCheck } from "lucide-react"
 import { BookingForm } from "@/components/booking-form"
+import { listServicesFromDb } from "@/lib/bookings-repository"
 import { getBookingPageViewModel } from "@/lib/public-site"
 import { buildMetadata } from "@/lib/seo"
 
@@ -10,8 +11,9 @@ export const metadata: Metadata = buildMetadata({
   path: "/randevu",
 })
 
-export default function RandevuPage() {
+export default async function RandevuPage() {
   const viewModel = getBookingPageViewModel()
+  const services = await listServicesFromDb()
 
   return (
     <>
@@ -27,7 +29,13 @@ export default function RandevuPage() {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <BookingForm />
+              <BookingForm
+                services={services.map((service) => ({
+                  slug: service.slug,
+                  title: service.title,
+                  teaser: service.teaser,
+                }))}
+              />
             </div>
 
             <div className="flex flex-col gap-6">

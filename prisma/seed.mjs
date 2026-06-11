@@ -1,191 +1,20 @@
-import { AppointmentSource, AppointmentStatus, PaymentMethod, PrismaClient } from "@prisma/client"
+import { randomBytes, scryptSync } from "node:crypto"
+import {
+  AdminUserRole,
+  AppointmentSource,
+  AppointmentStatus,
+  PaymentMethod,
+  PrismaClient,
+  SubscriptionPlan,
+  TenantMode,
+} from "@prisma/client"
 
 const prisma = new PrismaClient()
 
-const services = [
-  {
-    slug: "sac-kesim-tasarim",
-    title: "Sac Kesim ve Tasarim",
-    shortTitle: "Sac Kesim",
-    teaser: "Yuz hatlarina uygun premium kesim deneyimi.",
-    description: "Danismanlik, yikama ve sekillendirme ile tamamlanan profesyonel kesim paketi.",
-    image: "/images/service-haircut.jpg",
-    priceFrom: 950,
-    priceLabel: "950 TL",
-    durationMinutes: 60,
-    sortOrder: 1,
-    features: [
-      "Yuze uygun stil plani",
-      "Yikama ve son sekillendirme",
-      "Gunluk kullanim odakli kesim",
-      "Bakim onerileri",
-    ],
-  },
-  {
-    slug: "sac-boyama",
-    title: "Sac Boyama",
-    shortTitle: "Boyama",
-    teaser: "Canli tonlar ve kontrollu renk gecisleri.",
-    description: "Dip boya, tonlama ve modern renk gecis teknikleri ile premium hizmet.",
-    image: "/images/service-coloring.jpg",
-    priceFrom: 2200,
-    priceLabel: "2.200 TL",
-    durationMinutes: 150,
-    sortOrder: 2,
-    features: [
-      "Renk analizi",
-      "Tonlama ve koruma",
-      "Profesyonel urun secimi",
-      "Sonrasi bakim yonlendirmesi",
-    ],
-  },
-  {
-    slug: "keratin-bakimi",
-    title: "Keratin Bakimi",
-    shortTitle: "Keratin",
-    teaser: "Parlaklik ve yumusaklik kazandiran yogun bakim.",
-    description: "Sac telini destekleyen, kabarmayi azaltan premium keratin uygulamasi.",
-    image: "/images/service-keratin.jpg",
-    priceFrom: 2800,
-    priceLabel: "2.800 TL",
-    durationMinutes: 120,
-    sortOrder: 3,
-    features: [
-      "Yumusak doku",
-      "Parlak bitis",
-      "Kolay sekil alma",
-      "Ev bakim plani",
-    ],
-  },
-  {
-    slug: "fon-sekillendirme",
-    title: "Fon ve Sekillendirme",
-    shortTitle: "Fon",
-    teaser: "Hizli ve bakimli gorunum icin sekillendirme.",
-    description: "Gunluk ya da ozel gunler icin profesyonel fon ve finish paketi.",
-    image: "/images/service-blowdry.jpg",
-    priceFrom: 650,
-    priceLabel: "650 TL",
-    durationMinutes: 45,
-    sortOrder: 4,
-    features: [
-      "Duz veya hacimli bitis",
-      "Isi kontrollu uygulama",
-      "Hizli operasyon",
-      "Ozel gun hazirligi",
-    ],
-  },
-  {
-    slug: "cilt-bakimi",
-    title: "Cilt Bakimi",
-    shortTitle: "Cilt Bakimi",
-    teaser: "Temizlik, nem ve canlilik odakli bakim.",
-    description: "Kuafor operasyonuna destek veren hizli premium cilt bakimi uygulamasi.",
-    image: "/images/service-skin.jpg",
-    priceFrom: 1400,
-    priceLabel: "1.400 TL",
-    durationMinutes: 50,
-    sortOrder: 5,
-    features: [
-      "Temel analiz",
-      "Temizlik ve nem bakimi",
-      "Dinlendiren maske",
-      "Ev kullanimi tavsiyesi",
-    ],
-  },
-  {
-    slug: "sakal-tasarim",
-    title: "Sakal Tasarim",
-    shortTitle: "Sakal",
-    teaser: "Yuze uygun net cizgiler ve bakimli gorunum.",
-    description: "Erkek bakim operasyonlari icin hizli ve temiz sakal tasarim uygulamasi.",
-    image: "/images/service-beard.jpg",
-    priceFrom: 500,
-    priceLabel: "500 TL",
-    durationMinutes: 30,
-    sortOrder: 6,
-    features: [
-      "Hat duzeltme",
-      "Sicak havlu uygulamasi",
-      "Keskin cizgi bitisi",
-      "Bakim tavsiyesi",
-    ],
-  },
-]
-
-const staffMembers = [
-  {
-    name: "Elif Aydin",
-    role: "Kurucu ve Bas Stilist",
-    bio: "Kesim, premium deneyim ve VIP musteri operasyonunda uzman.",
-    avatar: "/images/team-1.jpg",
-    sortOrder: 1,
-    commissionRate: 15,
-  },
-  {
-    name: "Emre Kilic",
-    role: "Renk Uzmani",
-    bio: "Boya, tonlama ve donusum operasyonlarinda lider.",
-    avatar: "/images/team-2.jpg",
-    sortOrder: 2,
-    commissionRate: 12,
-  },
-  {
-    name: "Seda Ozturk",
-    role: "Bakim Uzmani",
-    bio: "Bakim, keratin ve operasyon surec standardizasyonu alaninda uzman.",
-    avatar: "/images/team-3.jpg",
-    sortOrder: 3,
-    commissionRate: 10,
-  },
-  {
-    name: "Mert Arslan",
-    role: "Erkek Bakim Uzmani",
-    bio: "Sakal ve hizli erkek bakim operasyonlarinda guclu kapasite sunar.",
-    avatar: "/images/team-4.jpg",
-    sortOrder: 4,
-    commissionRate: 8,
-  },
-]
-
-const customers = [
-  {
-    name: "Zeynep Kaya",
-    email: "zeynep.kaya@demo.local",
-    phone: "905321110001",
-    notes: "Renk islemlerinde soguk ton seviyor. Kahve ikrami tercih ediyor.",
-  },
-  {
-    name: "Melis Demir",
-    email: "melis.demir@demo.local",
-    phone: "905321110002",
-    notes: "Cumartesi sabahlarini tercih ediyor. Sac ucu hassas.",
-  },
-  {
-    name: "Ayse Tunc",
-    email: "ayse.tunc@demo.local",
-    phone: "905321110003",
-    notes: "Keratin sonrasi urun önerisi istiyor.",
-  },
-  {
-    name: "Burak Yilmaz",
-    email: "burak.yilmaz@demo.local",
-    phone: "905321110004",
-    notes: "Damat paketi aday musteri. Hizli cikis bekliyor.",
-  },
-  {
-    name: "Ece Sahin",
-    email: "ece.sahin@demo.local",
-    phone: "905321110005",
-    notes: "Son dakika degisiklik yapabiliyor; hatirlatma onemli.",
-  },
-  {
-    name: "Deniz Aksoy",
-    email: "deniz.aksoy@demo.local",
-    phone: "905321110006",
-    notes: "Kart ile odeme yapiyor, paket hizmetlerle ilgileniyor.",
-  },
-]
+function hashPassword(password) {
+  const salt = randomBytes(16).toString("hex")
+  return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`
+}
 
 function toScheduledAt(date, time) {
   return new Date(`${date}T${time}:00+03:00`)
@@ -207,120 +36,163 @@ function daysFromToday(offset) {
       return acc
     }, {})
 
-  const istanbulToday = new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00+03:00`)
-  istanbulToday.setUTCDate(istanbulToday.getUTCDate() + offset)
-
-  return istanbulToday.toISOString().slice(0, 10)
+  const current = new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00+03:00`)
+  current.setUTCDate(current.getUTCDate() + offset)
+  return current.toISOString().slice(0, 10)
 }
 
-async function resetDemoData() {
+async function resetData() {
+  await prisma.saleItem.deleteMany()
+  await prisma.sale.deleteMany()
+  await prisma.product.deleteMany()
+  await prisma.customerAccessCode.deleteMany()
+  await prisma.appointmentCancellationRequest.deleteMany()
   await prisma.payment.deleteMany()
   await prisma.appointment.deleteMany()
   await prisma.packageService.deleteMany()
   await prisma.package.deleteMany()
-
-  await prisma.customer.deleteMany({
+  await prisma.staffTimeOff.deleteMany()
+  await prisma.staffAvailability.deleteMany()
+  await prisma.adminUser.deleteMany()
+  await prisma.customer.deleteMany()
+  await prisma.staff.deleteMany()
+  await prisma.service.deleteMany()
+  await prisma.tenantSubscription.deleteMany()
+  await prisma.businessSettings.deleteMany()
+  await prisma.auditLog.deleteMany()
+  await prisma.tenant.deleteMany({
     where: {
-      email: {
-        in: customers.map((customer) => customer.email),
+      slug: {
+        in: ["default", "north-demo"],
       },
     },
   })
 }
 
-async function upsertCoreData() {
-  await prisma.businessSettings.upsert({
-    where: { id: "adakan-core-settings" },
-    update: {
-      businessName: "Adakan Hair Studio",
-      tagline: "Satilabilir kuafor operasyon, odeme ve sadakat platformu",
-      phone: "905399416521",
-      whatsappPhone: "905399416521",
-      email: "adakansoftware@gmail.com",
-      address: "Bagdat Caddesi No:128, Caddebostan",
-      city: "Istanbul",
-      timezone: "Europe/Istanbul",
+async function seedTenant(config) {
+  const tenant = await prisma.tenant.create({
+    data: {
+      slug: config.slug,
+      name: config.name,
+      phone: config.phone,
+      email: config.email,
       currency: "TRY",
-      dailyCapacity: 24,
-      workingHours: {
-        note: "Hazirlik: 09:30. Operasyon: 10:00-20:00. Pazar rezervasyon bazli.",
-      },
+      timezone: "Europe/Istanbul",
+      mode: config.mode,
+      isActive: true,
+      isSetupComplete: true,
+      setupCompletedAt: new Date(),
     },
-    create: {
-      id: "adakan-core-settings",
-      businessName: "Adakan Hair Studio",
-      tagline: "Satilabilir kuafor operasyon, odeme ve sadakat platformu",
-      phone: "905399416521",
-      whatsappPhone: "905399416521",
-      email: "adakansoftware@gmail.com",
-      address: "Bagdat Caddesi No:128, Caddebostan",
-      city: "Istanbul",
+  })
+
+  await prisma.businessSettings.create({
+    data: {
+      tenantId: tenant.id,
+      businessName: config.name,
+      tagline: config.tagline,
+      phone: config.phone,
+      whatsappPhone: config.phone,
+      email: config.email,
+      address: config.address,
+      city: config.city,
       timezone: "Europe/Istanbul",
       currency: "TRY",
-      dailyCapacity: 24,
+      dailyCapacity: config.dailyCapacity,
       workingHours: {
-        note: "Hazirlik: 09:30. Operasyon: 10:00-20:00. Pazar rezervasyon bazli.",
+        note: config.workingHoursNote,
       },
     },
   })
 
-  for (const service of services) {
-    await prisma.service.upsert({
-      where: { slug: service.slug },
-      update: service,
-      create: service,
-    })
+  await prisma.tenantSubscription.create({
+    data: {
+      tenantId: tenant.id,
+      plan: config.plan,
+      maxStaffCount: config.plan === SubscriptionPlan.PRO ? 999 : 6,
+      maxMonthlyAppointments: config.plan === SubscriptionPlan.PRO ? 99999 : 400,
+      isActive: true,
+    },
+  })
+
+  const services = []
+  for (const [index, service] of config.services.entries()) {
+    services.push(
+      await prisma.service.create({
+        data: {
+          tenantId: tenant.id,
+          slug: service.slug,
+          title: service.title,
+          shortTitle: service.shortTitle,
+          teaser: service.teaser,
+          description: service.description,
+          image: service.image,
+          priceFrom: service.priceFrom,
+          priceLabel: `${service.priceFrom} TL`,
+          durationMinutes: service.durationMinutes,
+          isActive: true,
+          sortOrder: index + 1,
+          features: service.features,
+        },
+      })
+    )
   }
 
-  for (const staff of staffMembers) {
-    await prisma.staff.upsert({
-      where: { name: staff.name },
-      update: staff,
-      create: staff,
-    })
-  }
-}
+  const serviceBySlug = new Map(services.map((service) => [service.slug, service]))
 
-async function seedCustomers() {
-  const result = new Map()
-
-  for (const customer of customers) {
-    const record = await prisma.customer.create({
+  const staff = []
+  for (const [index, member] of config.staff.entries()) {
+    const created = await prisma.staff.create({
       data: {
-        ...customer,
-        loyaltyPoints: 0,
+        tenantId: tenant.id,
+        name: member.name,
+        role: member.role,
+        bio: member.bio,
+        avatar: member.avatar,
+        isActive: true,
+        sortOrder: index + 1,
+        commissionRate: member.commissionRate,
       },
     })
+    staff.push(created)
 
-    result.set(customer.email, record)
+    for (const dayOfWeek of [1, 2, 3, 4, 5, 6]) {
+      await prisma.staffAvailability.create({
+        data: {
+          staffId: created.id,
+          dayOfWeek,
+          startTime: "10:00",
+          endTime: "19:00",
+          breakStartTime: "13:00",
+          breakEndTime: "14:00",
+          isActive: true,
+        },
+      })
+    }
   }
 
-  return result
-}
+  const staffByName = new Map(staff.map((member) => [member.name, member]))
 
-async function seedPackages(serviceBySlug) {
-  const packageDefinitions = [
-    {
-      slug: "damat-paketi",
-      name: "Damat Paketi",
-      teaser: "Sac, sakal ve cilt bakimini tek akista birlestiren premium erkek bakim paketi.",
-      packagePrice: 2550,
-      totalDurationMinutes: 140,
-      serviceSlugs: ["sac-kesim-tasarim", "sakal-tasarim", "cilt-bakimi"],
-    },
-    {
-      slug: "renk-bakim-paketi",
-      name: "Renk ve Bakim Paketi",
-      teaser: "Boyama sonrasi keratin destekli premium yenilenme paketi.",
-      packagePrice: 4500,
-      totalDurationMinutes: 270,
-      serviceSlugs: ["sac-boyama", "keratin-bakimi"],
-    },
-  ]
+  const customers = []
+  for (const customer of config.customers) {
+    customers.push(
+      await prisma.customer.create({
+        data: {
+          tenantId: tenant.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          notes: customer.notes,
+        },
+      })
+    )
+  }
 
-  for (const pkg of packageDefinitions) {
+  const customerByEmail = new Map(customers.map((customer) => [customer.email, customer]))
+
+  for (const pkg of config.packages) {
     const createdPackage = await prisma.package.create({
       data: {
+        tenantId: tenant.id,
         slug: pkg.slug,
         name: pkg.name,
         teaser: pkg.teaser,
@@ -331,240 +203,262 @@ async function seedPackages(serviceBySlug) {
     })
 
     for (const [index, serviceSlug] of pkg.serviceSlugs.entries()) {
-      const service = serviceBySlug.get(serviceSlug)
       await prisma.packageService.create({
         data: {
           packageId: createdPackage.id,
-          serviceId: service.id,
+          serviceId: serviceBySlug.get(serviceSlug).id,
           sortOrder: index + 1,
         },
       })
     }
   }
-}
 
-async function seedAppointments({ serviceBySlug, staffByName, customerByEmail }) {
-  const today = daysFromToday(0)
-  const yesterday = daysFromToday(-1)
-  const twoDaysAgo = daysFromToday(-2)
-  const threeDaysAgo = daysFromToday(-3)
-  const fourDaysAgo = daysFromToday(-4)
-  const tomorrow = daysFromToday(1)
-  const dayAfterTomorrow = daysFromToday(2)
-
-  const appointmentDefinitions = [
-    {
-      customerEmail: "zeynep.kaya@demo.local",
-      serviceSlug: "sac-boyama",
-      staffName: "Emre Kilic",
-      status: AppointmentStatus.COMPLETED,
-      source: AppointmentSource.ADMIN,
-      scheduledDate: fourDaysAgo,
-      scheduledTime: "11:00",
-      notes: "Renk koruyucu seri onerildi.",
-      payment: { amount: 2400, method: PaymentMethod.CARD, note: "POS slip 4812" },
-    },
-    {
-      customerEmail: "zeynep.kaya@demo.local",
-      serviceSlug: "fon-sekillendirme",
-      staffName: "Elif Aydin",
-      status: AppointmentStatus.COMPLETED,
-      source: AppointmentSource.WEB,
-      scheduledDate: twoDaysAgo,
-      scheduledTime: "17:00",
-      notes: "Aksam etkinligi icin hizli finish.",
-      payment: { amount: 650, method: PaymentMethod.CASH, note: "Kasadan tahsil" },
-    },
-    {
-      customerEmail: "zeynep.kaya@demo.local",
-      serviceSlug: "sac-kesim-tasarim",
-      staffName: "Elif Aydin",
-      status: AppointmentStatus.COMPLETED,
-      source: AppointmentSource.ADMIN,
-      scheduledDate: yesterday,
-      scheduledTime: "10:30",
-      notes: "Katli kesim tercih edildi.",
-      payment: { amount: 950, method: PaymentMethod.CARD, note: "Sadakat puani isledi" },
-    },
-    {
-      customerEmail: "zeynep.kaya@demo.local",
-      serviceSlug: "fon-sekillendirme",
-      staffName: "Elif Aydin",
-      status: AppointmentStatus.COMPLETED,
-      source: AppointmentSource.WEB,
-      scheduledDate: today,
-      scheduledTime: "12:00",
-      notes: "Bugun tamamlandi ama tahsilat bekliyor.",
-    },
-    {
-      customerEmail: "zeynep.kaya@demo.local",
-      serviceSlug: "keratin-bakimi",
-      staffName: "Seda Ozturk",
-      status: AppointmentStatus.COMPLETED,
-      source: AppointmentSource.ADMIN,
-      scheduledDate: threeDaysAgo,
-      scheduledTime: "15:00",
-      notes: "Besinci odenmis islem olacak.",
-      payment: { amount: 2800, method: PaymentMethod.IBAN, note: "Havale referansi 9301" },
-    },
-    {
-      customerEmail: "melis.demir@demo.local",
-      serviceSlug: "sac-kesim-tasarim",
-      staffName: "Elif Aydin",
-      status: AppointmentStatus.CONFIRMED,
-      source: AppointmentSource.WEB,
-      scheduledDate: tomorrow,
-      scheduledTime: "10:00",
-      notes: "Cumartesi oncesi bakim istiyor.",
-    },
-    {
-      customerEmail: "ayse.tunc@demo.local",
-      serviceSlug: "keratin-bakimi",
-      staffName: "Seda Ozturk",
-      status: AppointmentStatus.COMPLETED,
-      source: AppointmentSource.ADMIN,
-      scheduledDate: today,
-      scheduledTime: "14:00",
-      notes: "Ev bakim plani anlatildi.",
-      payment: { amount: 2900, method: PaymentMethod.CARD, note: "Ek urun satisi dahil" },
-    },
-    {
-      customerEmail: "burak.yilmaz@demo.local",
-      serviceSlug: "sakal-tasarim",
-      staffName: "Mert Arslan",
-      status: AppointmentStatus.CONFIRMED,
-      source: AppointmentSource.ADMIN,
-      scheduledDate: tomorrow,
-      scheduledTime: "12:00",
-      notes: "Damat paketi teklifi sunulacak.",
-    },
-    {
-      customerEmail: "ece.sahin@demo.local",
-      serviceSlug: "fon-sekillendirme",
-      staffName: null,
-      status: AppointmentStatus.NEW,
-      source: AppointmentSource.WEB,
-      scheduledDate: tomorrow,
-      scheduledTime: "15:00",
-      notes: "Personel atamasi bekliyor.",
-    },
-    {
-      customerEmail: "deniz.aksoy@demo.local",
-      serviceSlug: "sac-boyama",
-      staffName: "Emre Kilic",
-      status: AppointmentStatus.CANCELLED,
-      source: AppointmentSource.WEB,
-      scheduledDate: today,
-      scheduledTime: "16:00",
-      notes: "Musteri seyahat nedeniyle iptal etti.",
-    },
-    {
-      customerEmail: "deniz.aksoy@demo.local",
-      serviceSlug: "cilt-bakimi",
-      staffName: "Seda Ozturk",
-      status: AppointmentStatus.COMPLETED,
-      source: AppointmentSource.ADMIN,
-      scheduledDate: twoDaysAgo,
-      scheduledTime: "13:30",
-      notes: "Paket hizmete ilgi gosterdi.",
-      payment: { amount: 1400, method: PaymentMethod.CASH, note: "Nakit tahsil" },
-    },
-    {
-      customerEmail: "melis.demir@demo.local",
-      serviceSlug: "fon-sekillendirme",
-      staffName: "Elif Aydin",
-      status: AppointmentStatus.CONFIRMED,
-      source: AppointmentSource.ADMIN,
-      scheduledDate: dayAfterTomorrow,
-      scheduledTime: "18:00",
-      notes: "Etkinlik oncesi finish randevusu.",
-    },
-  ]
-
-  for (const definition of appointmentDefinitions) {
-    const customer = customerByEmail.get(definition.customerEmail)
-    const service = serviceBySlug.get(definition.serviceSlug)
-    const staff = definition.staffName ? staffByName.get(definition.staffName) : null
-
-    const appointment = await prisma.appointment.create({
+  for (const product of config.products) {
+    await prisma.product.create({
       data: {
-        customerId: customer.id,
-        serviceId: service.id,
-        staffId: staff?.id ?? null,
-        status: definition.status,
-        source: definition.source,
-        scheduledDate: definition.scheduledDate,
-        scheduledTime: definition.scheduledTime,
-        scheduledAt: toScheduledAt(definition.scheduledDate, definition.scheduledTime),
-        notes: definition.notes,
+        tenantId: tenant.id,
+        name: product.name,
+        sku: product.sku,
+        stock: product.stock,
+        purchasePrice: product.purchasePrice,
+        salePrice: product.salePrice,
+        isActive: true,
+      },
+    })
+  }
+
+  for (const appointment of config.appointments) {
+    const created = await prisma.appointment.create({
+      data: {
+        tenantId: tenant.id,
+        customerId: customerByEmail.get(appointment.customerEmail).id,
+        serviceId: serviceBySlug.get(appointment.serviceSlug).id,
+        staffId: appointment.staffName ? staffByName.get(appointment.staffName).id : null,
+        status: appointment.status,
+        source: appointment.source,
+        scheduledDate: appointment.scheduledDate,
+        scheduledTime: appointment.scheduledTime,
+        scheduledAt: toScheduledAt(appointment.scheduledDate, appointment.scheduledTime),
+        notes: appointment.notes,
       },
     })
 
-    if (definition.payment) {
-      const paidAt = new Date(`${definition.scheduledDate}T${definition.scheduledTime}:00+03:00`)
-      paidAt.setHours(paidAt.getHours() + 2)
-
+    if (appointment.payment) {
       await prisma.payment.create({
         data: {
-          appointmentId: appointment.id,
-          amount: definition.payment.amount,
-          method: definition.payment.method,
-          paidAt,
-          note: definition.payment.note,
+          tenantId: tenant.id,
+          appointmentId: created.id,
+          amount: appointment.payment.amount,
+          method: appointment.payment.method,
+          paidAt: new Date(`${appointment.scheduledDate}T${appointment.scheduledTime}:00+03:00`),
+          note: appointment.payment.note,
         },
       })
     }
   }
-}
 
-async function refreshLoyalty() {
-  const seededCustomers = await prisma.customer.findMany({
-    where: {
-      email: {
-        in: customers.map((customer) => customer.email),
-      },
-    },
-    include: {
-      appointments: {
-        where: {
+  for (const customer of customers) {
+    const paidCompletedCount = await prisma.payment.count({
+      where: {
+        tenantId: tenant.id,
+        appointment: {
+          customerId: customer.id,
           status: AppointmentStatus.COMPLETED,
-          payment: {
-            isNot: null,
-          },
-        },
-        include: {
-          payment: true,
         },
       },
-    },
-  })
+    })
 
-  for (const customer of seededCustomers) {
     await prisma.customer.update({
       where: { id: customer.id },
       data: {
-        loyaltyPoints: customer.appointments.length * 20,
+        loyaltyPoints: paidCompletedCount * 20,
+      },
+    })
+  }
+
+  await prisma.adminUser.create({
+    data: {
+      tenantId: tenant.id,
+      username: config.owner.username,
+      email: config.owner.email,
+      passwordHash: hashPassword(config.owner.password),
+      role: AdminUserRole.OWNER,
+      isActive: true,
+    },
+  })
+
+  if (staff[0]) {
+    await prisma.adminUser.create({
+      data: {
+        tenantId: tenant.id,
+        staffId: staff[0].id,
+        username: `${config.slug}-staff`,
+        email: `staff-${config.slug}@demo.local`,
+        passwordHash: hashPassword("StaffPanel123!"),
+        role: AdminUserRole.STAFF,
+        isActive: true,
       },
     })
   }
 }
 
+const sharedServices = [
+  {
+    slug: "sac-kesim-tasarim",
+    title: "Sac Kesim ve Tasarim",
+    shortTitle: "Sac Kesim",
+    teaser: "Yuz hattina uygun premium kesim.",
+    description: "Danismanlik, yikama ve finish dahil profesyonel kesim paketi.",
+    image: "/images/service-haircut.jpg",
+    priceFrom: 950,
+    durationMinutes: 60,
+    features: ["Stil analizi", "Yikama", "Finish"],
+  },
+  {
+    slug: "sac-boyama",
+    title: "Sac Boyama",
+    shortTitle: "Boyama",
+    teaser: "Tonlama ve premium renk operasyonu.",
+    description: "Dip boya, ton esitleme ve koruma odakli boyama.",
+    image: "/images/service-coloring.jpg",
+    priceFrom: 2200,
+    durationMinutes: 150,
+    features: ["Renk analizi", "Tonlama", "Koruyucu seri"],
+  },
+  {
+    slug: "keratin-bakimi",
+    title: "Keratin Bakimi",
+    shortTitle: "Keratin",
+    teaser: "Yogun bakim ve parlaklik.",
+    description: "Kabarmayi azaltan premium keratin uygulamasi.",
+    image: "/images/service-keratin.jpg",
+    priceFrom: 2800,
+    durationMinutes: 120,
+    features: ["Onarim", "Parlaklik", "Ev bakim plani"],
+  },
+]
+
 async function main() {
-  await resetDemoData()
-  await upsertCoreData()
+  await resetData()
 
-  const [serviceRecords, staffRecords, customerByEmail] = await Promise.all([
-    prisma.service.findMany(),
-    prisma.staff.findMany(),
-    seedCustomers(),
-  ])
+  await seedTenant({
+    slug: "default",
+    name: "Adakan Hair Studio",
+    phone: "905399416521",
+    email: "adakansoftware@gmail.com",
+    tagline: "Satilabilir cok kiracili salon operasyon platformu",
+    address: "Bagdat Caddesi No:128, Caddebostan",
+    city: "Istanbul",
+    workingHoursNote: "10:00-20:00 operasyon, 09:30 hazirlik.",
+    dailyCapacity: 24,
+    mode: TenantMode.PRODUCTION,
+    plan: SubscriptionPlan.PRO,
+    services: sharedServices,
+    staff: [
+      { name: "Elif Aydin", role: "Kurucu Stilist", bio: "Premium kesim ve deneyim uzmani.", avatar: "/images/team-1.jpg", commissionRate: 15 },
+      { name: "Emre Kilic", role: "Renk Uzmani", bio: "Renk donusumu ve tonlama lideri.", avatar: "/images/team-2.jpg", commissionRate: 12 },
+      { name: "Seda Ozturk", role: "Bakim Uzmani", bio: "Bakim ve keratin uygulamalari uzmani.", avatar: "/images/team-3.jpg", commissionRate: 10 },
+    ],
+    customers: [
+      { name: "Zeynep Kaya", email: "zeynep.kaya@demo.local", phone: "905321110001", notes: "Soguk ton seviyor." },
+      { name: "Melis Demir", email: "melis.demir@demo.local", phone: "905321110002", notes: "Cumartesi sabah tercih ediyor." },
+      { name: "Ayse Tunc", email: "ayse.tunc@demo.local", phone: "905321110003", notes: "Keratin sonrasi urun soruyor." },
+    ],
+    packages: [
+      {
+        slug: "renk-bakim-paketi",
+        name: "Renk ve Bakim Paketi",
+        teaser: "Boyama sonrasi keratin destekli premium paket.",
+        packagePrice: 4500,
+        totalDurationMinutes: 270,
+        serviceSlugs: ["sac-boyama", "keratin-bakimi"],
+      },
+    ],
+    products: [
+      { name: "Profesyonel Sampuan", sku: "ADA-SAM-001", stock: 20, purchasePrice: 180, salePrice: 350 },
+      { name: "Mat Wax", sku: "ADA-WAX-002", stock: 14, purchasePrice: 90, salePrice: 220 },
+    ],
+    appointments: [
+      {
+        customerEmail: "zeynep.kaya@demo.local",
+        serviceSlug: "sac-boyama",
+        staffName: "Emre Kilic",
+        status: AppointmentStatus.COMPLETED,
+        source: AppointmentSource.ADMIN,
+        scheduledDate: daysFromToday(-2),
+        scheduledTime: "11:00",
+        notes: "Renk koruyucu seri onerildi.",
+        payment: { amount: 2400, method: PaymentMethod.CARD, note: "POS slip 4812" },
+      },
+      {
+        customerEmail: "zeynep.kaya@demo.local",
+        serviceSlug: "keratin-bakimi",
+        staffName: "Seda Ozturk",
+        status: AppointmentStatus.COMPLETED,
+        source: AppointmentSource.WEB,
+        scheduledDate: daysFromToday(0),
+        scheduledTime: "14:00",
+        notes: "Tahsilat bekliyor.",
+      },
+      {
+        customerEmail: "melis.demir@demo.local",
+        serviceSlug: "sac-kesim-tasarim",
+        staffName: "Elif Aydin",
+        status: AppointmentStatus.CONFIRMED,
+        source: AppointmentSource.WEB,
+        scheduledDate: daysFromToday(1),
+        scheduledTime: "10:00",
+        notes: "Onayli randevu.",
+      },
+    ],
+    owner: {
+      username: "owner",
+      email: "owner@adakan.demo",
+      password: "OwnerPanel123!",
+    },
+  })
 
-  const serviceBySlug = new Map(serviceRecords.map((service) => [service.slug, service]))
-  const staffByName = new Map(staffRecords.map((staff) => [staff.name, staff]))
-
-  await seedPackages(serviceBySlug)
-  await seedAppointments({ serviceBySlug, staffByName, customerByEmail })
-  await refreshLoyalty()
+  await seedTenant({
+    slug: "north-demo",
+    name: "North Demo Salon",
+    phone: "905301110999",
+    email: "north@demo.local",
+    tagline: "Ikinci tenant izolasyon testi",
+    address: "Atasehir / Istanbul",
+    city: "Istanbul",
+    workingHoursNote: "10:00-19:00 operasyon.",
+    dailyCapacity: 12,
+    mode: TenantMode.DEMO,
+    plan: SubscriptionPlan.BASIC,
+    services: sharedServices,
+    staff: [
+      { name: "Derya Cetin", role: "Salon Yoneticisi", bio: "Operasyon ve musteri takibi.", avatar: "/images/team-1.jpg", commissionRate: 8 },
+    ],
+    customers: [
+      { name: "Burcu Eren", email: "burcu.eren@demo.local", phone: "905321119999", notes: "Tenant izolasyon musteri kaydi." },
+    ],
+    packages: [],
+    products: [
+      { name: "Bakim Kremi", sku: "NOR-KRM-001", stock: 8, purchasePrice: 110, salePrice: 240 },
+    ],
+    appointments: [
+      {
+        customerEmail: "burcu.eren@demo.local",
+        serviceSlug: "sac-kesim-tasarim",
+        staffName: "Derya Cetin",
+        status: AppointmentStatus.NEW,
+        source: AppointmentSource.WEB,
+        scheduledDate: daysFromToday(1),
+        scheduledTime: "12:00",
+        notes: "Ikinci tenant yeni talep.",
+      },
+    ],
+    owner: {
+      username: "north-owner",
+      email: "north-owner@demo.local",
+      password: "NorthOwner123!",
+    },
+  })
 }
 
 main()

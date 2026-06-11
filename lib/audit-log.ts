@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { logEvent } from "@/lib/observability"
 
 type AuditLogInput = {
+  tenantId?: string | null
   actorType: AuditActorType
   actorIdentifier?: string | null
   event: AuditEvent
@@ -30,6 +31,7 @@ export async function createAuditLog(input: AuditLogInput, client: AuditLogWrite
   try {
     await client.auditLog.create({
       data: {
+        tenantId: input.tenantId ?? null,
         actorType: input.actorType,
         actorIdentifier: input.actorIdentifier ?? null,
         event: input.event,

@@ -26,6 +26,29 @@ enum AuditActorType {
   ANONYMOUS
 }
 
+enum AdminUserRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum SubscriptionPlan {
+  DEMO
+  BASIC
+  PRO
+}
+
+enum TenantMode {
+  DEMO
+  PRODUCTION
+}
+
+enum CancellationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum AuditEvent {
   BOOKING_CREATED
   BOOKING_REPLAYED
@@ -35,6 +58,15 @@ enum AuditEvent {
   COMMISSION_RECORDED
   BUSINESS_SETTINGS_UPDATED
   CUSTOMER_UPDATED
+  TENANT_SETUP_COMPLETED
+  STAFF_AVAILABILITY_UPDATED
+  STAFF_TIMEOFF_UPDATED
+  SUBSCRIPTION_UPDATED
+  CUSTOMER_PORTAL_ACCESSED
+  APPOINTMENT_CANCELLATION_REQUESTED
+  INVENTORY_SALE_RECORDED
+  PRODUCT_UPDATED
+  ADMIN_USER_UPDATED
 }
 
 enum PaymentMethod {
@@ -44,8 +76,40 @@ enum PaymentMethod {
   OTHER
 }
 
+model Tenant {
+  id                 String               @id @default(cuid())
+  slug               String               @unique
+  name               String
+  phone              String?
+  email              String?
+  domain             String?              @unique
+  currency           String               @default("TRY")
+  timezone           String               @default("Europe/Istanbul")
+  mode               TenantMode           @default(DEMO)
+  isActive           Boolean              @default(true)
+  isSetupComplete    Boolean              @default(false)
+  setupCompletedAt   DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  businessSettings   BusinessSettings?
+  staff              Staff[]
+  services           Service[]
+  customers          Customer[]
+  appointments       Appointment[]
+  packages           Package[]
+  payments           Payment[]
+  adminUsers         AdminUser[]
+  subscription       TenantSubscription?
+  products           Product[]
+  sales              Sale[]
+  customerAccessCodes CustomerAccessCode[]
+  cancellationRequests AppointmentCancellationRequest[]
+  auditLogs          AuditLog[]
+}
+
 model BusinessSettings {
   id           String   @id @default(cuid())
+  tenantId      String   @unique
   businessName String
   tagline      String
   phone        String
@@ -59,11 +123,13 @@ model BusinessSettings {
   workingHours  Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Service {
   id              String        @id @default(cuid())
-  slug            String        @unique
+  tenantId        String
+  slug            String
   title           String
   shortTitle      String
   teaser          String
@@ -79,11 +145,16 @@ model Service {
   updatedAt       DateTime      @updatedAt
   appointments    Appointment[]
   packageServices PackageService[]
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, isActive, sortOrder])
 }
 
 model Staff {
   id             String        @id @default(cuid())
-  name           String        @unique
+  tenantId       String
+  name           String
   role           String
   bio            String
   avatar         String
@@ -93,10 +164,19 @@ model Staff {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   appointments   Appointment[]
+  adminUsers     AdminUser[]
+  availabilities StaffAvailability[]
+  timeOff        StaffTimeOff[]
+  sales          Sale[]
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId, isActive, sortOrder])
 }
 
 model Customer {
   id            String        @id @default(cuid())
+  tenantId      String
   name          String
   email         String?
   phone         String?
@@ -105,13 +185,19 @@ model Customer {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   appointments  Appointment[]
+  sales         Sale[]
+  accessCodes   CustomerAccessCode[]
+  cancellationRequests AppointmentCancellationRequest[]
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([email])
-  @@unique([phone])
+  @@unique([tenantId, email])
+  @@unique([tenantId, phone])
+  @@index([tenantId, updatedAt])
 }
 
 model Appointment {
   id            String             @id @default(cuid())
+  tenantId      String
   customerId    String
   serviceId     String
   staffId       String?
@@ -127,16 +213,20 @@ model Appointment {
   service       Service            @relation(fields: [serviceId], references: [id])
   staff         Staff?             @relation(fields: [staffId], references: [id])
   payment       Payment?
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cancellationRequests AppointmentCancellationRequest[]
 
+  @@index([tenantId, scheduledAt])
   @@index([scheduledAt])
   @@index([status])
-  @@index([scheduledDate, scheduledTime])
-  @@index([staffId, scheduledDate, scheduledTime])
-  @@index([customerId, scheduledDate, scheduledTime])
+  @@index([tenantId, scheduledDate, scheduledTime])
+  @@index([tenantId, staffId, scheduledDate, scheduledTime])
+  @@index([tenantId, customerId, scheduledDate, scheduledTime])
 }
 
 model Payment {
   id            String        @id @default(cuid())
+  tenantId      String
   appointmentId String        @unique
   amount        Int
   method        PaymentMethod
@@ -145,14 +235,17 @@ model Payment {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   appointment   Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId, paidAt])
   @@index([paidAt])
   @@index([method, paidAt])
 }
 
 model Package {
   id                   String           @id @default(cuid())
-  slug                 String           @unique
+  tenantId             String
+  slug                 String
   name                 String
   teaser               String
   packagePrice         Int
@@ -161,6 +254,10 @@ model Package {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
   packageServices      PackageService[]
+  tenant               Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, isActive])
 }
 
 model PackageService {
@@ -200,6 +297,7 @@ model RateLimitBucket {
 
 model AuditLog {
   id              String         @id @default(cuid())
+  tenantId        String?
   actorType       AuditActorType
   actorIdentifier String?
   event           AuditEvent
@@ -209,8 +307,158 @@ model AuditLog {
   ipAddress       String?
   metadata        Json?
   createdAt       DateTime       @default(now())
+  tenant          Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   @@index([event, createdAt])
   @@index([targetType, targetId, createdAt])
   @@index([actorType, createdAt])
+  @@index([tenantId, event, createdAt])
+}
+
+model AdminUser {
+  id           String        @id @default(cuid())
+  tenantId     String
+  staffId      String?
+  username     String
+  email        String
+  passwordHash String
+  role         AdminUserRole
+  isActive     Boolean       @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staff        Staff?        @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, username])
+  @@unique([tenantId, email])
+  @@index([tenantId, role, isActive])
+}
+
+model TenantSubscription {
+  id                  String           @id @default(cuid())
+  tenantId            String           @unique
+  plan                SubscriptionPlan @default(DEMO)
+  maxStaffCount       Int              @default(3)
+  maxMonthlyAppointments Int           @default(120)
+  startsAt            DateTime         @default(now())
+  endsAt              DateTime?
+  isActive            Boolean          @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  tenant              Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model StaffAvailability {
+  id             String   @id @default(cuid())
+  staffId        String
+  dayOfWeek      Int
+  startTime      String
+  endTime        String
+  breakStartTime String?
+  breakEndTime   String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  staff          Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, dayOfWeek, isActive])
+}
+
+model StaffTimeOff {
+  id          String   @id @default(cuid())
+  staffId     String
+  startDate   String
+  endDate     String
+  isAllDay    Boolean  @default(true)
+  startTime   String?
+  endTime     String?
+  reason      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  staff       Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, startDate, endDate])
+}
+
+model CustomerAccessCode {
+  id         String   @id @default(cuid())
+  tenantId   String
+  customerId String
+  identifier String
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, identifier, expiresAt])
+}
+
+model AppointmentCancellationRequest {
+  id            String                    @id @default(cuid())
+  tenantId      String
+  appointmentId String
+  customerId    String
+  reason        String?
+  status        CancellationRequestStatus @default(PENDING)
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  appointment   Appointment               @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  customer      Customer                  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
+  @@index([appointmentId, customerId])
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  sku           String
+  stock         Int
+  purchasePrice Int
+  salePrice     Int
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  saleItems     SaleItem[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, isActive, name])
+}
+
+model Sale {
+  id           String        @id @default(cuid())
+  tenantId     String
+  customerId   String?
+  staffId      String?
+  totalAmount  Int
+  paymentMethod PaymentMethod
+  note         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  staff        Staff?        @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  items        SaleItem[]
+
+  @@index([tenantId, createdAt])
+}
+
+model SaleItem {
+  id         String   @id @default(cuid())
+  saleId     String
+  productId  String
+  quantity   Int
+  unitPrice  Int
+  createdAt  DateTime @default(now())
+  sale       Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([saleId])
+  @@index([productId])
 }

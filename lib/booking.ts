@@ -29,9 +29,11 @@ export const bookingTimeSlots = [
 export const bookingServiceSlugs = siteContent.services.map((service) => service.slug) as [string, ...string[]]
 
 export const bookingSchema = z.object({
-  service: z.enum(bookingServiceSlugs, {
-    message: "Lütfen bir hizmet seçin.",
-  }),
+  service: z
+    .string()
+    .trim()
+    .min(1, "Lutfen bir hizmet secin.")
+    .regex(/^[a-z0-9-]+$/, "Gecerli bir hizmet secin."),
   date: z
     .string()
     .min(1, "Lütfen bir tarih seçin.")

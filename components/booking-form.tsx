@@ -38,7 +38,15 @@ type AvailabilityResponse = {
   message?: string
 }
 
-export function BookingForm() {
+export function BookingForm({
+  services = siteContent.services,
+}: {
+  services?: Array<{
+    slug: string
+    title: string
+    teaser: string
+  }>
+}) {
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [errors, setErrors] = useState<BookingFieldErrors>({})
@@ -48,7 +56,7 @@ export function BookingForm() {
   const [availabilityLoading, setAvailabilityLoading] = useState(false)
   const [availabilityMessage, setAvailabilityMessage] = useState("")
   const [formData, setFormData] = useState<BookingFormDraft>({
-    service: bookingServiceSlugs[0],
+    service: services[0]?.slug ?? bookingServiceSlugs[0],
     date: "",
     time: "",
     name: "",
@@ -59,8 +67,7 @@ export function BookingForm() {
 
   const minDate = getBookingMinDate()
   const normalizedSelectedDate = normalizeBookingDateInput(formData.date)
-  const selectedService =
-    siteContent.services.find((service) => service.slug === formData.service) ?? siteContent.services[0]
+  const selectedService = services.find((service) => service.slug === formData.service) ?? services[0]
 
   useEffect(() => {
     let cancelled = false
@@ -228,7 +235,7 @@ export function BookingForm() {
           onClick={() => {
             setSubmitted(false)
             setFormData({
-              service: bookingServiceSlugs[0],
+              service: services[0]?.slug ?? bookingServiceSlugs[0],
               date: "",
               time: "",
               name: "",
@@ -281,7 +288,7 @@ export function BookingForm() {
             required
             className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
           >
-            {siteContent.services.map((service) => (
+            {services.map((service) => (
               <option key={service.slug} value={service.slug}>
                 {service.title}
               </option>
