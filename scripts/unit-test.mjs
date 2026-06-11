@@ -20,6 +20,7 @@ import { runHttpTests } from "../tests/http.test.mts"
 import { runObservabilityTests } from "../tests/observability.test.mts"
 import { runOpsPreflightTests } from "../tests/ops-preflight.test.mts"
 import { runRepositoryTests } from "../tests/repository.test.mts"
+import { runSalonOpsTests } from "../tests/salon-ops.test.mts"
 import { runSecurityTests } from "../tests/security.test.mts"
 import { runSiteConfigTests } from "../tests/site-config.test.mts"
 
@@ -163,6 +164,7 @@ try {
   runObservabilityTests()
   runOpsPreflightTests()
   runRepositoryTests()
+  runSalonOpsTests()
   runSecurityTests()
   runSiteConfigTests()
   restoreEnv()

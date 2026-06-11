@@ -7,6 +7,7 @@ const filesToCheck = [
   "app/hizmetler/page.tsx",
   "app/hakkimizda/page.tsx",
   "app/admin/page.tsx",
+  "app/admin/customers/[id]/page.tsx",
   "app/api/bookings/route.ts",
   "app/admin/actions.ts",
   "components/admin/appointment-operations.tsx",
@@ -40,6 +41,20 @@ async function main() {
         throw new Error(`Smoke check failed: "${token}" bulundu -> ${file}`)
       }
     }
+  }
+
+  const adminOperations = await readFile(
+    new URL("../components/admin/appointment-operations.tsx", import.meta.url),
+    "utf8"
+  )
+  const adminPage = await readFile(new URL("../app/admin/page.tsx", import.meta.url), "utf8")
+
+  if (!adminOperations.includes("Odeme Alindi")) {
+    throw new Error('Smoke check failed: "Odeme Alindi" aksiyonu bulunamadi -> components/admin/appointment-operations.tsx')
+  }
+
+  if (!adminPage.includes("Gun Sonu Ozeti")) {
+    throw new Error('Smoke check failed: "Gun Sonu Ozeti" karti bulunamadi -> app/admin/page.tsx')
   }
 
   console.log("Smoke check passed.")

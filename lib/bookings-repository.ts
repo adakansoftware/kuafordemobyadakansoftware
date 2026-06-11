@@ -10,6 +10,7 @@ import {
 } from "@/lib/booking-rules"
 import { assertMatchingCustomerIdentity, CustomerIdentityConflictError } from "@/lib/customer-identity"
 import { db } from "@/lib/db"
+import { calculateAvailableDiscountCount } from "@/lib/salon-ops"
 
 const ACTIVE_APPOINTMENT_STATUSES = [AppointmentStatus.NEW, AppointmentStatus.CONFIRMED] as const
 const BOOKING_IDEMPOTENCY_WINDOW_MS = 2 * 60 * 1000
@@ -314,6 +315,7 @@ export async function getCustomerInsights() {
       name: true,
       phone: true,
       email: true,
+      loyaltyPoints: true,
     },
     orderBy: {
       updatedAt: "desc",
@@ -323,7 +325,7 @@ export async function getCustomerInsights() {
 
   const customerIds = customers.map((customer) => customer.id)
 
-  const [groupedAppointments, latestAppointments] = await Promise.all([
+  const [groupedAppointments, latestAppointments, completedPaidAppointments] = await Promise.all([
     customerIds.length
       ? db.appointment.groupBy({
           by: ["customerId", "status"],
@@ -349,6 +351,27 @@ export async function getCustomerInsights() {
             staff: true,
           },
           orderBy: [{ customerId: "asc" }, { scheduledAt: "desc" }, { createdAt: "desc" }],
+        })
+      : Promise.resolve([]),
+    customerIds.length
+      ? db.appointment.findMany({
+          where: {
+            customerId: {
+              in: customerIds,
+            },
+            status: AppointmentStatus.COMPLETED,
+            payment: {
+              isNot: null,
+            },
+          },
+          select: {
+            customerId: true,
+            payment: {
+              select: {
+                amount: true,
+              },
+            },
+          },
         })
       : Promise.resolve([]),
   ])
@@ -387,6 +410,24 @@ export async function getCustomerInsights() {
       .filter((appointment, index, appointments) => appointments.findIndex((entry) => entry.customerId === appointment.customerId) === index)
       .map((appointment) => [appointment.customerId, appointment])
   )
+  const completedPaidStatsByCustomerId = new Map<
+    string,
+    {
+      completedPaidAppointments: number
+      totalSpending: number
+    }
+  >()
+
+  for (const appointment of completedPaidAppointments) {
+    const current = completedPaidStatsByCustomerId.get(appointment.customerId) ?? {
+      completedPaidAppointments: 0,
+      totalSpending: 0,
+    }
+
+    current.completedPaidAppointments += 1
+    current.totalSpending += appointment.payment?.amount ?? 0
+    completedPaidStatsByCustomerId.set(appointment.customerId, current)
+  }
 
   return customers.map((customer) => {
     const latestAppointment = latestAppointmentByCustomerId.get(customer.id) ?? null
@@ -395,12 +436,19 @@ export async function getCustomerInsights() {
       completedAppointments: 0,
       activeAppointments: 0,
     }
+    const paidStats = completedPaidStatsByCustomerId.get(customer.id) ?? {
+      completedPaidAppointments: 0,
+      totalSpending: 0,
+    }
 
     return {
       id: customer.id,
       name: customer.name,
       phone: customer.phone,
       email: customer.email,
+      loyaltyPoints: customer.loyaltyPoints,
+      availableDiscounts: calculateAvailableDiscountCount(paidStats.completedPaidAppointments),
+      totalSpending: paidStats.totalSpending,
       totalAppointments: stats.totalAppointments,
       completedAppointments: stats.completedAppointments,
       activeAppointments: stats.activeAppointments,
@@ -1002,6 +1050,7 @@ const appointmentInclude = {
   customer: true,
   service: true,
   staff: true,
+  payment: true,
 } as const
 type AppointmentWithRelations = Prisma.AppointmentGetPayload<{
   include: typeof appointmentInclude

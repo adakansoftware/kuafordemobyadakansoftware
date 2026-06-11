@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
 import type { ReactNode } from "react"
+import Link from "next/link"
 import { AppointmentStatus } from "@prisma/client"
 import { AppointmentOperations } from "@/components/admin/appointment-operations"
+import { BusinessSettingsForm } from "@/components/admin/business-settings-form"
 import {
   getAppointmentMetrics,
   getBusinessSettings,
@@ -15,11 +17,18 @@ import {
   listStaffFromDb,
 } from "@/lib/bookings-repository"
 import { requireAdminAccess } from "@/lib/security"
+import {
+  getActivePackages,
+  getDailyCalendarView,
+  getEndOfDaySummary,
+  getStaffCommissionSummary,
+  getUnpaidCompletedAppointments,
+} from "@/lib/salon-ops-repository"
 import { siteContent } from "@/lib/site-content"
 
 export const metadata: Metadata = {
   title: "Admin | Adakan Hair Studio",
-  description: "Operasyon paneli, randevu kayıtları ve salon yönetim ekranı.",
+  description: "Kuafor randevu, odeme, musteri ve operasyon yonetim merkezi.",
   robots: {
     index: false,
     follow: false,
@@ -34,6 +43,7 @@ type AdminPageProps = {
     status?: string
     staff?: string
     page?: string
+    day?: string
   }>
 }
 
@@ -52,6 +62,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const statusFilter = normalizeStatusFilter(resolvedSearchParams.status)
   const staffFilter = (resolvedSearchParams.staff ?? "all").trim() || "all"
   const page = normalizePageParam(resolvedSearchParams.page)
+  const selectedDay = normalizeDateParam(resolvedSearchParams.day)
 
   const [
     settings,
@@ -64,6 +75,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     upcomingAgenda,
     followUpQueue,
     appointments,
+    unpaidCompletedAppointments,
+    endOfDaySummary,
+    staffCommissionSummary,
+    activePackages,
+    calendarView,
   ] = await Promise.all([
     getBusinessSettings(),
     getAppointmentMetrics(),
@@ -85,21 +101,34 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         pageSize: 25,
       }
     ),
+    getUnpaidCompletedAppointments(),
+    getEndOfDaySummary(),
+    getStaffCommissionSummary(),
+    getActivePackages(),
+    getDailyCalendarView(selectedDay),
   ])
 
-  const capacityUsage = Math.min(100, Math.round((alerts.todaysLoad / Math.max(alerts.todayCapacity, 1)) * 100))
+  const capacityUsage = Math.min(100, Math.round((alerts.todaysLoad / Math.max(settings?.dailyCapacity ?? alerts.todayCapacity, 1)) * 100))
   const filteredSummary = [
-    query ? `Arama: "${query}"` : "Tüm kayıtlar",
-    statusFilter === "ALL" ? "Tüm durumlar" : `${statusLabels[statusFilter]} durumundakiler`,
+    query ? `Arama: "${query}"` : "Tum kayitlar",
+    statusFilter === "ALL" ? "Tum durumlar" : `${statusLabels[statusFilter]} durumundakiler`,
     staffFilter === "all"
-      ? "Tüm ekip"
+      ? "Tum ekip"
       : staffFilter === "unassigned"
-        ? "Atanmamış randevular"
-        : `${staff.find((person) => person.id === staffFilter)?.name ?? "Seçili personel"}`,
+        ? "Atanmamis randevular"
+        : `${staff.find((person) => person.id === staffFilter)?.name ?? "Secili personel"}`,
   ]
 
   const bestPerformingService = [...servicePerformance].sort((a, b) => b.completedAppointments - a.completedAppointments)[0]
   const mostLoadedStaff = [...staffWorkload].sort((a, b) => b.activeAppointments - a.activeAppointments)[0]
+  const workingHoursNote =
+    settings?.workingHours && typeof settings.workingHours === "object" && "note" in settings.workingHours
+      ? String(settings.workingHours.note ?? "")
+      : ""
+
+  const calendarTimes = Array.from(
+    new Set(calendarView.appointments.map((appointment) => appointment.scheduledTime))
+  ).sort()
 
   return (
     <>
@@ -112,65 +141,118 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 {settings?.businessName ?? "Salon Operasyon Merkezi"}
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-relaxed text-primary-foreground/75">
-                Operasyon, ekip, müşteri ve gelir sinyallerini aynı ekranda toplayan bu panel; salonun günlük
-                yönetimini canlı kullanım seviyesinde sürdürmek için tasarlandı.
+                Randevu, odeme, musteri, personel primi ve gun sonu raporu ayni ekranda yonetilir.
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <HighlightCard label="Bugünkü Operasyon" value={`${alerts.todaysLoad}`} caption="aktif plan" />
-              <HighlightCard label="Kapasite Kullanımı" value={`${capacityUsage}%`} caption={`${alerts.todayCapacity} slot kapasite`} />
-              <HighlightCard label="Takip Sırası" value={`${followUpQueue.length}`} caption="hemen ilgilenilecek kayıt" />
+            <div className="grid gap-3 sm:grid-cols-4">
+              <HighlightCard label="Bugunku Operasyon" value={`${alerts.todaysLoad}`} caption="aktif plan" />
+              <HighlightCard label="Gun Sonu Ciro" value={formatCurrency(endOfDaySummary.revenueTotal)} caption="bugun tahsil edilen" />
+              <HighlightCard label="Bekleyen Odeme" value={`${endOfDaySummary.pendingPaymentCount}`} caption={formatCurrency(endOfDaySummary.pendingPaymentAmount)} />
+              <HighlightCard label="Kapasite Kullanim" value={`${capacityUsage}%`} caption={`${settings?.dailyCapacity ?? alerts.todayCapacity} slot`} />
             </div>
           </div>
         </div>
       </section>
 
       <section className="py-16">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl space-y-10 px-6 lg:px-8">
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-6">
             <MetricCard label="Toplam Randevu" value={String(metrics.totalAppointments)} />
-            <MetricCard label="Bugünkü Randevu" value={String(metrics.todaysAppointments)} />
+            <MetricCard label="Bugunku Randevu" value={String(metrics.todaysAppointments)} />
             <MetricCard label="Yeni Talep" value={String(metrics.newAppointments)} />
-            <MetricCard label="Onaylı" value={String(metrics.confirmedAppointments)} />
-            <MetricCard label="Tamamlandı" value={String(metrics.completedAppointments)} />
-            <MetricCard label="İptal" value={String(metrics.cancelledAppointments)} />
+            <MetricCard label="Onayli" value={String(metrics.confirmedAppointments)} />
+            <MetricCard label="Tamamlandi" value={String(metrics.completedAppointments)} />
+            <MetricCard label="Iptal" value={String(metrics.cancelledAppointments)} />
           </div>
 
-          <div className="mt-10 grid gap-6 xl:grid-cols-[1.65fr_1fr]">
+          <div className="grid gap-6 xl:grid-cols-3">
+            <PanelCard
+              title="Gun Sonu Ozeti"
+              items={[
+                `Bugunku ciro: ${formatCurrency(endOfDaySummary.revenueTotal)}`,
+                `Nakit: ${formatCurrency(endOfDaySummary.cashTotal)}`,
+                `Kart: ${formatCurrency(endOfDaySummary.cardTotal)}`,
+                `IBAN: ${formatCurrency(endOfDaySummary.ibanTotal)}`,
+                `Bekleyen odeme: ${formatCurrency(endOfDaySummary.pendingPaymentAmount)}`,
+                `Tamamlanan randevu: ${endOfDaySummary.completedAppointments}`,
+                `Iptal orani: %${endOfDaySummary.cancelRate}`,
+                `En cok kazandiran hizmet: ${endOfDaySummary.topService?.title ?? "Veri bekleniyor"}`,
+                `En cok calisan personel: ${endOfDaySummary.topStaff?.name ?? "Veri bekleniyor"}`,
+              ]}
+            />
+
+            <InsightCard
+              title="Servis Lideri"
+              value={bestPerformingService?.title ?? "Veri bekleniyor"}
+              subtitle={
+                bestPerformingService
+                  ? `${bestPerformingService.completedAppointments} tamamlanan islem / tahmini ${formatCurrency(bestPerformingService.estimatedRevenue)}`
+                  : "Tamamlanan hizmet verisi henuz olusmadi."
+              }
+            />
+
+            <InsightCard
+              title="En Yogun Personel"
+              value={mostLoadedStaff?.name ?? "Planlama bekleniyor"}
+              subtitle={
+                mostLoadedStaff
+                  ? `${mostLoadedStaff.activeAppointments} aktif randevu / ${mostLoadedStaff.role}`
+                  : "Aktif randevu atamasi bekleniyor."
+              }
+            />
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[1.75fr_1fr]">
             <div className="space-y-6">
-              <div className="grid gap-6 lg:grid-cols-2">
-                <InsightCard
-                  title="Servis Lideri"
-                  value={bestPerformingService?.title ?? "Veri bekleniyor"}
-                  subtitle={
-                    bestPerformingService
-                      ? `${bestPerformingService.completedAppointments} tamamlanan işlem / tahmini ${formatCurrency(bestPerformingService.estimatedRevenue)}`
-                      : "Tamamlanan işlem verisi henüz oluşmadı."
-                  }
-                />
-                <InsightCard
-                  title="En Yoğun Personel"
-                  value={mostLoadedStaff?.name ?? "Planlama bekleniyor"}
-                  subtitle={
-                    mostLoadedStaff
-                      ? `${mostLoadedStaff.activeAppointments} aktif randevu / ${mostLoadedStaff.role}`
-                      : "Aktif randevu ataması bekleniyor."
-                  }
-                />
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="font-serif text-2xl font-bold text-foreground">Odenmemis Tamamlanan Randevular</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Tahsilat bekleyen tamamlanmis kayitlar, odeme aksiyonuna hizli giris icin ayrica listelenir.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-background px-4 py-2 text-sm text-foreground">
+                    {unpaidCompletedAppointments.length} kayit
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  {unpaidCompletedAppointments.length ? (
+                    unpaidCompletedAppointments.map((appointment) => (
+                      <div key={appointment.id} className="rounded-xl bg-background px-4 py-4">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <div className="font-medium text-foreground">{appointment.customer.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {appointment.service.title} / {appointment.scheduledDate} / {appointment.scheduledTime}
+                            </div>
+                          </div>
+                          <div className="text-sm font-medium text-amber-800">
+                            Bekleyen tahsilat: {formatCurrency(appointment.service.priceFrom)}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-xl bg-background px-4 py-4 text-sm text-muted-foreground">
+                      Su anda bekleyen odeme gorunmuyor.
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="rounded-2xl border border-border bg-card p-6">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                   <div>
-                    <h2 className="font-serif text-2xl font-bold text-foreground">Canlı Operasyon Akışı</h2>
+                    <h2 className="font-serif text-2xl font-bold text-foreground">Canli Operasyon Akisi</h2>
                     <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                      Randevu durumunu değiştirin, personel atayın, not bırakın ve kayıtları arama ya da filtrelerle
-                      hızlı şekilde bulun. Sistem çakışma ve dolu saat kontrollerini arka planda korur.
+                      Mevcut randevu listesi korunur; durum, personel, odeme ve WhatsApp aksiyonlari ayni kayit uzerinden yonetilir.
                     </p>
                   </div>
                   <div className="rounded-full bg-secondary px-4 py-2 text-sm text-foreground">
-                    {appointments.total} kayıt bulundu
+                    {appointments.total} kayit bulundu
                   </div>
                 </div>
 
@@ -181,7 +263,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       type="search"
                       name="q"
                       defaultValue={query}
-                      placeholder="Müşteri, telefon, e-posta veya hizmet ara"
+                      placeholder="Musteri, telefon, e-posta veya hizmet ara"
                       className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
                     />
                   </label>
@@ -193,11 +275,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       defaultValue={statusFilter}
                       className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
                     >
-                      <option value="ALL">Tüm durumlar</option>
+                      <option value="ALL">Tum durumlar</option>
                       <option value="NEW">Yeni</option>
-                      <option value="CONFIRMED">Onaylı</option>
-                      <option value="COMPLETED">Tamamlandı</option>
-                      <option value="CANCELLED">İptal</option>
+                      <option value="CONFIRMED">Onayli</option>
+                      <option value="COMPLETED">Tamamlandi</option>
+                      <option value="CANCELLED">Iptal</option>
                     </select>
                   </label>
 
@@ -208,8 +290,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       defaultValue={staffFilter}
                       className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
                     >
-                      <option value="all">Tüm ekip</option>
-                      <option value="unassigned">Atanmamış</option>
+                      <option value="all">Tum ekip</option>
+                      <option value="unassigned">Atanmamis</option>
                       {staff.map((person) => (
                         <option key={person.id} value={person.id}>
                           {person.name}
@@ -232,7 +314,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       href="/admin"
                       className="w-full rounded-xl border border-input bg-background px-5 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:border-accent"
                     >
-                      Sıfırla
+                      Sifirla
                     </a>
                   </div>
                 </form>
@@ -254,6 +336,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       <AppointmentOperations
                         key={appointment.id}
                         appointment={appointment}
+                        businessName={settings?.businessName ?? "Adakan Hair Studio"}
                         staffOptions={staff.map((person) => ({
                           id: person.id,
                           name: person.name,
@@ -263,15 +346,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     ))
                   ) : (
                     <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-muted-foreground">
-                      Seçili filtrelerle eşleşen randevu bulunamadı. Arama terimini veya filtreleri değiştirerek devam
-                      edebilirsiniz.
+                      Secili filtrelerle eslesen randevu bulunamadi.
                     </div>
                   )}
                 </div>
 
                 <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-border/80 bg-secondary/30 px-4 py-4 md:flex-row md:items-center md:justify-between">
                   <div className="text-sm text-muted-foreground">
-                    Sayfa {appointments.page} / {appointments.totalPages} · Bu sayfada {appointments.items.length} kayıt
+                    Sayfa {appointments.page} / {appointments.totalPages} - Bu sayfada {appointments.items.length} kayit
                   </div>
 
                   <div className="flex gap-3">
@@ -281,10 +363,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         status: statusFilter,
                         staff: staffFilter,
                         page: appointments.page - 1,
+                        day: selectedDay,
                       })}
                       disabled={appointments.page <= 1}
                     >
-                      Önceki
+                      Onceki
                     </PaginationLink>
                     <PaginationLink
                       href={buildAdminPageHref({
@@ -292,6 +375,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         status: statusFilter,
                         staff: staffFilter,
                         page: appointments.page + 1,
+                        day: selectedDay,
                       })}
                       disabled={appointments.page >= appointments.totalPages}
                     >
@@ -304,64 +388,100 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <div className="rounded-2xl border border-border bg-card p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="font-serif text-2xl font-bold text-foreground">Yaklaşan Ajanda</h2>
+                    <h2 className="font-serif text-2xl font-bold text-foreground">Gunluk Takvim Gorunumu</h2>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Sonraki aktif randevular ekip ve müşteri bilgisiyle birlikte listelenir.
+                      Saat satirlari ve personel sutunlariyla gunluk randevu yogunlugu.
                     </p>
                   </div>
-                  <span className="rounded-full bg-secondary px-4 py-2 text-sm text-foreground">
-                    {upcomingAgenda.length} plan
-                  </span>
+                  <form className="flex items-center gap-3">
+                    <input type="hidden" name="q" value={query} />
+                    <input type="hidden" name="status" value={statusFilter} />
+                    <input type="hidden" name="staff" value={staffFilter} />
+                    <input
+                      type="date"
+                      name="day"
+                      defaultValue={selectedDay}
+                      className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-xl border border-input bg-background px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:border-accent"
+                    >
+                      Gunu Goster
+                    </button>
+                  </form>
                 </div>
 
-                <div className="mt-4 space-y-3">
-                  {upcomingAgenda.map((appointment) => (
-                    <div key={appointment.id} className="rounded-xl bg-secondary px-4 py-4">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <div className="font-medium text-foreground">{appointment.customer.name}</div>
-                          <div className="mt-1 text-sm text-muted-foreground">
-                            {appointment.service.title} / {appointment.scheduledDate} / {appointment.scheduledTime}
-                          </div>
+                <div className="mt-6 overflow-x-auto">
+                  <div className="min-w-[780px] rounded-2xl border border-border">
+                    <div className="grid grid-cols-[120px_repeat(auto-fit,minmax(160px,1fr))] border-b border-border bg-secondary/40" style={{ gridTemplateColumns: `120px repeat(${Math.max(calendarView.staff.length, 1)}, minmax(160px, 1fr))` }}>
+                      <div className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Saat</div>
+                      {calendarView.staff.map((person) => (
+                        <div key={person.id} className="border-l border-border px-4 py-3 text-sm font-medium text-foreground">
+                          {person.name}
                         </div>
-                        <div className="text-sm text-muted-foreground">{appointment.staff?.name ?? "Atama bekliyor"}</div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                    {calendarTimes.length ? (
+                      calendarTimes.map((time) => (
+                        <div key={time} className="grid border-b border-border last:border-b-0" style={{ gridTemplateColumns: `120px repeat(${Math.max(calendarView.staff.length, 1)}, minmax(160px, 1fr))` }}>
+                          <div className="px-4 py-4 text-sm font-medium text-foreground">{time}</div>
+                          {calendarView.staff.map((person) => {
+                            const appointment = calendarView.appointments.find(
+                              (entry) => entry.scheduledTime === time && entry.staffId === person.id
+                            )
+
+                            return (
+                              <div key={`${time}-${person.id}`} className="border-l border-border px-3 py-3">
+                                {appointment ? (
+                                  <div className={`rounded-xl px-3 py-3 text-sm ${getCalendarToneClass(appointment.status)}`}>
+                                    <div className="font-medium">{appointment.customer.name}</div>
+                                    <div className="mt-1 text-xs opacity-80">{appointment.service.title}</div>
+                                  </div>
+                                ) : (
+                                  <div className="rounded-xl border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
+                                    Bos
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-8 text-sm text-muted-foreground">Secilen gun icin takvim kaydi bulunmuyor.</div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="space-y-6">
-              <PanelCard
-                title="Operasyon Uyarıları"
-                items={[
-                  `${alerts.unassignedActiveAppointments} aktif kayıt henüz personele atanmadı.`,
-                  `${alerts.staleRequests} yeni talep 30 dakikadan uzun süredir işleme alınmadı.`,
-                  `Bugün ${alerts.todaysLoad} aktif randevu planlandı.`,
-                  `Ekip kapasitesi bugün yaklaşık ${alerts.todayCapacity} yarım saatlik slot seviyesinde.`,
-                ]}
-              />
-
-              <TonePanel title="Takip Sırası">
-                <div className="space-y-3">
-                  {followUpQueue.length ? (
-                    followUpQueue.map((item) => (
-                      <div key={item.id} className={`rounded-xl px-4 py-3 ${getToneClass(item.tone)}`}>
-                        <div className="font-medium">{item.title}</div>
-                        <div className="mt-1 text-sm opacity-80">{item.description}</div>
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <h2 className="font-serif text-2xl font-bold text-foreground">Personel Prim Ozeti</h2>
+                <div className="mt-4 space-y-3">
+                  {staffCommissionSummary.map((person) => (
+                    <div key={person.id} className="rounded-xl bg-secondary px-4 py-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="font-medium text-foreground">{person.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {person.role} / %{person.commissionRate} prim
+                          </div>
+                        </div>
+                        <div className="text-right text-sm text-muted-foreground">
+                          <div>{person.totalAppointments} odemeli islem</div>
+                          <div>{formatCurrency(person.totalRevenue)} ciro</div>
+                          <div className="font-medium text-foreground">{formatCurrency(person.estimatedCommission)} prim</div>
+                        </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="rounded-xl bg-secondary px-4 py-3 text-sm text-muted-foreground">
-                      Şu an acil takip gerektiren kayıt görünmüyor.
                     </div>
-                  )}
+                  ))}
                 </div>
-              </TonePanel>
+              </div>
 
               <div className="rounded-2xl border border-border bg-card p-6">
-                <h2 className="font-serif text-2xl font-bold text-foreground">Müşteri Geçmişi</h2>
+                <h2 className="font-serif text-2xl font-bold text-foreground">Musteri Gecmisi</h2>
                 <div className="mt-4 space-y-3">
                   {customerInsights.map((customer) => (
                     <div key={customer.id} className="rounded-xl bg-secondary px-4 py-4">
@@ -371,22 +491,26 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                           <div className="mt-1 text-sm text-muted-foreground">{customer.phone ?? "Telefon yok"}</div>
                           <div className="text-sm text-muted-foreground">{customer.email ?? "E-posta yok"}</div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-serif text-2xl font-bold text-foreground">{customer.totalAppointments}</div>
-                          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">toplam ziyaret</div>
-                        </div>
+                        <Link
+                          className="rounded-full border border-input bg-background px-3 py-2 text-xs uppercase tracking-[0.16em] text-foreground transition-colors hover:border-accent"
+                          href={`/admin/customers/${customer.id}`}
+                        >
+                          Detay
+                        </Link>
                       </div>
 
                       <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
                         <p>Aktif plan: {customer.activeAppointments}</p>
                         <p>Tamamlanan hizmet: {customer.completedAppointments}</p>
+                        <p>Toplam harcama: {formatCurrency(customer.totalSpending)}</p>
+                        <p>Sadakat puani: {customer.loyaltyPoints}</p>
+                        <p>Indirim hakki: {customer.availableDiscounts}</p>
                         <p>
-                          Son kayıt:{" "}
+                          Son kayit:{" "}
                           {customer.latestAppointment
                             ? `${customer.latestAppointment.serviceTitle} / ${customer.latestAppointment.scheduledDate} / ${customer.latestAppointment.scheduledTime}`
-                            : "Henüz yok"}
+                            : "Henuz yok"}
                         </p>
-                        <p>Son atama: {customer.latestAppointment?.staffName ?? "Atama kaydı bulunmuyor"}</p>
                       </div>
                     </div>
                   ))}
@@ -394,25 +518,29 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               </div>
 
               <div className="rounded-2xl border border-border bg-card p-6">
-                <h2 className="font-serif text-2xl font-bold text-foreground">Servis Performansı</h2>
+                <h2 className="font-serif text-2xl font-bold text-foreground">Paket Hizmetler</h2>
                 <div className="mt-4 space-y-3">
-                  {servicePerformance.map((service) => (
-                    <div key={service.id} className="rounded-xl bg-secondary px-4 py-4">
+                  {activePackages.map((pkg) => (
+                    <div key={pkg.id} className="rounded-xl bg-secondary px-4 py-4">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <div className="font-medium text-foreground">{service.title}</div>
-                          <div className="mt-1 text-sm text-muted-foreground">{service.teaser}</div>
+                          <div className="font-medium text-foreground">{pkg.name}</div>
+                          <div className="mt-1 text-sm text-muted-foreground">{pkg.teaser}</div>
                         </div>
                         <div className="text-right text-sm text-muted-foreground">
-                          <div>{service.durationMinutes} dk</div>
-                          <div>{service.priceLabel}</div>
+                          <div>{formatCurrency(pkg.packagePrice)}</div>
+                          <div>{pkg.totalDurationMinutes} dk</div>
                         </div>
                       </div>
-                      <div className="mt-3 grid gap-1 text-sm text-muted-foreground">
-                        <p>Toplam talep: {service.totalAppointments}</p>
-                        <p>Aktif plan: {service.activeAppointments}</p>
-                        <p>Tamamlanan: {service.completedAppointments}</p>
-                        <p>Tahmini tamamlanan gelir: {formatCurrency(service.estimatedRevenue)}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {pkg.packageServices.map((item) => (
+                          <span
+                            key={item.id}
+                            className="rounded-full border border-border bg-background px-3 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground"
+                          >
+                            {item.service.shortTitle}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   ))}
@@ -420,33 +548,52 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               </div>
 
               <div className="rounded-2xl border border-border bg-card p-6">
-                <h2 className="font-serif text-2xl font-bold text-foreground">Ekip Yük Dağılımı</h2>
-                <div className="mt-4 space-y-3">
-                  {staffWorkload.map((person) => (
-                    <div key={person.id} className="rounded-xl bg-secondary px-4 py-3">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <div className="font-medium text-foreground">{person.name}</div>
-                          <div className="text-sm text-muted-foreground">{person.role}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-serif text-2xl font-bold text-foreground">{person.activeAppointments}</div>
-                          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">aktif</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <h2 className="font-serif text-2xl font-bold text-foreground">Isletme Ayarlari</h2>
+                <div className="mt-4">
+                  <BusinessSettingsForm
+                    settings={{
+                      businessName: settings?.businessName ?? "Adakan Hair Studio",
+                      tagline: settings?.tagline ?? "Premium kuafor operasyon sistemi",
+                      phone: settings?.phone ?? "",
+                      whatsappPhone: settings?.whatsappPhone ?? settings?.phone ?? "",
+                      email: settings?.email ?? "",
+                      address: settings?.address ?? "",
+                      city: settings?.city ?? "",
+                      currency: settings?.currency ?? "TRY",
+                      dailyCapacity: settings?.dailyCapacity ?? 22,
+                      workingHoursNote,
+                    }}
+                  />
                 </div>
               </div>
 
               <PanelCard
-                title="Çekirdek Durumu"
-                items={[
-                  "Neon Postgres veritabanı bağlantısı aktif.",
-                  "Public form, API ve admin panel aynı veri kurallarını kullanıyor.",
-                  "Ajanda, müşteri geçmişi, servis performansı ve takip sırası tek panelde yönetiliyor.",
-                ]}
+                title="Takip Sirasi"
+                items={followUpQueue.length ? followUpQueue.map((item) => `${item.title}: ${item.description}`) : ["Acil takip gerektiren kayit gorunmuyor."]}
               />
+
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="font-serif text-2xl font-bold text-foreground">Yaklasan Ajanda</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">Sonraki aktif randevular hizli gorunum.</p>
+                  </div>
+                  <span className="rounded-full bg-secondary px-4 py-2 text-sm text-foreground">
+                    {upcomingAgenda.length} plan
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {upcomingAgenda.map((appointment) => (
+                    <div key={appointment.id} className="rounded-xl bg-secondary px-4 py-4">
+                      <div className="font-medium text-foreground">{appointment.customer.name}</div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        {appointment.service.title} / {appointment.scheduledDate} / {appointment.scheduledTime}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -465,12 +612,11 @@ function normalizeStatusFilter(value?: string) {
 
 function normalizePageParam(value?: string) {
   const page = Number(value)
+  return Number.isFinite(page) ? Math.max(Math.floor(page), 1) : 1
+}
 
-  if (!Number.isFinite(page)) {
-    return 1
-  }
-
-  return Math.max(Math.floor(page), 1)
+function normalizeDateParam(value?: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value ?? "") ? (value as string) : new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date())
 }
 
 function buildAdminPageHref(input: {
@@ -478,6 +624,7 @@ function buildAdminPageHref(input: {
   status: "ALL" | AppointmentStatus
   staff: string
   page: number
+  day: string
 }) {
   const params = new URLSearchParams()
 
@@ -497,6 +644,10 @@ function buildAdminPageHref(input: {
     params.set("page", String(input.page))
   }
 
+  if (input.day) {
+    params.set("day", input.day)
+  }
+
   const query = params.toString()
   return query ? `/admin?${query}` : "/admin"
 }
@@ -509,16 +660,20 @@ function formatCurrency(value: number) {
   }).format(value)
 }
 
-function getToneClass(tone: "warning" | "accent" | "success") {
-  if (tone === "warning") {
-    return "bg-amber-500/10 text-amber-800"
-  }
-
-  if (tone === "success") {
+function getCalendarToneClass(status: AppointmentStatus) {
+  if (status === "CONFIRMED") {
     return "bg-emerald-500/10 text-emerald-800"
   }
 
-  return "bg-sky-500/10 text-sky-800"
+  if (status === "COMPLETED") {
+    return "bg-sky-500/10 text-sky-800"
+  }
+
+  if (status === "CANCELLED") {
+    return "bg-rose-500/10 text-rose-800"
+  }
+
+  return "bg-amber-500/10 text-amber-800"
 }
 
 function MetricCard({ label, value }: { label: string; value: string }) {
@@ -530,15 +685,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
   )
 }
 
-function HighlightCard({
-  label,
-  value,
-  caption,
-}: {
-  label: string
-  value: string
-  caption: string
-}) {
+function HighlightCard({ label, value, caption }: { label: string; value: string; caption: string }) {
   return (
     <div className="rounded-2xl border border-primary-foreground/20 bg-primary-foreground/5 p-5">
       <p className="text-xs uppercase tracking-[0.2em] text-primary-foreground/70">{label}</p>
@@ -548,35 +695,12 @@ function HighlightCard({
   )
 }
 
-function InsightCard({
-  title,
-  value,
-  subtitle,
-}: {
-  title: string
-  value: string
-  subtitle: string
-}) {
+function InsightCard({ title, value, subtitle }: { title: string; value: string; subtitle: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
       <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{title}</p>
       <p className="mt-3 font-serif text-3xl font-bold text-foreground">{value}</p>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
-    </div>
-  )
-}
-
-function TonePanel({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h2 className="font-serif text-2xl font-bold text-foreground">{title}</h2>
-      <div className="mt-4">{children}</div>
     </div>
   )
 }
