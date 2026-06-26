@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { AdminUserRole } from "@prisma/client"
+import { getTodayInIstanbulDate, resolveSafeReportDateRange } from "@/lib/reporting"
 import { getDateRangeReport } from "@/lib/salon-ops-repository"
 import { requireAdminRoles } from "@/lib/security"
 
@@ -13,10 +14,13 @@ type ReportsPageProps = {
 export default async function AdminReportsPage({ searchParams }: ReportsPageProps) {
   await requireAdminRoles([AdminUserRole.OWNER, AdminUserRole.MANAGER])
   const params = (await searchParams) ?? {}
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date())
-  const from = params.from && /^\d{4}-\d{2}-\d{2}$/.test(params.from) ? params.from : today
-  const to = params.to && /^\d{4}-\d{2}-\d{2}$/.test(params.to) ? params.to : today
-  const report = await getDateRangeReport({ from, to })
+  const today = getTodayInIstanbulDate()
+  const range = resolveSafeReportDateRange({
+    from: params.from,
+    to: params.to,
+    fallbackDate: today,
+  })
+  const report = await getDateRangeReport(range)
 
   return (
     <section className="py-10">
@@ -24,14 +28,14 @@ export default async function AdminReportsPage({ searchParams }: ReportsPageProp
         <div className="rounded-2xl border border-border bg-card p-6">
           <h2 className="font-serif text-3xl font-bold text-foreground">Raporlar</h2>
           <form className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto_auto]">
-            <input type="date" name="from" defaultValue={from} className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
-            <input type="date" name="to" defaultValue={to} className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
+            <input type="date" name="from" defaultValue={range.from} className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
+            <input type="date" name="to" defaultValue={range.to} className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
             <button type="submit" className="rounded-xl bg-primary px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground">Filtrele</button>
             <div className="flex flex-wrap gap-2">
-              <Link href={`/admin/reports/export?from=${from}&to=${to}`} className="rounded-xl border border-input px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
+              <Link href={`/admin/reports/export?from=${range.from}&to=${range.to}`} className="rounded-xl border border-input px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
                 CSV Export
               </Link>
-              <Link href={`/admin/reports/print?from=${from}&to=${to}`} className="rounded-xl border border-input px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
+              <Link href={`/admin/reports/print?from=${range.from}&to=${range.to}`} className="rounded-xl border border-input px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
                 Yazdir
               </Link>
             </div>

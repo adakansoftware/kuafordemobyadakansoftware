@@ -1,4 +1,5 @@
 import { AdminUserRole } from "@prisma/client"
+import { getTodayInIstanbulDate, resolveSafeReportDateRange } from "@/lib/reporting"
 import { getDateRangeReport } from "@/lib/salon-ops-repository"
 import { requireAdminRoles } from "@/lib/security"
 
@@ -12,16 +13,19 @@ type PrintPageProps = {
 export default async function PrintableReportsPage({ searchParams }: PrintPageProps) {
   await requireAdminRoles([AdminUserRole.OWNER, AdminUserRole.MANAGER])
   const params = (await searchParams) ?? {}
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date())
-  const from = params.from && /^\d{4}-\d{2}-\d{2}$/.test(params.from) ? params.from : today
-  const to = params.to && /^\d{4}-\d{2}-\d{2}$/.test(params.to) ? params.to : today
-  const report = await getDateRangeReport({ from, to })
+  const today = getTodayInIstanbulDate()
+  const range = resolveSafeReportDateRange({
+    from: params.from,
+    to: params.to,
+    fallbackDate: today,
+  })
+  const report = await getDateRangeReport(range)
 
   return (
     <section className="mx-auto max-w-4xl space-y-6 px-6 py-10">
       <h1 className="font-serif text-4xl font-bold text-foreground">Yazdirilabilir Gun Sonu ve Tarih Araligi Raporu</h1>
       <p className="text-sm text-muted-foreground">
-        {from} - {to}
+        {range.from} - {range.to}
       </p>
       <div className="grid gap-3 md:grid-cols-2">
         <ReportItem label="Toplam Ciro" value={formatCurrency(report.revenueTotal)} />

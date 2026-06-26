@@ -1,19 +1,24 @@
 import { exportReportCsv } from "@/lib/salon-ops-repository"
 import { requireAdminRoles } from "@/lib/security"
 import { AdminUserRole } from "@prisma/client"
+import { getTodayInIstanbulDate, resolveSafeReportDateRange } from "@/lib/reporting"
 
 export async function GET(request: Request) {
   await requireAdminRoles([AdminUserRole.OWNER, AdminUserRole.MANAGER])
   const url = new URL(request.url)
-  const from = url.searchParams.get("from") ?? new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date())
-  const to = url.searchParams.get("to") ?? from
-  const csv = await exportReportCsv({ from, to })
+  const today = getTodayInIstanbulDate()
+  const range = resolveSafeReportDateRange({
+    from: url.searchParams.get("from"),
+    to: url.searchParams.get("to"),
+    fallbackDate: today,
+  })
+  const csv = await exportReportCsv(range)
 
   return new Response(csv, {
     status: 200,
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="report-${from}-${to}.csv"`,
+      "Content-Disposition": `attachment; filename="report-${range.from}-${range.to}.csv"`,
       "Cache-Control": "no-store",
     },
   })

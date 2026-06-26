@@ -1,6 +1,11 @@
 import { PaymentMethod } from "@prisma/client"
 import { z } from "zod"
 
+function timeToMinutes(value: string) {
+  const [hours, minutes] = value.split(":").map(Number)
+  return hours * 60 + minutes
+}
+
 export const paymentSchema = z.object({
   appointmentId: z.string().trim().min(1, "Randevu kaydi bulunamadi."),
   amount: z.coerce.number().int().positive("Odeme tutari sifirdan buyuk olmalidir."),
@@ -35,6 +40,60 @@ export const staffAvailabilitySchema = z.object({
   endTime: z.string().trim().regex(/^\d{2}:\d{2}$/, "Bitis saati gecersiz."),
   breakStartTime: z.string().trim().optional().default(""),
   breakEndTime: z.string().trim().optional().default(""),
+}).superRefine((value, context) => {
+  if (timeToMinutes(value.startTime) >= timeToMinutes(value.endTime)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endTime"],
+      message: "Bitis saati baslangic saatinden sonra olmalidir.",
+    })
+  }
+
+  const hasBreakStart = Boolean(value.breakStartTime)
+  const hasBreakEnd = Boolean(value.breakEndTime)
+
+  if (hasBreakStart !== hasBreakEnd) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["breakStartTime"],
+      message: "Mola saatleri birlikte girilmelidir.",
+    })
+    return
+  }
+
+  if (!hasBreakStart || !hasBreakEnd) {
+    return
+  }
+
+  if (!/^\d{2}:\d{2}$/.test(value.breakStartTime) || !/^\d{2}:\d{2}$/.test(value.breakEndTime)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["breakStartTime"],
+      message: "Mola saatleri HH:MM formatinda olmalidir.",
+    })
+    return
+  }
+
+  const startMinutes = timeToMinutes(value.startTime)
+  const endMinutes = timeToMinutes(value.endTime)
+  const breakStartMinutes = timeToMinutes(value.breakStartTime)
+  const breakEndMinutes = timeToMinutes(value.breakEndTime)
+
+  if (breakStartMinutes >= breakEndMinutes) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["breakEndTime"],
+      message: "Mola bitisi mola baslangicindan sonra olmalidir.",
+    })
+  }
+
+  if (breakStartMinutes <= startMinutes || breakEndMinutes >= endMinutes) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["breakStartTime"],
+      message: "Mola saatleri mesai araligi icinde kalmalidir.",
+    })
+  }
 })
 
 export const staffTimeOffSchema = z.object({
@@ -45,6 +104,48 @@ export const staffTimeOffSchema = z.object({
   startTime: z.string().trim().optional().default(""),
   endTime: z.string().trim().optional().default(""),
   reason: z.string().trim().max(500, "Izin nedeni en fazla 500 karakter olabilir.").optional().default(""),
+}).superRefine((value, context) => {
+  if (value.startDate > value.endDate) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endDate"],
+      message: "Bitis tarihi baslangic tarihinden once olamaz.",
+    })
+  }
+
+  const isAllDay = value.isAllDay === true || value.isAllDay === "true"
+  const hasStartTime = Boolean(value.startTime)
+  const hasEndTime = Boolean(value.endTime)
+
+  if (isAllDay) {
+    return
+  }
+
+  if (!hasStartTime || !hasEndTime) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["startTime"],
+      message: "Saat bazli izin icin baslangic ve bitis saati birlikte girilmelidir.",
+    })
+    return
+  }
+
+  if (!/^\d{2}:\d{2}$/.test(value.startTime) || !/^\d{2}:\d{2}$/.test(value.endTime)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["startTime"],
+      message: "Izin saatleri HH:MM formatinda olmalidir.",
+    })
+    return
+  }
+
+  if (timeToMinutes(value.startTime) >= timeToMinutes(value.endTime)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endTime"],
+      message: "Izin bitis saati baslangic saatinden sonra olmalidir.",
+    })
+  }
 })
 
 export const productSaleSchema = z.object({

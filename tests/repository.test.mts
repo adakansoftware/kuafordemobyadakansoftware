@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { normalizeAppointmentPagination } from "../lib/appointment-pagination.ts"
 import { assertMatchingCustomerIdentity, CustomerIdentityConflictError } from "../lib/customer-identity.ts"
 import { calculatePublicAvailability, findStaffScheduleConflict, getOverlappingSlotTimes, hasAppointmentWindowOverlap } from "../lib/booking-rules.ts"
+import { normalizeReportDateRange, ReportRangeError } from "../lib/reporting.ts"
 
 export function runRepositoryTests() {
   assert.deepEqual(normalizeAppointmentPagination(), {
@@ -165,4 +166,19 @@ export function runRepositoryTests() {
   )
 
   assert.equal(noConflict, null)
+
+  assert.deepEqual(normalizeReportDateRange({ from: "2026-06-01", to: "2026-06-30" }), {
+    from: "2026-06-01",
+    to: "2026-06-30",
+    rangeDays: 30,
+  })
+
+  assert.throws(
+    () => normalizeReportDateRange({ from: "2026-06-30", to: "2026-06-01" }),
+    ReportRangeError
+  )
+  assert.throws(
+    () => normalizeReportDateRange({ from: "2026-02-30", to: "2026-03-01" }),
+    ReportRangeError
+  )
 }

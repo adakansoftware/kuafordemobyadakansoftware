@@ -14,6 +14,7 @@ import { db } from "@/lib/db"
 import { normalizeCustomerPortalIdentifier } from "@/lib/customer-portal"
 import { hashPassword } from "@/lib/password"
 import { verifyPassword } from "@/lib/password"
+import { toReportWindow } from "@/lib/reporting"
 import {
   buildAppointmentWhatsAppMessages,
   calculateAvailableDiscountCount,
@@ -658,14 +659,15 @@ export async function getDateRangeReport(input: {
 }) {
   const tenantId = await resolveTenantId(input.tenantId)
   await assertPlanFeature(tenantId, "reports")
+  const reportWindow = toReportWindow({ from: input.from, to: input.to })
 
   const [payments, appointments, customers] = await Promise.all([
     db.payment.findMany({
       where: {
         tenantId,
         paidAt: {
-          gte: new Date(`${input.from}T00:00:00+03:00`),
-          lte: new Date(`${input.to}T23:59:59.999+03:00`),
+          gte: reportWindow.fromDateTime,
+          lte: reportWindow.toDateTime,
         },
       },
       include: {
@@ -716,8 +718,9 @@ export async function getDateRangeReport(input: {
   const repeatCustomers = customers.filter((customer) => customer.appointments.filter((appointment) => appointment.status === AppointmentStatus.COMPLETED).length > 1).length
 
   return {
-    from: input.from,
-    to: input.to,
+    from: reportWindow.from,
+    to: reportWindow.to,
+    rangeDays: reportWindow.rangeDays,
     revenueTotal: dailyRevenue,
     dailyRevenue: dailyRevenue,
     weeklyRevenue: dailyRevenue,
@@ -738,6 +741,9 @@ export async function exportReportCsv(input: {
   const report = await getDateRangeReport(input)
   const rows = [
     ["Metric", "Value"],
+    ["From", report.from],
+    ["To", report.to],
+    ["Range Days", String(report.rangeDays)],
     ["Revenue Total", String(report.revenueTotal)],
     ["Completed Appointments", String(report.completedAppointments)],
     ["Cancel Rate", String(report.cancelRate)],
@@ -778,6 +784,27 @@ export async function recordInventorySale(input: {
     const product = await tx.product.findFirstOrThrow({
       where: { id: input.productId, tenantId, isActive: true },
     })
+
+    if (input.customerId) {
+      await tx.customer.findFirstOrThrow({
+        where: {
+          id: input.customerId,
+          tenantId,
+        },
+        select: { id: true },
+      })
+    }
+
+    if (input.staffId) {
+      await tx.staff.findFirstOrThrow({
+        where: {
+          id: input.staffId,
+          tenantId,
+          isActive: true,
+        },
+        select: { id: true },
+      })
+    }
 
     if (product.stock < input.quantity) {
       throw new SubscriptionFeatureError("Yeterli stok bulunmuyor.")
@@ -923,6 +950,10 @@ export async function createStaffTimeOff(input: {
   const staff = await db.staff.findFirstOrThrow({
     where: { id: input.staffId, tenantId },
   })
+
+  if (input.startDate > input.endDate) {
+    throw new SubscriptionFeatureError("Izin bitis tarihi baslangic tarihinden once olamaz.")
+  }
 
   const timeOff = await db.staffTimeOff.create({
     data: {

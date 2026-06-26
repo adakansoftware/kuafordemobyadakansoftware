@@ -5,6 +5,8 @@ import {
   customerNotesSchema,
   mapAdminPaymentError,
   paymentSchema,
+  staffAvailabilitySchema,
+  staffTimeOffSchema,
 } from "../lib/admin-ops.ts"
 import {
   calculateAvailableDiscountCount,
@@ -85,6 +87,37 @@ export function runSalonOpsTests() {
     workingHoursNote: "10:00-20:00",
   })
   assert.equal(validSettings.success, true)
+
+  const invalidAvailability = staffAvailabilitySchema.safeParse({
+    staffId: "staff_1",
+    dayOfWeek: "2",
+    startTime: "18:00",
+    endTime: "10:00",
+    breakStartTime: "",
+    breakEndTime: "",
+  })
+  assert.equal(invalidAvailability.success, false)
+
+  const validAvailability = staffAvailabilitySchema.safeParse({
+    staffId: "staff_1",
+    dayOfWeek: "2",
+    startTime: "10:00",
+    endTime: "18:00",
+    breakStartTime: "13:00",
+    breakEndTime: "14:00",
+  })
+  assert.equal(validAvailability.success, true)
+
+  const invalidTimeOff = staffTimeOffSchema.safeParse({
+    staffId: "staff_1",
+    startDate: "2026-06-20",
+    endDate: "2026-06-19",
+    isAllDay: "false",
+    startTime: "16:00",
+    endTime: "10:00",
+    reason: "Test",
+  })
+  assert.equal(invalidTimeOff.success, false)
 
   const validCustomerNotes = customerNotesSchema.safeParse({
     customerId: "cus_1",
