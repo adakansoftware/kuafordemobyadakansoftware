@@ -34,6 +34,7 @@ function main() {
     ["run", "test:unit"],
     ["run", "test:smoke"],
     ["run", "ops:migration-check"],
+    ["run", "ops:hardening-check"],
     ci ? ["run", "ops:preflight", "--", "--ci"] : ["run", "ops:preflight"],
   ]
 

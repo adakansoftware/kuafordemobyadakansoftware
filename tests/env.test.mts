@@ -37,6 +37,18 @@ export function runEnvTests() {
   issues = getEnvIssues()
   assert.equal(issues.includes("ADMIN_PASSWORD en az 12 karakter olmalidir."), true)
 
+  process.env.ADMIN_PASSWORD = "very-strong-pass"
+  process.env.ALLOWED_ORIGIN_HOSTS = "https://example.com"
+  resetEnvCacheForTests()
+  issues = getEnvIssues()
+  assert.equal(issues.includes("ALLOWED_ORIGIN_HOSTS sadece host isimleri icermelidir."), true)
+
+  process.env.ALLOWED_ORIGIN_HOSTS = "booking.example.com"
+  process.env.DATABASE_URL = "mysql://demo"
+  resetEnvCacheForTests()
+  issues = getEnvIssues()
+  assert.equal(issues.includes("DATABASE_URL PostgreSQL baglantisi olmalidir."), true)
+
   process.env.NODE_ENV = "production"
   delete process.env.NEXT_PUBLIC_SITE_URL
   delete process.env.ADMIN_USERNAME

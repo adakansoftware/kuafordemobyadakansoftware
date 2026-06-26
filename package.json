@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "next dev --webpack",
     "dev:turbo": "next dev",
     "build": "next build",
@@ -12,12 +13,18 @@
     "test:unit": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/unit-test.mjs",
     "test:smoke": "node scripts/smoke-check.mjs",
     "ops:migration-check": "node scripts/migration-check.mjs",
+    "ops:hardening-check": "node scripts/hardening-check.mjs",
     "ops:preflight": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/ops-preflight.mjs",
     "ops:retention": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/ops-retention.mjs",
     "ops:audit-summary": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/audit-summary.mjs",
     "verify": "node scripts/verify.mjs",
     "verify:ci": "node scripts/verify.mjs --ci",
     "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:hardening": "prisma db execute --file prisma/hardening.sql --schema prisma/schema.prisma",
     "db:seed": "node prisma/seed.mjs"
   },
   "dependencies": {

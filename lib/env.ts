@@ -46,6 +46,7 @@ function collectEnvIssues(env: AppEnv) {
   const issues: string[] = []
   const hasAdminUsername = Boolean(env.ADMIN_USERNAME)
   const hasAdminPassword = Boolean(env.ADMIN_PASSWORD)
+  const normalizedDatabaseUrl = env.DATABASE_URL.trim().toLowerCase()
 
   if (hasAdminUsername !== hasAdminPassword) {
     issues.push("ADMIN_USERNAME ve ADMIN_PASSWORD birlikte tanimlanmalidir.")
@@ -61,6 +62,21 @@ function collectEnvIssues(env: AppEnv) {
 
   if (env.NODE_ENV === "production" && !env.NEXT_PUBLIC_SITE_URL) {
     issues.push("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur.")
+  }
+
+  if (!normalizedDatabaseUrl.startsWith("postgres://") && !normalizedDatabaseUrl.startsWith("postgresql://")) {
+    issues.push("DATABASE_URL PostgreSQL baglantisi olmalidir.")
+  }
+
+  if (
+    env.ALLOWED_ORIGIN_HOSTS &&
+    env.ALLOWED_ORIGIN_HOSTS
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .some((value) => value.includes("://") || value.includes("/"))
+  ) {
+    issues.push("ALLOWED_ORIGIN_HOSTS sadece host isimleri icermelidir.")
   }
 
   return issues
