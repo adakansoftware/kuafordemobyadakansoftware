@@ -15,6 +15,8 @@ import {
   getPaymentMethodLabel,
   getPaymentMethodOptions,
 } from "../lib/salon-ops.ts"
+import { getCustomerPortalSessionMaxAgeSeconds, normalizeCustomerPortalIdentifier } from "../lib/customer-portal.ts"
+import { buildSetupServices, buildSetupStaffMembers, normalizeSetupSlug, parseSetupList } from "../lib/setup-wizard.ts"
 
 export function runSalonOpsTests() {
   assert.equal(calculateCommissionAmount(2400, 15), 360)
@@ -45,6 +47,14 @@ export function runSalonOpsTests() {
 
   assert.equal(messages.confirmation.includes("randevunuz onaylandi"), true)
   assert.equal(messages.paymentReminder.includes("odeme kaydiniz bekleniyor"), true)
+  assert.equal(normalizeCustomerPortalIdentifier(" Demo@Example.com "), "demo@example.com")
+  assert.equal(normalizeCustomerPortalIdentifier("+90 (532) 111 00 01"), "905321110001")
+  assert.equal(getCustomerPortalSessionMaxAgeSeconds(), 43200)
+
+  assert.equal(normalizeSetupSlug(" Sac & Sakal Deluxe "), "sac-sakal-deluxe")
+  assert.deepEqual(parseSetupList("Ali, ali, Ayse, , AYSE", { maxItems: 10 }), ["Ali", "Ayse"])
+  assert.equal(buildSetupStaffMembers("Ali, ali, Ayse").length, 2)
+  assert.equal(buildSetupServices("Sac Kesim, sac kesim, Boya")[0]?.slug, "setup-service-1-sac-kesim")
 
   const validPayment = paymentSchema.safeParse({
     appointmentId: "apt_1",

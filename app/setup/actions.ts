@@ -3,15 +3,16 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { completeSetupWizard } from "@/lib/salon-ops-repository"
+import { buildSetupServices, buildSetupStaffMembers } from "@/lib/setup-wizard"
 
 const setupSchema = z.object({
-  tenantName: z.string().trim().min(2),
-  phone: z.string().trim().min(10),
-  ownerUsername: z.string().trim().min(3),
-  ownerEmail: z.string().trim().email(),
-  ownerPassword: z.string().trim().min(8),
-  staffNames: z.string().trim().min(2),
-  serviceTitles: z.string().trim().min(2),
+  tenantName: z.string().trim().min(2, "Salon adi en az 2 karakter olmalidir."),
+  phone: z.string().trim().min(10, "Telefon bilgisi en az 10 karakter olmalidir."),
+  ownerUsername: z.string().trim().min(3, "Kurucu kullanici adi en az 3 karakter olmalidir."),
+  ownerEmail: z.string().trim().email("Gecerli bir e-posta adresi girin."),
+  ownerPassword: z.string().trim().min(12, "Kurucu sifresi en az 12 karakter olmalidir."),
+  staffNames: z.string().trim().min(2, "En az bir personel girilmelidir."),
+  serviceTitles: z.string().trim().min(2, "En az bir hizmet girilmelidir."),
 })
 
 export type SetupWizardState = {
@@ -40,25 +41,22 @@ export async function completeSetupWizardAction(
     }
   }
 
-  const staffMembers = validation.data.staffNames
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map((name) => ({ name, role: "Stilist" }))
+  const staffMembers = buildSetupStaffMembers(validation.data.staffNames)
+  const services = buildSetupServices(validation.data.serviceTitles)
 
-  const services = validation.data.serviceTitles
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map((title, index) => ({
-      slug: `setup-service-${index + 1}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      title,
-      shortTitle: title,
-      teaser: `${title} hizmeti kurulum sihirbazi ile olusturuldu.`,
-      description: `${title} hizmeti tenant kurulumu sirasinda otomatik tanimlandi.`,
-      durationMinutes: 60,
-      priceFrom: 1000 + index * 250,
-    }))
+  if (staffMembers.length === 0) {
+    return {
+      success: false,
+      message: "Kurulum icin en az bir benzersiz personel girilmelidir.",
+    }
+  }
+
+  if (services.length === 0) {
+    return {
+      success: false,
+      message: "Kurulum icin en az bir benzersiz hizmet girilmelidir.",
+    }
+  }
 
   try {
     await completeSetupWizard({

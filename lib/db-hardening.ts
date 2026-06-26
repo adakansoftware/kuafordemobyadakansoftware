@@ -3,6 +3,7 @@ export const requiredDbHardeningIndexes = [
   "appointment_customer_active_slot_lookup_idx",
   "payment_tenant_method_paidat_idx",
   "customer_access_code_active_lookup_idx",
+  "appointment_cancellation_request_single_pending_unique",
   "appointment_cancellation_request_pending_idx",
   "sale_tenant_payment_createdat_idx",
   "audit_log_tenant_target_createdat_idx",

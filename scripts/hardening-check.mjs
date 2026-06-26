@@ -15,7 +15,7 @@ async function main() {
   )
   assert.equal(sql.includes("TODO"), false, 'Hardening SQL icinde "TODO" bulunmamali.')
 
-  console.log(`Hardening check passed. Index count: ${8}`)
+  console.log(`Hardening check passed. Index count: ${9}`)
 }
 
 main().catch((error) => {

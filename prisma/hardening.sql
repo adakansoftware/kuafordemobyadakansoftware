@@ -13,6 +13,10 @@ CREATE INDEX IF NOT EXISTS "customer_access_code_active_lookup_idx"
 ON "public"."CustomerAccessCode" ("tenantId", "identifier", "expiresAt" DESC)
 WHERE "consumedAt" IS NULL;
 
+CREATE UNIQUE INDEX IF NOT EXISTS "appointment_cancellation_request_single_pending_unique"
+ON "public"."AppointmentCancellationRequest" ("tenantId", "appointmentId", "customerId")
+WHERE "status" = 'PENDING';
+
 CREATE INDEX IF NOT EXISTS "appointment_cancellation_request_pending_idx"
 ON "public"."AppointmentCancellationRequest" ("tenantId", "appointmentId", "status", "createdAt" DESC)
 WHERE "status" = 'PENDING';

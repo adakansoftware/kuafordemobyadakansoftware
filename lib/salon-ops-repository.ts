@@ -11,7 +11,9 @@ import {
 } from "@prisma/client"
 import { createAuditLog } from "@/lib/audit-log"
 import { db } from "@/lib/db"
+import { normalizeCustomerPortalIdentifier } from "@/lib/customer-portal"
 import { hashPassword } from "@/lib/password"
+import { verifyPassword } from "@/lib/password"
 import {
   buildAppointmentWhatsAppMessages,
   calculateAvailableDiscountCount,
@@ -958,7 +960,11 @@ export async function beginCustomerPortalAccess(input: {
   tenantId?: string
 }) {
   const tenantId = await resolveTenantId(input.tenantId)
-  const normalizedIdentifier = input.identifier.trim().toLowerCase()
+  const normalizedIdentifier = normalizeCustomerPortalIdentifier(input.identifier)
+
+  if (!normalizedIdentifier) {
+    throw new CustomerPortalAccessError("Telefon veya e-posta bilgisi gereklidir.")
+  }
 
   const customer = await db.customer.findFirst({
     where: {
@@ -1010,7 +1016,7 @@ export async function verifyCustomerPortalAccess(input: {
     throw new CustomerPortalAccessError("Kodun suresi dolmus veya gecersiz.")
   }
 
-  if (input.code.trim() !== "123456") {
+  if (!verifyPassword(input.code.trim(), token.codeHash)) {
     throw new CustomerPortalAccessError("Kod gecersiz.")
   }
 
@@ -1018,6 +1024,18 @@ export async function verifyCustomerPortalAccess(input: {
     where: { id: token.id },
     data: {
       consumedAt: new Date(),
+    },
+  })
+
+  await createAuditLog({
+    tenantId,
+    actorType: AuditActorType.CUSTOMER,
+    actorIdentifier: token.customerId,
+    event: AuditEvent.CUSTOMER_PORTAL_ACCESSED,
+    targetType: "customer_portal",
+    targetId: token.customerId,
+    metadata: {
+      tokenId: token.id,
     },
   })
 
@@ -1058,6 +1076,22 @@ export async function requestAppointmentCancellation(input: {
       customerId: input.customerId,
     },
   })
+
+  const existingPendingRequest = await db.appointmentCancellationRequest.findFirst({
+    where: {
+      tenantId,
+      appointmentId: appointment.id,
+      customerId: input.customerId,
+      status: CancellationRequestStatus.PENDING,
+    },
+    select: {
+      id: true,
+    },
+  })
+
+  if (existingPendingRequest) {
+    throw new CustomerPortalAccessError("Bu randevu icin zaten bekleyen bir iptal talebi bulunuyor.")
+  }
 
   const request = await db.appointmentCancellationRequest.create({
     data: {
