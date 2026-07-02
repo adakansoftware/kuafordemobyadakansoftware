@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import {
   AdminUserRole,
   AppointmentStatus,
@@ -1000,9 +1001,15 @@ export async function beginCustomerPortalAccess(input: {
 }) {
   const tenantId = await resolveTenantId(input.tenantId)
   const normalizedIdentifier = normalizeCustomerPortalIdentifier(input.identifier)
+  const mockCode = process.env.NODE_ENV === "production" ? undefined : "123456"
 
   if (!normalizedIdentifier) {
-    throw new CustomerPortalAccessError("Telefon veya e-posta bilgisi gereklidir.")
+    return {
+      tokenId: `pending-${randomUUID()}`,
+      customerId: "",
+      mockCode,
+      accepted: true,
+    }
   }
 
   const customer = await db.customer.findFirst({
@@ -1013,7 +1020,12 @@ export async function beginCustomerPortalAccess(input: {
   })
 
   if (!customer) {
-    throw new CustomerPortalAccessError("Bu bilgi ile eslesen musteri kaydi bulunamadi.")
+    return {
+      tokenId: `pending-${randomUUID()}`,
+      customerId: "",
+      mockCode,
+      accepted: true,
+    }
   }
 
   const code = "123456"
@@ -1030,7 +1042,8 @@ export async function beginCustomerPortalAccess(input: {
   return {
     tokenId: token.id,
     customerId: customer.id,
-    mockCode: code,
+    mockCode,
+    accepted: true,
   }
 }
 

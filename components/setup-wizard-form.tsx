@@ -2,23 +2,35 @@
 
 import { useActionState } from "react"
 import { completeSetupWizardAction, type SetupWizardState } from "@/app/setup/actions"
+import type { PublicFormChallenge } from "@/lib/request-security"
 
 const initialState: SetupWizardState = {
   success: false,
   message: "",
 }
 
-export function SetupWizardForm() {
+export function SetupWizardForm({ securityChallenge }: { securityChallenge: PublicFormChallenge }) {
   const [state, formAction] = useActionState(completeSetupWizardAction, initialState)
 
   return (
     <form action={formAction} className="grid gap-4 rounded-3xl border border-border bg-card p-8 shadow-sm">
+      <input type="hidden" name="formIssuedAt" value={securityChallenge.formIssuedAt} />
+      <input type="hidden" name="formSignature" value={securityChallenge.formSignature} />
+      <input
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        className="hidden"
+        aria-hidden="true"
+      />
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Salon Adi" name="tenantName" />
         <Field label="Telefon" name="phone" />
         <Field label="Owner Kullanici Adi" name="ownerUsername" />
         <Field label="Owner E-posta" name="ownerEmail" type="email" />
         <Field label="Owner Sifre" name="ownerPassword" type="password" />
+        <Field label="Kurulum Erisim Tokeni" name="setupAccessToken" type="password" />
         <Field label="Personeller" name="staffNames" placeholder="Elif, Emre, Seda" />
       </div>
       <Field label="Hizmetler" name="serviceTitles" placeholder="Sac Kesim, Sac Boyama, Keratin" />

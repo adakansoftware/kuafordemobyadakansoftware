@@ -1,6 +1,24 @@
+import { db } from "@/lib/db"
+import { createPublicFormChallenge } from "@/lib/request-security"
 import { SetupWizardForm } from "@/components/setup-wizard-form"
 
-export default function SetupPage() {
+export const dynamic = "force-dynamic"
+
+export default async function SetupPage() {
+  const existingSetup = await db.tenant
+    .findFirst({
+      where: {
+        isSetupComplete: true,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    })
+    .catch(() => null)
+  const securityChallenge = createPublicFormChallenge("setup-form")
+
   return (
     <section className="py-16">
       <div className="mx-auto max-w-4xl space-y-6 px-6 lg:px-8">
@@ -12,7 +30,16 @@ export default function SetupPage() {
           </p>
         </div>
 
-        <SetupWizardForm />
+        {!existingSetup ? (
+          <SetupWizardForm securityChallenge={securityChallenge} />
+        ) : (
+          <div className="rounded-3xl border border-border bg-card p-8 shadow-sm">
+            <p className="text-sm font-medium text-foreground">Kurulum kilitli</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Aktif tenant kurulumu tamamlanmis gorunuyor. Guvenlik nedeniyle setup sihirbazi yeniden acik degil.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   )

@@ -1,8 +1,10 @@
 import { CustomerPortalForm } from "@/components/customer-portal-form"
 import { getCustomerPortalSessionSnapshot, requestCancellationAction } from "@/app/musteri/actions"
+import { createPublicFormChallenge } from "@/lib/request-security"
 
 export default async function CustomerPortalPage() {
   const snapshot = await getCustomerPortalSessionSnapshot()
+  const securityChallenge = createPublicFormChallenge("customer-portal-request")
 
   async function requestCancellation(formData: FormData) {
     "use server"
@@ -24,7 +26,7 @@ export default async function CustomerPortalPage() {
           </p>
         </div>
 
-        {!snapshot ? <CustomerPortalForm /> : null}
+        {!snapshot ? <CustomerPortalForm securityChallenge={securityChallenge} /> : null}
 
         {snapshot ? (
           <div className="rounded-3xl border border-border bg-card p-8 shadow-sm">

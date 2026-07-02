@@ -3,6 +3,13 @@
 import { cookies, headers } from "next/headers"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
+import {
+  blockTemporarily,
+  buildRequestFingerprint,
+  getTemporaryBlock,
+  recordSuspicion,
+  verifyPublicFormChallenge,
+} from "@/lib/request-security"
 import { applyRateLimit } from "@/lib/rate-limit"
 import {
   createCustomerPortalSessionValue,
@@ -28,17 +35,79 @@ export async function requestCustomerPortalCodeAction(
   const requestId = await getCurrentRequestId()
   const ipAddress = await getRequestIpAddress()
   const identifier = String(formData.get("identifier") ?? "")
+  const requestHeaders = await headers()
+  const fingerprint = buildRequestFingerprint(requestHeaders, {
+    route: "/musteri",
+    identifier: identifier.trim().toLowerCase().slice(0, 80),
+  })
+  const clientKey = `${ipAddress}:${fingerprint}`
 
   try {
     await verifyTrustedOrigin({ allowHostFallback: true })
+
+    if (String(formData.get("website") ?? "").trim()) {
+      await recordSuspicion({
+        scope: "customer-portal-request",
+        clientKey,
+        score: 6,
+        requestId,
+        route: "/musteri",
+        reason: "Customer portal request honeypot was filled.",
+      })
+      await blockTemporarily("customer-portal-request", clientKey, 30 * 60_000)
+
+      return {
+        step: "request",
+        success: false,
+        message: "Istek dogrulanamadi.",
+      }
+    }
+
+    const blockState = await getTemporaryBlock("customer-portal-request", clientKey)
+
+    if (blockState && blockState.resetAt > Date.now()) {
+      return {
+        step: "request",
+        success: false,
+        message: "Cok fazla kod denemesi yapildi. Lutfen biraz sonra tekrar deneyin.",
+      }
+    }
+
+    const challenge = verifyPublicFormChallenge("customer-portal-request", {
+      formIssuedAt: String(formData.get("formIssuedAt") ?? ""),
+      formSignature: String(formData.get("formSignature") ?? ""),
+    })
+
+    if (!challenge.ok) {
+      const accumulatedScore = await recordSuspicion({
+        scope: "customer-portal-request",
+        clientKey,
+        score: challenge.reason === "form_submitted_too_fast" ? 4 : 3,
+        requestId,
+        route: "/musteri",
+        reason: `Customer portal request challenge failed: ${challenge.reason}.`,
+      })
+
+      if (accumulatedScore >= 8) {
+        await blockTemporarily("customer-portal-request", clientKey, 30 * 60_000)
+      }
+
+      return {
+        step: "request",
+        success: false,
+        message: "Istek dogrulanamadi.",
+      }
+    }
+
     const rateLimit = await applyRateLimit({
-      key: `${ipAddress}:${identifier.trim().toLowerCase() || "anonymous"}`,
+      key: `${clientKey}:${identifier.trim().toLowerCase() || "anonymous"}`,
       namespace: "customer-portal-request",
       limit: 6,
       windowMs: 10 * 60_000,
     })
 
     if (!rateLimit.allowed) {
+      await blockTemporarily("customer-portal-request", clientKey, 30 * 60_000)
       return {
         step: "request",
         success: false,
@@ -53,7 +122,10 @@ export async function requestCustomerPortalCodeAction(
     return {
       step: "verify",
       success: true,
-      message: "Mock OTP olusturuldu. Demo kod ekranda gosteriliyor.",
+      message:
+        process.env.NODE_ENV === "production"
+          ? "Bilgi mevcutsa dogrulama kodu hazirlandi. Kodu girerek devam edin."
+          : "Mock OTP olusturuldu. Demo kod ekranda gosteriliyor.",
       tokenId: result.tokenId,
       mockCode: result.mockCode,
       customerId: result.customerId,
@@ -73,7 +145,12 @@ export async function requestCustomerPortalCodeAction(
     return {
       step: "request",
       success: false,
-      message: error instanceof Error ? error.message : "Kod olusturulamadi.",
+      message:
+        process.env.NODE_ENV === "production"
+          ? "Kod istegi su anda tamamlanamadi."
+          : error instanceof Error
+            ? error.message
+            : "Kod olusturulamadi.",
     }
   }
 }
@@ -85,17 +162,44 @@ export async function verifyCustomerPortalCodeAction(
   const requestId = await getCurrentRequestId()
   const ipAddress = await getRequestIpAddress()
   const tokenId = String(formData.get("tokenId") ?? previousState.tokenId ?? "")
+  const requestHeaders = await headers()
+  const fingerprint = buildRequestFingerprint(requestHeaders, {
+    route: "/musteri",
+    tokenId: tokenId.slice(0, 80),
+  })
+  const clientKey = `${ipAddress}:${fingerprint}`
 
   try {
     await verifyTrustedOrigin({ allowHostFallback: true })
+
+    if (String(formData.get("website") ?? "").trim()) {
+      await recordSuspicion({
+        scope: "customer-portal-verify",
+        clientKey,
+        score: 6,
+        requestId,
+        route: "/musteri",
+        reason: "Customer portal verify honeypot was filled.",
+      })
+      await blockTemporarily("customer-portal-verify", clientKey, 30 * 60_000)
+
+      return {
+        ...previousState,
+        step: "verify",
+        success: false,
+        message: "Kod dogrulanamadi.",
+      }
+    }
+
     const rateLimit = await applyRateLimit({
-      key: `${ipAddress}:${tokenId || "unknown-token"}`,
+      key: `${clientKey}:${tokenId || "unknown-token"}`,
       namespace: "customer-portal-verify",
       limit: 10,
       windowMs: 10 * 60_000,
     })
 
     if (!rateLimit.allowed) {
+      await blockTemporarily("customer-portal-verify", clientKey, 30 * 60_000)
       return {
         ...previousState,
         step: "verify",
@@ -132,6 +236,15 @@ export async function verifyCustomerPortalCodeAction(
       customerId: result.customerId,
     }
   } catch (error) {
+    await recordSuspicion({
+      scope: "customer-portal-verify",
+      clientKey,
+      score: 2,
+      requestId,
+      route: "/musteri",
+      reason: error instanceof Error ? error.message : "Customer portal verification failed.",
+    })
+
     logEvent({
       level: "warn",
       event: "customer_portal_verify_failed",
@@ -147,7 +260,12 @@ export async function verifyCustomerPortalCodeAction(
       ...previousState,
       step: "verify",
       success: false,
-      message: error instanceof Error ? error.message : "Kod dogrulanamadi.",
+      message:
+        process.env.NODE_ENV === "production"
+          ? "Kod dogrulanamadi."
+          : error instanceof Error
+            ? error.message
+            : "Kod dogrulanamadi.",
     }
   }
 }

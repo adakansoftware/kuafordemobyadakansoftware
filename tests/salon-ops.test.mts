@@ -17,7 +17,12 @@ import {
   getPaymentMethodLabel,
   getPaymentMethodOptions,
 } from "../lib/salon-ops.ts"
-import { getCustomerPortalSessionMaxAgeSeconds, normalizeCustomerPortalIdentifier } from "../lib/customer-portal.ts"
+import {
+  createCustomerPortalSessionValue,
+  getCustomerPortalSessionMaxAgeSeconds,
+  normalizeCustomerPortalIdentifier,
+  parseCustomerPortalSessionValue,
+} from "../lib/customer-portal.ts"
 import { buildSetupServices, buildSetupStaffMembers, normalizeSetupSlug, parseSetupList } from "../lib/setup-wizard.ts"
 
 export function runSalonOpsTests() {
@@ -52,6 +57,13 @@ export function runSalonOpsTests() {
   assert.equal(normalizeCustomerPortalIdentifier(" Demo@Example.com "), "demo@example.com")
   assert.equal(normalizeCustomerPortalIdentifier("+90 (532) 111 00 01"), "905321110001")
   assert.equal(getCustomerPortalSessionMaxAgeSeconds(), 43200)
+  const sessionValue = createCustomerPortalSessionValue({
+    customerId: "cus_123",
+    fingerprint: "ua|lang",
+    expiresAt: Date.now() + 60_000,
+  })
+  assert.equal(parseCustomerPortalSessionValue(sessionValue, "ua|lang")?.customerId, "cus_123")
+  assert.equal(parseCustomerPortalSessionValue(sessionValue, "other"), null)
 
   assert.equal(normalizeSetupSlug(" Sac & Sakal Deluxe "), "sac-sakal-deluxe")
   assert.deepEqual(parseSetupList("Ali, ali, Ayse, , AYSE", { maxItems: 10 }), ["Ali", "Ayse"])
