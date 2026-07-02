@@ -144,8 +144,8 @@ export function Footer() {
           />
         </div>
 
-        <div className="mt-12 border-t border-primary-foreground/10 pt-8 text-center">
-          <div className="flex flex-col items-center justify-center gap-2 text-center">
+        <div className="mt-12 border-t border-primary-foreground/10 pt-8">
+          <div className="flex flex-col items-center justify-center gap-2 text-center md:items-end md:text-right">
             <p className="text-sm text-primary-foreground/50">
               © {new Date().getFullYear()} {siteContent.brand.name}. Tüm hakları saklıdır.
             </p>
