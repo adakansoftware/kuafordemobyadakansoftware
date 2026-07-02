@@ -884,6 +884,26 @@ export async function listAdminUsers(options?: { tenantId?: string }) {
   })
 }
 
+export async function getAdminSecurityProfile(input: {
+  tenantId?: string
+  username: string
+}) {
+  const tenantId = await resolveTenantId(input.tenantId)
+
+  return db.adminUser.findFirstOrThrow({
+    where: {
+      tenantId,
+      username: input.username,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      username: true,
+      mfaEnabledAt: true,
+    },
+  })
+}
+
 export async function upsertStaffAvailability(input: {
   staffId: string
   dayOfWeek: number

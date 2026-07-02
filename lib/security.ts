@@ -125,10 +125,15 @@ export async function requireAdminAccess(): Promise<AdminAccessContext> {
         staffId: true,
         passwordHash: true,
         tenantId: true,
+        mfaEnabledAt: true,
       },
     })
 
     if (adminUser && verifyPassword(password, adminUser.passwordHash)) {
+      if (adminUser.mfaEnabledAt) {
+        throw new AdminAccessError("MFA aktif hesaplar icin form tabanli admin girisi gereklidir.")
+      }
+
       const session = await createAdminSession({
         tenantId: adminUser.tenantId,
         adminUserId: adminUser.id,
@@ -144,11 +149,13 @@ export async function requireAdminAccess(): Promise<AdminAccessContext> {
       await setAdminSessionCookie(session.token, session.expiresAt)
 
       return {
+        adminUserId: adminUser.id,
         tenantId: adminUser.tenantId,
         tenantSlug: tenant.tenantSlug,
         actorIdentifier: adminUser.username,
         role: adminUser.role,
         staffId: adminUser.staffId,
+        mfaEnabled: Boolean(adminUser.mfaEnabledAt),
         source: "admin_user",
       }
     }
@@ -168,6 +175,7 @@ export async function requireAdminAccess(): Promise<AdminAccessContext> {
     actorIdentifier: env.ADMIN_USERNAME ?? "admin",
     role: AdminUserRole.OWNER,
     staffId: null,
+    mfaEnabled: false,
     source: "basic_auth_fallback",
   }
 }
@@ -211,12 +219,14 @@ export function getDefaultTenantSlug() {
 export async function requireCriticalAdminStepUp(input: {
   accessContext: AdminAccessContext
   password?: string | null
+  totpCode?: string | null
   maxAgeMs?: number
 }) {
   if (input.accessContext.source === "admin_session" && input.accessContext.sessionId) {
     await requireAdminSessionStepUp({
       sessionId: input.accessContext.sessionId,
       password: input.password,
+      totpCode: input.totpCode,
       maxAgeMs: input.maxAgeMs,
     })
   }

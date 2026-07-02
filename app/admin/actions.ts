@@ -1,8 +1,9 @@
 "use server"
 
-import { AppointmentStatus } from "@prisma/client"
+import { AdminUserRole, AppointmentStatus, AuditActorType, AuditEvent } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
+import { createPendingMfaEnrollmentToken, decryptAdminMfaSecret, encryptAdminMfaSecret, resolvePendingMfaEnrollmentToken, verifyTotpCode } from "@/lib/admin-mfa"
 import {
   businessSettingsSchema,
   customerNotesSchema,
@@ -42,6 +43,9 @@ import {
   requireAdminAccess,
   verifyTrustedOrigin,
 } from "@/lib/security"
+import { db } from "@/lib/db"
+import { verifyPassword } from "@/lib/password"
+import { revokeOtherAdminSessions } from "@/lib/admin-session"
 
 export type UpdateAppointmentActionState = {
   success: boolean
@@ -77,6 +81,11 @@ export type StaffTimeOffActionState = {
 }
 
 export type ProductSaleActionState = {
+  success: boolean
+  message: string
+}
+
+export type AdminMfaActionState = {
   success: boolean
   message: string
 }
@@ -201,6 +210,7 @@ export async function updateAppointmentAction(
       await requireCriticalAdminStepUp({
         accessContext,
         password: adminPassword,
+        totpCode: String(formData.get("adminTotpCode") ?? ""),
       })
     } catch (error) {
       return {
@@ -303,6 +313,7 @@ export async function recordAppointmentPaymentAction(
     await requireCriticalAdminStepUp({
       accessContext,
       password: String(formData.get("adminPassword") ?? ""),
+      totpCode: String(formData.get("adminTotpCode") ?? ""),
     })
   } catch (error) {
     return {
@@ -404,6 +415,7 @@ export async function updateBusinessSettingsAction(
     await requireCriticalAdminStepUp({
       accessContext,
       password: String(formData.get("adminPassword") ?? ""),
+      totpCode: String(formData.get("adminTotpCode") ?? ""),
     })
   } catch (error) {
     return {
@@ -683,6 +695,7 @@ export async function recordProductSaleAction(
     await requireCriticalAdminStepUp({
       accessContext,
       password: String(formData.get("adminPassword") ?? ""),
+      totpCode: String(formData.get("adminTotpCode") ?? ""),
     })
   } catch (error) {
     return {
@@ -721,5 +734,197 @@ export async function recordProductSaleAction(
       success: false,
       message,
     }
+  }
+}
+
+export async function configureAdminMfaAction(
+  _previousState: AdminMfaActionState,
+  formData: FormData
+): Promise<AdminMfaActionState> {
+  const requestId = await getCurrentRequestId()
+  let accessContext
+  let ipAddress = "unknown"
+
+  try {
+    const guard = await requireAdminMutationGuard("admin-mfa-write", requestId)
+    accessContext = guard.accessContext
+    ipAddress = guard.ipAddress
+  } catch (error) {
+    return {
+      success: false,
+      message: mapAdminAppointmentSecurityError(error),
+    }
+  }
+
+  if (!accessContext.adminUserId || accessContext.source !== "admin_session") {
+    return {
+      success: false,
+      message: "MFA yonetimi icin aktif admin oturumu gereklidir.",
+    }
+  }
+
+  const adminUser = await db.adminUser.findFirst({
+    where: {
+      id: accessContext.adminUserId,
+      tenantId: accessContext.tenantId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      username: true,
+      passwordHash: true,
+      mfaEnabledAt: true,
+      mfaSecretCiphertext: true,
+    },
+  })
+
+  if (!adminUser) {
+    return {
+      success: false,
+      message: "Admin kullanicisi bulunamadi.",
+    }
+  }
+
+  const adminPassword = String(formData.get("adminPassword") ?? "")
+  const totpCode = String(formData.get("totpCode") ?? "")
+
+  if (!verifyPassword(adminPassword, adminUser.passwordHash)) {
+    logEvent({
+      level: "warn",
+      event: "admin_mfa_password_failed",
+      requestId,
+      route: "/admin/settings",
+      message: "Admin MFA mutation password verification failed.",
+      meta: {
+        actorIdentifier: accessContext.actorIdentifier,
+        ipAddress,
+      },
+    })
+
+    return {
+      success: false,
+      message: "Yonetici sifresi dogrulanamadi.",
+    }
+  }
+
+  const intent = String(formData.get("intent") ?? "").trim()
+
+  if (intent === "enable") {
+    const enrollmentToken = String(formData.get("enrollmentToken") ?? "")
+    const enrollment = resolvePendingMfaEnrollmentToken({
+      enrollmentToken,
+      adminUserId: adminUser.id,
+    })
+
+    if (!enrollment) {
+      return {
+        success: false,
+        message: "MFA kurulum oturumu gecersiz veya suresi dolmus.",
+      }
+    }
+
+    if (!verifyTotpCode({ secret: enrollment.secret, code: totpCode })) {
+      return {
+        success: false,
+        message: "Authenticator kodu dogrulanamadi.",
+      }
+    }
+
+    await db.adminUser.update({
+      where: { id: adminUser.id },
+      data: {
+        mfaSecretCiphertext: encryptAdminMfaSecret(enrollment.secret),
+        mfaEnabledAt: new Date(),
+      },
+    })
+
+    await db.auditLog.create({
+      data: {
+        tenantId: accessContext.tenantId,
+        actorType: AuditActorType.ADMIN,
+        actorIdentifier: accessContext.actorIdentifier,
+        event: AuditEvent.ADMIN_USER_UPDATED,
+        targetType: "admin_user",
+        targetId: adminUser.id,
+        requestId,
+        ipAddress,
+        metadata: {
+          action: "mfa_enabled",
+          role: AdminUserRole.OWNER,
+        },
+      },
+    })
+
+    await revokeOtherAdminSessions({
+      adminUserId: adminUser.id,
+      keepSessionId: accessContext.sessionId,
+    })
+
+    revalidatePath("/admin/settings")
+
+    return {
+      success: true,
+      message: "Admin MFA aktif edildi. Diger oturumlar guvenlik icin kapatildi.",
+    }
+  }
+
+  if (intent === "disable") {
+    if (!adminUser.mfaEnabledAt || !adminUser.mfaSecretCiphertext) {
+      return {
+        success: false,
+        message: "MFA zaten kapali.",
+      }
+    }
+
+    const secret = decryptAdminMfaSecret(adminUser.mfaSecretCiphertext)
+
+    if (!verifyTotpCode({ secret, code: totpCode })) {
+      return {
+        success: false,
+        message: "Authenticator kodu dogrulanamadi.",
+      }
+    }
+
+    await db.adminUser.update({
+      where: { id: adminUser.id },
+      data: {
+        mfaSecretCiphertext: null,
+        mfaEnabledAt: null,
+      },
+    })
+
+    await db.auditLog.create({
+      data: {
+        tenantId: accessContext.tenantId,
+        actorType: AuditActorType.ADMIN,
+        actorIdentifier: accessContext.actorIdentifier,
+        event: AuditEvent.ADMIN_USER_UPDATED,
+        targetType: "admin_user",
+        targetId: adminUser.id,
+        requestId,
+        ipAddress,
+        metadata: {
+          action: "mfa_disabled",
+          role: AdminUserRole.OWNER,
+        },
+      },
+    })
+
+    await revokeOtherAdminSessions({
+      adminUserId: adminUser.id,
+      keepSessionId: accessContext.sessionId,
+    })
+
+    revalidatePath("/admin/settings")
+
+    return {
+      success: true,
+      message: "Admin MFA kapatildi. Diger oturumlar guvenlik icin kapatildi.",
+    }
+  }
+
+  return {
+    success: false,
+    message: "Gecersiz MFA islemi.",
   }
 }

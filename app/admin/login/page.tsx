@@ -18,7 +18,7 @@ export default async function AdminLoginPage() {
           <p className="text-sm uppercase tracking-[0.18em] text-primary-foreground/70">Admin Login</p>
           <h1 className="mt-3 font-serif text-4xl font-bold">Yonetim Girisi</h1>
           <p className="mt-3 text-sm text-primary-foreground/80">
-            Guvenli yonetim oturumu olusturmak icin kullanici adi ve sifrenizle giris yapin.
+            Guvenli yonetim oturumu olusturmak icin kullanici adi, sifre ve gerekiyorsa authenticator kodu ile giris yapin.
           </p>
         </div>
 

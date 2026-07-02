@@ -90,6 +90,17 @@ export function ProductSaleForm({
             className="rounded-xl border border-input bg-background px-4 py-3 text-sm"
           />
         </label>
+
+        <label className="grid gap-2 text-sm text-foreground">
+          <span className="font-medium">Authenticator Kodu</span>
+          <input
+            name="adminTotpCode"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="MFA aktifse gerekli"
+            className="rounded-xl border border-input bg-background px-4 py-3 text-sm"
+          />
+        </label>
       </div>
 
       <div className="flex items-center justify-between gap-4">

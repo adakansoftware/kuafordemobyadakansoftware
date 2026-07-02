@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation"
 import { createAdminSession, setAdminSessionCookie } from "@/lib/admin-session"
+import { decryptAdminMfaSecret, verifyTotpCode } from "@/lib/admin-mfa"
 import { db } from "@/lib/db"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
@@ -34,6 +35,7 @@ export async function adminLoginAction(
 
   const username = String(formData.get("username") ?? "").trim()
   const password = String(formData.get("password") ?? "")
+  const totpCode = String(formData.get("totpCode") ?? "")
   const clientKey = `${ipAddress}:${username.toLowerCase() || "anonymous"}`
 
   if (String(formData.get("website") ?? "").trim()) {
@@ -123,6 +125,8 @@ export async function adminLoginAction(
       username: true,
       passwordHash: true,
       tenantId: true,
+      mfaSecretCiphertext: true,
+      mfaEnabledAt: true,
     },
   })
 
@@ -152,6 +156,39 @@ export async function adminLoginAction(
     return {
       success: false,
       message: "Kullanici adi veya sifre gecersiz.",
+    }
+  }
+
+  if (adminUser.mfaEnabledAt && adminUser.mfaSecretCiphertext) {
+    const secret = decryptAdminMfaSecret(adminUser.mfaSecretCiphertext)
+
+    if (!verifyTotpCode({ secret, code: totpCode })) {
+      await recordSuspicion({
+        scope: "admin-login",
+        clientKey,
+        score: 4,
+        requestId,
+        route: "/admin/login",
+        reason: "Admin login MFA verification failed.",
+        audit: true,
+      })
+
+      logEvent({
+        level: "warn",
+        event: "admin_login_mfa_failed",
+        requestId,
+        route: "/admin/login",
+        message: "Admin login MFA verification failed.",
+        meta: {
+          ipAddress,
+          username,
+        },
+      })
+
+      return {
+        success: false,
+        message: "Authenticator kodu gecersiz.",
+      }
     }
   }
 

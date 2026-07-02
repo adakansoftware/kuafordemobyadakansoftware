@@ -36,6 +36,17 @@ export function AdminLoginForm({ securityChallenge }: { securityChallenge: Publi
         />
       </label>
 
+      <label className="grid gap-2 text-sm text-foreground">
+        <span className="font-medium">Authenticator Kodu</span>
+        <input
+          name="totpCode"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          placeholder="MFA aktifse 6 haneli kod girin"
+          className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
+        />
+      </label>
+
       <p className={state.success ? "text-sm text-green-600" : "text-sm text-muted-foreground"}>
         {state.message || "Oturum cihaz ve ag baglamina baglanir; supheli oturumlar otomatik reddedilir."}
       </p>

@@ -1,16 +1,27 @@
 import { AdminUserRole } from "@prisma/client"
+import { AdminMfaSettingsForm } from "@/components/admin/admin-mfa-settings-form"
 import { BusinessSettingsForm } from "@/components/admin/business-settings-form"
 import { getBusinessSettings } from "@/lib/bookings-repository"
-import { getTenantSubscriptionDetails, listAdminUsers } from "@/lib/salon-ops-repository"
+import { createPendingMfaEnrollmentToken } from "@/lib/admin-mfa"
+import { getAdminSecurityProfile, getTenantSubscriptionDetails, listAdminUsers } from "@/lib/salon-ops-repository"
 import { requireAdminRoles } from "@/lib/security"
 
 export default async function AdminSettingsPage() {
-  await requireAdminRoles([AdminUserRole.OWNER])
-  const [settings, subscription, users] = await Promise.all([
+  const accessContext = await requireAdminRoles([AdminUserRole.OWNER])
+  const [settings, subscription, users, securityProfile] = await Promise.all([
     getBusinessSettings(),
     getTenantSubscriptionDetails(),
     listAdminUsers(),
+    getAdminSecurityProfile({
+      tenantId: accessContext.tenantId,
+      username: accessContext.actorIdentifier,
+    }),
   ])
+  const enrollment = createPendingMfaEnrollmentToken({
+    adminUserId: securityProfile.id,
+    tenantSlug: accessContext.tenantSlug,
+    username: securityProfile.username,
+  })
 
   const workingHoursNote =
     settings?.workingHours && typeof settings.workingHours === "object" && "note" in settings.workingHours
@@ -61,10 +72,24 @@ export default async function AdminSettingsPage() {
                     <div className="font-medium text-foreground">{user.username}</div>
                     <div className="text-sm text-muted-foreground">{user.role} / {user.email}</div>
                     <div className="text-sm text-muted-foreground">{user.staff?.name ?? "Staff bagli degil"}</div>
+                    <div className="text-sm text-muted-foreground">MFA: {user.mfaEnabledAt ? "Aktif" : "Kapali"}</div>
                   </div>
                 ))}
               </div>
             </div>
+
+            <AdminMfaSettingsForm
+              profile={{
+                username: securityProfile.username,
+                mfaEnabled: Boolean(securityProfile.mfaEnabledAt),
+                enabledAtLabel: securityProfile.mfaEnabledAt?.toLocaleString("tr-TR") ?? null,
+              }}
+              enrollment={{
+                enrollmentToken: enrollment.enrollmentToken,
+                displaySecret: enrollment.displaySecret,
+                otpauthUri: enrollment.otpauthUri,
+              }}
+            />
           </div>
         </div>
       </div>

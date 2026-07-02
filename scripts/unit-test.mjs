@@ -10,6 +10,7 @@ import {
   normalizeOrigin,
 } from "../lib/security-core.ts"
 import { runAdminAppointmentActionTests } from "../tests/admin-appointment-action.test.mts"
+import { runAdminMfaTests } from "../tests/admin-mfa.test.mts"
 import { runBookingActionTests } from "../tests/booking-action.test.mts"
 import { runBookingTests } from "../tests/booking.test.mts"
 import { runBookingRouteTests } from "../tests/booking-route.test.mts"
@@ -169,6 +170,7 @@ try {
   testSecurityHelpers()
   testHealthSummary()
   runAdminAppointmentActionTests()
+  runAdminMfaTests()
   runBookingActionTests()
   runBookingTests()
   runBookingRouteTests()

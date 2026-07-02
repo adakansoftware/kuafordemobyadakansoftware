@@ -217,6 +217,17 @@ export function AppointmentOperations({
               />
             </label>
 
+            <label className="grid gap-2 text-sm text-foreground">
+              <span className="font-medium">Authenticator Kodu</span>
+              <input
+                name="adminTotpCode"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="MFA aktifse 6 haneli kod"
+                className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
+              />
+            </label>
+
             <div className="flex items-center justify-between gap-4">
               <p className={currentAppointmentState.success ? "text-sm text-green-600" : "text-sm text-muted-foreground"}>
                 {currentAppointmentState.message || "Randevu durumu ve atama bu cekirdek kayit uzerinden yonetilir."}
@@ -274,6 +285,17 @@ export function AppointmentOperations({
                   name="adminPassword"
                   autoComplete="current-password"
                   placeholder="Kritik odeme islemi icin gerekli olabilir"
+                  className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm text-foreground">
+                <span className="font-medium">Authenticator Kodu</span>
+                <input
+                  name="adminTotpCode"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="MFA aktifse gerekli"
                   className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </label>

@@ -5,6 +5,7 @@ import { db } from "./db.ts"
 import { getOptionalEnv } from "./env.ts"
 import { logEvent } from "./observability.ts"
 import { verifyPassword } from "./password.ts"
+import { decryptAdminMfaSecret, verifyTotpCode } from "./admin-mfa.ts"
 import { getRequestIpFromHeaders } from "./security-core.ts"
 
 export const ADMIN_SESSION_COOKIE_NAME = "admin_session"
@@ -186,6 +187,7 @@ export async function resolveAdminSessionFromRequest(input: {
           staffId: true,
           isActive: true,
           tenantId: true,
+          mfaEnabledAt: true,
         },
       },
       tenant: {
@@ -266,6 +268,7 @@ export async function resolveAdminSessionFromRequest(input: {
   }
 
   return {
+    adminUserId: session.adminUser.id,
     sessionId: session.id,
     stepUpVerifiedAt: session.stepUpVerifiedAt,
     tenantId: session.tenantId,
@@ -273,6 +276,7 @@ export async function resolveAdminSessionFromRequest(input: {
     actorIdentifier: session.adminUser.username,
     role: session.adminUser.role as AdminUserRole,
     staffId: session.adminUser.staffId,
+    mfaEnabled: Boolean(session.adminUser.mfaEnabledAt),
     source: "admin_session" as const,
   }
 }
@@ -280,6 +284,7 @@ export async function resolveAdminSessionFromRequest(input: {
 export async function requireAdminSessionStepUp(input: {
   sessionId: string
   password?: string | null
+  totpCode?: string | null
   maxAgeMs?: number
 }) {
   const session = await db.adminSession.findFirst({
@@ -295,7 +300,10 @@ export async function requireAdminSessionStepUp(input: {
       stepUpVerifiedAt: true,
       adminUser: {
         select: {
+          id: true,
           passwordHash: true,
+          mfaSecretCiphertext: true,
+          mfaEnabledAt: true,
         },
       },
     },
@@ -321,10 +329,40 @@ export async function requireAdminSessionStepUp(input: {
     throw new AdminStepUpError("Yonetici sifresi dogrulanamadi.")
   }
 
+  if (session.adminUser.mfaEnabledAt && session.adminUser.mfaSecretCiphertext) {
+    const totpCode = input.totpCode?.trim()
+
+    if (!totpCode) {
+      throw new AdminStepUpError("Bu islem icin authenticator kodu gereklidir.")
+    }
+
+    const secret = decryptAdminMfaSecret(session.adminUser.mfaSecretCiphertext)
+
+    if (!verifyTotpCode({ secret, code: totpCode })) {
+      throw new AdminStepUpError("Authenticator kodu dogrulanamadi.")
+    }
+  }
+
   await db.adminSession.update({
     where: { id: session.id },
     data: {
       stepUpVerifiedAt: new Date(),
+    },
+  })
+}
+
+export async function revokeOtherAdminSessions(input: {
+  adminUserId: string
+  keepSessionId?: string | null
+}) {
+  await db.adminSession.updateMany({
+    where: {
+      adminUserId: input.adminUserId,
+      revokedAt: null,
+      ...(input.keepSessionId ? { id: { not: input.keepSessionId } } : {}),
+    },
+    data: {
+      revokedAt: new Date(),
     },
   })
 }
