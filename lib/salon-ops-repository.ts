@@ -781,6 +781,8 @@ export async function recordInventorySale(input: {
   await assertPlanFeature(tenantId, "inventory")
 
   return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId}), hashtext(${input.productId}))`
+
     const product = await tx.product.findFirstOrThrow({
       where: { id: input.productId, tenantId, isActive: true },
     })
@@ -806,10 +808,6 @@ export async function recordInventorySale(input: {
       })
     }
 
-    if (product.stock < input.quantity) {
-      throw new SubscriptionFeatureError("Yeterli stok bulunmuyor.")
-    }
-
     const sale = await tx.sale.create({
       data: {
         tenantId,
@@ -831,14 +829,24 @@ export async function recordInventorySale(input: {
       },
     })
 
-    await tx.product.update({
-      where: { id: product.id },
+    const stockUpdate = await tx.product.updateMany({
+      where: {
+        id: product.id,
+        tenantId,
+        stock: {
+          gte: input.quantity,
+        },
+      },
       data: {
         stock: {
           decrement: input.quantity,
         },
       },
     })
+
+    if (stockUpdate.count !== 1) {
+      throw new SubscriptionFeatureError("Yeterli stok bulunmuyor.")
+    }
 
     await createAuditLog(
       {
@@ -1032,47 +1040,61 @@ export async function verifyCustomerPortalAccess(input: {
   tenantId?: string
 }) {
   const tenantId = await resolveTenantId(input.tenantId)
-  const token = await db.customerAccessCode.findFirst({
-    where: {
-      id: input.tokenId,
-      tenantId,
-      consumedAt: null,
-      expiresAt: {
-        gt: new Date(),
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId}), hashtext(${input.tokenId}))`
+
+    const token = await tx.customerAccessCode.findFirst({
+      where: {
+        id: input.tokenId,
+        tenantId,
+        consumedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
       },
-    },
+    })
+
+    if (!token) {
+      throw new CustomerPortalAccessError("Kodun suresi dolmus veya gecersiz.")
+    }
+
+    if (!verifyPassword(input.code.trim(), token.codeHash)) {
+      throw new CustomerPortalAccessError("Kod gecersiz.")
+    }
+
+    const consumeResult = await tx.customerAccessCode.updateMany({
+      where: {
+        id: token.id,
+        consumedAt: null,
+      },
+      data: {
+        consumedAt: new Date(),
+      },
+    })
+
+    if (consumeResult.count !== 1) {
+      throw new CustomerPortalAccessError("Kod daha once kullanilmis veya gecersiz.")
+    }
+
+    await createAuditLog(
+      {
+        tenantId,
+        actorType: AuditActorType.CUSTOMER,
+        actorIdentifier: token.customerId,
+        event: AuditEvent.CUSTOMER_PORTAL_ACCESSED,
+        targetType: "customer_portal",
+        targetId: token.customerId,
+        metadata: {
+          tokenId: token.id,
+        },
+      },
+      tx
+    )
+
+    return {
+      customerId: token.customerId,
+    }
   })
-
-  if (!token) {
-    throw new CustomerPortalAccessError("Kodun suresi dolmus veya gecersiz.")
-  }
-
-  if (!verifyPassword(input.code.trim(), token.codeHash)) {
-    throw new CustomerPortalAccessError("Kod gecersiz.")
-  }
-
-  await db.customerAccessCode.update({
-    where: { id: token.id },
-    data: {
-      consumedAt: new Date(),
-    },
-  })
-
-  await createAuditLog({
-    tenantId,
-    actorType: AuditActorType.CUSTOMER,
-    actorIdentifier: token.customerId,
-    event: AuditEvent.CUSTOMER_PORTAL_ACCESSED,
-    targetType: "customer_portal",
-    targetId: token.customerId,
-    metadata: {
-      tokenId: token.id,
-    },
-  })
-
-  return {
-    customerId: token.customerId,
-  }
 }
 
 export async function getCustomerPortalSnapshot(input: {
@@ -1100,53 +1122,68 @@ export async function requestAppointmentCancellation(input: {
   tenantId?: string
 }) {
   const tenantId = await resolveTenantId(input.tenantId)
-  const appointment = await db.appointment.findFirstOrThrow({
-    where: {
-      id: input.appointmentId,
-      tenantId,
-      customerId: input.customerId,
-    },
-  })
+  try {
+    return await db.$transaction(async (tx) => {
+      const appointment = await tx.appointment.findFirstOrThrow({
+        where: {
+          id: input.appointmentId,
+          tenantId,
+          customerId: input.customerId,
+        },
+      })
 
-  const existingPendingRequest = await db.appointmentCancellationRequest.findFirst({
-    where: {
-      tenantId,
-      appointmentId: appointment.id,
-      customerId: input.customerId,
-      status: CancellationRequestStatus.PENDING,
-    },
-    select: {
-      id: true,
-    },
-  })
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId}), hashtext(${appointment.id}))`
 
-  if (existingPendingRequest) {
-    throw new CustomerPortalAccessError("Bu randevu icin zaten bekleyen bir iptal talebi bulunuyor.")
+      const existingPendingRequest = await tx.appointmentCancellationRequest.findFirst({
+        where: {
+          tenantId,
+          appointmentId: appointment.id,
+          customerId: input.customerId,
+          status: CancellationRequestStatus.PENDING,
+        },
+        select: {
+          id: true,
+        },
+      })
+
+      if (existingPendingRequest) {
+        throw new CustomerPortalAccessError("Bu randevu icin zaten bekleyen bir iptal talebi bulunuyor.")
+      }
+
+      const request = await tx.appointmentCancellationRequest.create({
+        data: {
+          tenantId,
+          appointmentId: appointment.id,
+          customerId: input.customerId,
+          reason: input.reason?.trim() || null,
+          status: CancellationRequestStatus.PENDING,
+        },
+      })
+
+      await createAuditLog(
+        {
+          tenantId,
+          actorType: AuditActorType.CUSTOMER,
+          actorIdentifier: input.customerId,
+          event: AuditEvent.APPOINTMENT_CANCELLATION_REQUESTED,
+          targetType: "appointment_cancellation_request",
+          targetId: request.id,
+          metadata: {
+            appointmentId: appointment.id,
+          },
+        },
+        tx
+      )
+
+      return request
+    })
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new CustomerPortalAccessError("Bu randevu icin zaten bekleyen bir iptal talebi bulunuyor.")
+    }
+
+    throw error
   }
-
-  const request = await db.appointmentCancellationRequest.create({
-    data: {
-      tenantId,
-      appointmentId: appointment.id,
-      customerId: input.customerId,
-      reason: input.reason?.trim() || null,
-      status: CancellationRequestStatus.PENDING,
-    },
-  })
-
-  await createAuditLog({
-    tenantId,
-    actorType: AuditActorType.CUSTOMER,
-    actorIdentifier: input.customerId,
-    event: AuditEvent.APPOINTMENT_CANCELLATION_REQUESTED,
-    targetType: "appointment_cancellation_request",
-    targetId: request.id,
-    metadata: {
-      appointmentId: appointment.id,
-    },
-  })
-
-  return request
 }
 
 export async function completeSetupWizard(input: {

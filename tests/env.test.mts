@@ -7,6 +7,10 @@ const originalEnv = {
   ADMIN_USERNAME: process.env.ADMIN_USERNAME,
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
   ALLOWED_ORIGIN_HOSTS: process.env.ALLOWED_ORIGIN_HOSTS,
+  APP_SECURITY_SECRET: process.env.APP_SECURITY_SECRET,
+  TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+  ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
   NODE_ENV: process.env.NODE_ENV,
 }
 
@@ -25,6 +29,7 @@ function restoreEnv() {
 export function runEnvTests() {
   process.env.DATABASE_URL = "postgresql://demo"
   process.env.NODE_ENV = "development"
+  process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
   process.env.ADMIN_USERNAME = "admin"
   delete process.env.ADMIN_PASSWORD
   resetEnvCacheForTests()
@@ -51,6 +56,7 @@ export function runEnvTests() {
 
   process.env.NODE_ENV = "production"
   delete process.env.NEXT_PUBLIC_SITE_URL
+  delete process.env.APP_SECURITY_SECRET
   delete process.env.ADMIN_USERNAME
   delete process.env.ADMIN_PASSWORD
   resetEnvCacheForTests()
@@ -59,6 +65,7 @@ export function runEnvTests() {
   assert.throws(() => getEnv(), /NEXT_PUBLIC_SITE_URL zorunludur/)
 
   process.env.NEXT_PUBLIC_SITE_URL = "https://example.com"
+  process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
   process.env.ADMIN_USERNAME = "admin"
   process.env.ADMIN_PASSWORD = "short"
   resetEnvCacheForTests()

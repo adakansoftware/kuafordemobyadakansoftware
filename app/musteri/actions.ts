@@ -1,10 +1,14 @@
 "use server"
 
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
 import { applyRateLimit } from "@/lib/rate-limit"
-import { getCustomerPortalSessionMaxAgeSeconds } from "@/lib/customer-portal"
+import {
+  createCustomerPortalSessionValue,
+  getCustomerPortalSessionMaxAgeSeconds,
+  parseCustomerPortalSessionValue,
+} from "@/lib/customer-portal"
 import { getRequestIpAddress, verifyTrustedOrigin } from "@/lib/security"
 import { beginCustomerPortalAccess, getCustomerPortalSnapshot, requestAppointmentCancellation, verifyCustomerPortalAccess } from "@/lib/salon-ops-repository"
 
@@ -104,8 +108,16 @@ export async function verifyCustomerPortalCodeAction(
       tokenId,
       code: String(formData.get("code") ?? ""),
     })
+    const requestHeaders = await headers()
+    const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
+    const expiresAt = Date.now() + getCustomerPortalSessionMaxAgeSeconds() * 1000
+    const sessionValue = createCustomerPortalSessionValue({
+      customerId: result.customerId,
+      fingerprint,
+      expiresAt,
+    })
 
-    ;(await cookies()).set("customer_portal_customer_id", result.customerId, {
+    ;(await cookies()).set("customer_portal_session", sessionValue, {
       httpOnly: true,
       sameSite: "lax",
       path: "/musteri",
@@ -143,7 +155,10 @@ export async function verifyCustomerPortalCodeAction(
 export async function requestCancellationAction(appointmentId: string, reason: string) {
   const requestId = await getCurrentRequestId()
   const ipAddress = await getRequestIpAddress()
-  const customerId = (await cookies()).get("customer_portal_customer_id")?.value
+  const requestHeaders = await headers()
+  const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
+  const customerSession = parseCustomerPortalSessionValue((await cookies()).get("customer_portal_session")?.value, fingerprint)
+  const customerId = customerSession?.customerId
 
   if (!customerId) {
     throw new Error("Musteri oturumu bulunamadi.")
@@ -186,7 +201,10 @@ export async function requestCancellationAction(appointmentId: string, reason: s
 }
 
 export async function getCustomerPortalSessionSnapshot() {
-  const customerId = (await cookies()).get("customer_portal_customer_id")?.value
+  const requestHeaders = await headers()
+  const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
+  const customerSession = parseCustomerPortalSessionValue((await cookies()).get("customer_portal_session")?.value, fingerprint)
+  const customerId = customerSession?.customerId
 
   if (!customerId) {
     return null

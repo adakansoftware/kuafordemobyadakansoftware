@@ -39,6 +39,10 @@ export function runBookingsApiTests() {
     phone: "+905399416521",
     email: "ada@example.com",
     website: "",
+    formIssuedAt: "",
+    formSignature: "",
+    turnstileToken: "",
+    clientFingerprint: "",
   })
 
   assert.equal(parseBookingPayload({ name: "Ada" }), null)

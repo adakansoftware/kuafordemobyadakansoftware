@@ -7,10 +7,12 @@ import { getEnv } from "./env.ts"
 import { verifyPassword } from "./password.ts"
 import {
   authorizeAdminRequest,
+  getAdminAllowlistIps,
   getBasicAuthUsername,
   getBasicAuthPassword,
   getAllowedHosts,
   getAllowedOrigins,
+  isIpAllowed,
   getRequestIpFromHeaders,
   isTrustedRequestOriginHeaders,
   normalizeHost,
@@ -20,7 +22,18 @@ import { DEFAULT_TENANT_SLUG, getTenantContextBySlugOrDefault, getTenantRequestC
 
 const ADMIN_REALM = "Adakan Admin"
 
-export { authorizeAdminRequest, getAllowedHosts, getAllowedOrigins, getRequestIpFromHeaders, isTrustedRequestOriginHeaders, normalizeHost, normalizeOrigin }
+export {
+  authorizeAdminRequest,
+  getAdminAllowlistIps,
+  getBasicAuthUsername,
+  getAllowedHosts,
+  getAllowedOrigins,
+  getRequestIpFromHeaders,
+  isIpAllowed,
+  isTrustedRequestOriginHeaders,
+  normalizeHost,
+  normalizeOrigin,
+}
 
 export class AdminAccessError extends Error {
   constructor(message = "Yonetim alanina erisim izni bulunamadi.") {
@@ -79,11 +92,17 @@ export function getSecurityHeaders() {
 export async function requireAdminAccess(): Promise<AdminAccessContext> {
   const env = getEnv()
   const requestHeaders = await headers()
+  const ipAddress = getRequestIpFromHeaders(requestHeaders)
+  const allowlist = getAdminAllowlistIps()
   const authorization = requestHeaders.get("authorization")
   const username = getBasicAuthUsername(authorization)
   const password = getBasicAuthPassword(authorization)
   const tenantSlug = await getTenantRequestCandidate()
   const tenant = await getTenantContextBySlugOrDefault(tenantSlug)
+
+  if (!isIpAllowed(ipAddress, allowlist)) {
+    throw new AdminAccessError("Bu IP adresi admin erisimi icin izinli degil.")
+  }
 
   if (username && password) {
     const adminUser = await db.adminUser.findFirst({

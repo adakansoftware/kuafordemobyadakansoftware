@@ -25,6 +25,9 @@ export function buildHealthSummary(options: {
   envIssues: string[]
   hasCanonicalUrl: boolean
   adminConfigured: boolean
+  securitySecretConfigured: boolean
+  turnstileConfigured: boolean
+  adminAllowlistConfigured: boolean
   allowedHostsConfigured: boolean
   rateLimitStorageOk: boolean
   auditLogStorageOk: boolean
@@ -51,6 +54,27 @@ export function buildHealthSummary(options: {
       detail: options.adminConfigured
         ? "Admin kimlik dogrulamasi yapilandirilmis."
         : "Admin kimlik dogrulamasi eksik veya zayif.",
+    },
+    {
+      key: "security_secret",
+      ok: options.securitySecretConfigured,
+      detail: options.securitySecretConfigured
+        ? "Uygulama guvenlik sirri tanimli."
+        : "APP_SECURITY_SECRET eksik veya zayif.",
+    },
+    {
+      key: "turnstile",
+      ok: options.turnstileConfigured,
+      detail: options.turnstileConfigured
+        ? "Turnstile bot dogrulamasi yapilandirilmis."
+        : "Turnstile devre disi.",
+    },
+    {
+      key: "admin_allowlist",
+      ok: options.adminAllowlistConfigured,
+      detail: options.adminAllowlistConfigured
+        ? "Admin IP allowlist tanimli."
+        : "Admin IP allowlist tanimli degil.",
     },
     {
       key: "origin_hosts",

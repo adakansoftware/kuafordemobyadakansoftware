@@ -15,6 +15,10 @@ const originalEnv = {
   ADMIN_USERNAME: process.env.ADMIN_USERNAME,
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
   ALLOWED_ORIGIN_HOSTS: process.env.ALLOWED_ORIGIN_HOSTS,
+  APP_SECURITY_SECRET: process.env.APP_SECURITY_SECRET,
+  TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+  ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
   NODE_ENV: process.env.NODE_ENV,
 }
 
@@ -24,6 +28,7 @@ function primeEnv() {
   process.env.ADMIN_USERNAME = "admin-user"
   process.env.ADMIN_PASSWORD = "very-strong-pass"
   process.env.ALLOWED_ORIGIN_HOSTS = "api.example.com, booking.example.com"
+  process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
   process.env.NODE_ENV = "development"
   resetEnvCacheForTests()
 }

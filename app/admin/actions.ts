@@ -2,6 +2,7 @@
 
 import { AppointmentStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
+import { headers } from "next/headers"
 import {
   businessSettingsSchema,
   customerNotesSchema,
@@ -23,6 +24,7 @@ import { AppointmentConflictError, updateAppointmentFromAdmin } from "@/lib/book
 import { adminNotesSchema } from "@/lib/booking"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
+import { buildRequestFingerprint } from "@/lib/request-security"
 import { applyRateLimit } from "@/lib/rate-limit"
 import {
   AdminPaymentError,
@@ -35,7 +37,6 @@ import {
   updateCustomerNotes,
 } from "@/lib/salon-ops-repository"
 import {
-  getAdminActorIdentifier,
   getRequestIpAddress,
   requireAdminAccess,
   verifyTrustedOrigin,
@@ -79,17 +80,63 @@ export type ProductSaleActionState = {
   message: string
 }
 
+async function requireAdminMutationGuard(namespace: string, requestId: string) {
+  const ipAddress = await getRequestIpAddress()
+  const accessContext = await requireAdminAccess()
+  await verifyTrustedOrigin({ allowHostFallback: true })
+
+  const actorIdentifier = accessContext.actorIdentifier
+  const requestHeaders = await headers()
+  const fingerprint = buildRequestFingerprint(requestHeaders, {
+    namespace,
+    actorIdentifier,
+  })
+  const rateLimit = await applyRateLimit({
+    key: `${ipAddress}:${actorIdentifier}:${fingerprint}`,
+    namespace,
+    limit: 45,
+    windowMs: 60_000,
+  })
+
+  if (!rateLimit.allowed) {
+    logEvent({
+      level: "warn",
+      event: "admin_mutation_rate_limited",
+      requestId,
+      route: "/admin",
+      message: "Admin mutation request was rate limited.",
+      meta: {
+        actorIdentifier,
+        ipAddress,
+        namespace,
+        rateLimitSource: rateLimit.source,
+      },
+    })
+
+    throw new Error(getAdminAppointmentRateLimitMessage())
+  }
+
+  return {
+    accessContext,
+    actorIdentifier,
+    ipAddress,
+  }
+}
+
 export async function updateAppointmentAction(
   _previousState: UpdateAppointmentActionState,
   formData: FormData
 ): Promise<UpdateAppointmentActionState> {
   const requestId = await getCurrentRequestId()
-  const ipAddress = await getRequestIpAddress()
   let accessContext
+  let actorIdentifier = "admin"
+  let ipAddress = "unknown"
 
   try {
-    accessContext = await requireAdminAccess()
-    await verifyTrustedOrigin({ allowHostFallback: true })
+    const guard = await requireAdminMutationGuard("admin-appointment-write", requestId)
+    accessContext = guard.accessContext
+    actorIdentifier = guard.actorIdentifier
+    ipAddress = guard.ipAddress
   } catch (error) {
     logEvent({
       level: "warn",
@@ -112,7 +159,6 @@ export async function updateAppointmentAction(
   const statusValue = String(formData.get("status") ?? "").trim()
   const staffId = String(formData.get("staffId") ?? "").trim()
   const notes = String(formData.get("notes") ?? "").trim()
-  const actorIdentifier = await getAdminActorIdentifier()
 
   if (!appointmentId) {
     return {
@@ -135,21 +181,6 @@ export async function updateAppointmentAction(
     return {
       success: false,
       message: validatedNotes.error.issues[0]?.message ?? "Operasyon notu gecersiz.",
-      appointmentId,
-    }
-  }
-
-  const rateLimit = await applyRateLimit({
-    key: `${ipAddress}:${actorIdentifier ?? "admin"}`,
-    namespace: "admin-appointment-write",
-    limit: 60,
-    windowMs: 60_000,
-  })
-
-  if (!rateLimit.allowed) {
-    return {
-      success: false,
-      message: getAdminAppointmentRateLimitMessage(),
       appointmentId,
     }
   }
@@ -211,12 +242,15 @@ export async function recordAppointmentPaymentAction(
   formData: FormData
 ): Promise<RecordPaymentActionState> {
   const requestId = await getCurrentRequestId()
-  const ipAddress = await getRequestIpAddress()
   let accessContext
+  let actorIdentifier = "admin"
+  let ipAddress = "unknown"
 
   try {
-    accessContext = await requireAdminAccess()
-    await verifyTrustedOrigin({ allowHostFallback: true })
+    const guard = await requireAdminMutationGuard("admin-payment-write", requestId)
+    accessContext = guard.accessContext
+    actorIdentifier = guard.actorIdentifier
+    ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
@@ -224,7 +258,6 @@ export async function recordAppointmentPaymentAction(
     }
   }
 
-  const actorIdentifier = await getAdminActorIdentifier()
   const validation = paymentSchema.safeParse({
     appointmentId: formData.get("appointmentId"),
     amount: formData.get("amount"),
@@ -237,21 +270,6 @@ export async function recordAppointmentPaymentAction(
       success: false,
       message: validation.error.issues[0]?.message ?? "Odeme formu gecersiz.",
       appointmentId: String(formData.get("appointmentId") ?? "").trim() || undefined,
-    }
-  }
-
-  const rateLimit = await applyRateLimit({
-    key: `${ipAddress}:${actorIdentifier ?? "admin"}`,
-    namespace: "admin-payment-write",
-    limit: 60,
-    windowMs: 60_000,
-  })
-
-  if (!rateLimit.allowed) {
-    return {
-      success: false,
-      message: getAdminAppointmentRateLimitMessage(),
-      appointmentId: validation.data.appointmentId,
     }
   }
 
@@ -307,12 +325,15 @@ export async function updateBusinessSettingsAction(
   formData: FormData
 ): Promise<BusinessSettingsActionState> {
   const requestId = await getCurrentRequestId()
-  const ipAddress = await getRequestIpAddress()
   let accessContext
+  let actorIdentifier = "admin"
+  let ipAddress = "unknown"
 
   try {
-    accessContext = await requireAdminAccess()
-    await verifyTrustedOrigin({ allowHostFallback: true })
+    const guard = await requireAdminMutationGuard("admin-business-settings-write", requestId)
+    accessContext = guard.accessContext
+    actorIdentifier = guard.actorIdentifier
+    ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
@@ -320,7 +341,6 @@ export async function updateBusinessSettingsAction(
     }
   }
 
-  const actorIdentifier = await getAdminActorIdentifier()
   const validation = businessSettingsSchema.safeParse({
     businessName: formData.get("businessName"),
     tagline: formData.get("tagline"),
@@ -382,12 +402,15 @@ export async function updateCustomerNotesAction(
   formData: FormData
 ): Promise<CustomerNotesActionState> {
   const requestId = await getCurrentRequestId()
-  const ipAddress = await getRequestIpAddress()
   let accessContext
+  let actorIdentifier = "admin"
+  let ipAddress = "unknown"
 
   try {
-    accessContext = await requireAdminAccess()
-    await verifyTrustedOrigin({ allowHostFallback: true })
+    const guard = await requireAdminMutationGuard("admin-customer-notes-write", requestId)
+    accessContext = guard.accessContext
+    actorIdentifier = guard.actorIdentifier
+    ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
@@ -395,7 +418,6 @@ export async function updateCustomerNotesAction(
     }
   }
 
-  const actorIdentifier = await getAdminActorIdentifier()
   const validation = customerNotesSchema.safeParse({
     customerId: formData.get("customerId"),
     notes: formData.get("notes"),
@@ -453,12 +475,13 @@ export async function updateStaffAvailabilityAction(
   formData: FormData
 ): Promise<StaffAvailabilityActionState> {
   const requestId = await getCurrentRequestId()
-  const ipAddress = await getRequestIpAddress()
   let accessContext
+  let ipAddress = "unknown"
 
   try {
-    accessContext = await requireAdminAccess()
-    await verifyTrustedOrigin({ allowHostFallback: true })
+    const guard = await requireAdminMutationGuard("admin-staff-availability-write", requestId)
+    accessContext = guard.accessContext
+    ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
@@ -510,12 +533,13 @@ export async function createStaffTimeOffAction(
   formData: FormData
 ): Promise<StaffTimeOffActionState> {
   const requestId = await getCurrentRequestId()
-  const ipAddress = await getRequestIpAddress()
   let accessContext
+  let ipAddress = "unknown"
 
   try {
-    accessContext = await requireAdminAccess()
-    await verifyTrustedOrigin({ allowHostFallback: true })
+    const guard = await requireAdminMutationGuard("admin-staff-timeoff-write", requestId)
+    accessContext = guard.accessContext
+    ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
@@ -574,12 +598,13 @@ export async function recordProductSaleAction(
   formData: FormData
 ): Promise<ProductSaleActionState> {
   const requestId = await getCurrentRequestId()
-  const ipAddress = await getRequestIpAddress()
   let accessContext
+  let ipAddress = "unknown"
 
   try {
-    accessContext = await requireAdminAccess()
-    await verifyTrustedOrigin({ allowHostFallback: true })
+    const guard = await requireAdminMutationGuard("admin-product-sale-write", requestId)
+    accessContext = guard.accessContext
+    ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,

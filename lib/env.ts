@@ -24,6 +24,10 @@ const envSchema = z.object({
   ADMIN_USERNAME: optionalTrimmedString,
   ADMIN_PASSWORD: optionalTrimmedString,
   ALLOWED_ORIGIN_HOSTS: optionalTrimmedString,
+  APP_SECURITY_SECRET: optionalTrimmedString,
+  TURNSTILE_SECRET_KEY: optionalTrimmedString,
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: optionalTrimmedString,
+  ADMIN_ALLOWLIST_IPS: optionalTrimmedString,
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 })
 
@@ -38,6 +42,10 @@ function parseEnv() {
     ADMIN_USERNAME: process.env.ADMIN_USERNAME,
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
     ALLOWED_ORIGIN_HOSTS: process.env.ALLOWED_ORIGIN_HOSTS,
+    APP_SECURITY_SECRET: process.env.APP_SECURITY_SECRET,
+    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+    ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
     NODE_ENV: process.env.NODE_ENV,
   })
 }
@@ -60,6 +68,10 @@ function collectEnvIssues(env: AppEnv) {
     issues.push("ADMIN_PASSWORD en az 12 karakter olmalidir.")
   }
 
+  if (env.APP_SECURITY_SECRET && env.APP_SECURITY_SECRET.length < 24) {
+    issues.push("APP_SECURITY_SECRET en az 24 karakter olmalidir.")
+  }
+
   if (env.NODE_ENV === "production" && !env.NEXT_PUBLIC_SITE_URL) {
     issues.push("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur.")
   }
@@ -77,6 +89,24 @@ function collectEnvIssues(env: AppEnv) {
       .some((value) => value.includes("://") || value.includes("/"))
   ) {
     issues.push("ALLOWED_ORIGIN_HOSTS sadece host isimleri icermelidir.")
+  }
+
+  const hasTurnstileSiteKey = Boolean(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+  const hasTurnstileSecret = Boolean(env.TURNSTILE_SECRET_KEY)
+
+  if (hasTurnstileSiteKey !== hasTurnstileSecret) {
+    issues.push("Turnstile ayarlari icin NEXT_PUBLIC_TURNSTILE_SITE_KEY ve TURNSTILE_SECRET_KEY birlikte tanimlanmalidir.")
+  }
+
+  if (
+    env.ADMIN_ALLOWLIST_IPS &&
+    env.ADMIN_ALLOWLIST_IPS
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .some((value) => value.includes("/") || value.includes(" "))
+  ) {
+    issues.push("ADMIN_ALLOWLIST_IPS sadece virgulle ayrilmis tekil IP degerleri icermelidir.")
   }
 
   return issues
@@ -103,6 +133,10 @@ export function getOptionalEnv() {
     ADMIN_USERNAME: process.env.ADMIN_USERNAME,
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
     ALLOWED_ORIGIN_HOSTS: process.env.ALLOWED_ORIGIN_HOSTS,
+    APP_SECURITY_SECRET: process.env.APP_SECURITY_SECRET,
+    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+    ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
     NODE_ENV: process.env.NODE_ENV,
   })
 }

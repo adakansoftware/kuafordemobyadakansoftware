@@ -60,6 +60,20 @@ export function getAllowedHosts() {
   return hosts
 }
 
+export function parseIpAllowlist(value: string | null | undefined) {
+  return new Set(
+    (value ?? "")
+      .split(",")
+      .map((entry) => stripPortFromIp(entry))
+      .filter(Boolean)
+  )
+}
+
+export function getAdminAllowlistIps() {
+  const env = getEnv()
+  return parseIpAllowlist(env.ADMIN_ALLOWLIST_IPS)
+}
+
 function stripPortFromIp(value: string) {
   const trimmed = value.trim().replace(/^for=/i, "").replace(/^"|"$/g, "")
 
@@ -126,6 +140,14 @@ export function getRequestIpFromHeaders(input: Headers) {
   }
 
   return "unknown"
+}
+
+export function isIpAllowed(ipAddress: string, allowlist: Set<string>) {
+  if (!allowlist.size) {
+    return true
+  }
+
+  return allowlist.has(stripPortFromIp(ipAddress))
 }
 
 function isSameCredential(left: string, right: string) {

@@ -1,5 +1,6 @@
 "use server"
 
+import { headers } from "next/headers"
 import {
   getSubmitBookingRateLimitMessage,
   mapSubmitBookingCreateError,
@@ -9,6 +10,15 @@ import { AppointmentConflictError, createAppointmentFromWeb } from "@/lib/bookin
 import { validateBookingForm, type BookingFormDraft } from "@/lib/booking"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
+import {
+  blockTemporarily,
+  buildRequestFingerprint,
+  claimReplayWindow,
+  getTemporaryBlock,
+  recordSuspicion,
+  verifyPublicFormChallenge,
+  verifyTurnstileToken,
+} from "@/lib/request-security"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { getRequestIpAddress, verifyTrustedOrigin } from "@/lib/security"
 
@@ -31,8 +41,34 @@ export type SubmitBookingResult =
 export async function submitBookingAction(values: BookingFormDraft): Promise<SubmitBookingResult> {
   const requestId = await getCurrentRequestId()
   const ipAddress = await getRequestIpAddress()
+  const requestHeaders = await headers()
+  const requestFingerprint = buildRequestFingerprint(requestHeaders, {
+    clientFingerprint: values.clientFingerprint?.slice(0, 120) ?? "",
+    service: values.service,
+    date: values.date,
+  })
+  const clientKey = `${ipAddress}:${requestFingerprint}`
+
+  const blockState = await getTemporaryBlock("booking-action", clientKey)
+
+  if (blockState && blockState.resetAt > Date.now()) {
+    return {
+      success: false,
+      message: getSubmitBookingRateLimitMessage(),
+    }
+  }
 
   if (values.website?.trim()) {
+    await recordSuspicion({
+      scope: "booking-action",
+      clientKey,
+      score: 6,
+      requestId,
+      route: "/randevu",
+      reason: "Booking server action honeypot was filled.",
+    })
+    await blockTemporarily("booking-action", clientKey, 30 * 60_000)
+
     logEvent({
       level: "warn",
       event: "booking_action_honeypot_triggered",
@@ -47,6 +83,35 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
     return {
       success: false,
       message: "Talebiniz dogrulanamadi. Lutfen formu yeniden deneyin.",
+    }
+  }
+
+  const formChallenge = verifyPublicFormChallenge("booking-form", {
+    formIssuedAt: values.formIssuedAt,
+    formSignature: values.formSignature,
+  })
+
+  if (!formChallenge.ok) {
+    const suspicionScore = formChallenge.reason === "form_submitted_too_fast" ? 4 : 3
+    const accumulatedScore = await recordSuspicion({
+      scope: "booking-action",
+      clientKey,
+      score: suspicionScore,
+      requestId,
+      route: "/randevu",
+      reason: `Booking form challenge failed: ${formChallenge.reason}.`,
+      meta: {
+        ageMs: formChallenge.ageMs,
+      },
+    })
+
+    if (accumulatedScore >= 8) {
+      await blockTemporarily("booking-action", clientKey, 30 * 60_000)
+    }
+
+    return {
+      success: false,
+      message: "Talep dogrulamasi basarisiz oldu. Lutfen formu yenileyip tekrar deneyin.",
     }
   }
 
@@ -74,6 +139,32 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
     }
   }
 
+  const turnstileResult = await verifyTurnstileToken({
+    token: values.turnstileToken,
+    ipAddress,
+    requestId,
+  })
+
+  if (!turnstileResult.ok) {
+    const accumulatedScore = await recordSuspicion({
+      scope: "booking-action",
+      clientKey,
+      score: turnstileResult.enforced ? 5 : 1,
+      requestId,
+      route: "/randevu",
+      reason: `Booking turnstile verification failed: ${turnstileResult.reason}.`,
+    })
+
+    if (accumulatedScore >= 8) {
+      await blockTemporarily("booking-action", clientKey, 30 * 60_000)
+    }
+
+    return {
+      success: false,
+      message: "Guvenlik dogrulamasi tamamlanamadi. Lutfen tekrar deneyin.",
+    }
+  }
+
   const validation = validateBookingForm(values)
 
   if (!validation.success) {
@@ -97,7 +188,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
   }
 
   const rateLimit = await applyRateLimit({
-    key: ipAddress,
+    key: clientKey,
     namespace: "booking-action-write",
     limit: 3,
     windowMs: 60_000,
@@ -120,6 +211,26 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
       success: false,
       message: getSubmitBookingRateLimitMessage(),
     }
+  }
+
+  const replayClaim = await claimReplayWindow(
+    "booking-action",
+    `${clientKey}:${validation.data.service}:${validation.data.date}:${validation.data.time}`,
+    2 * 60_000
+  )
+
+  if (!replayClaim.ok) {
+    await recordSuspicion({
+      scope: "booking-action",
+      clientKey,
+      score: 2,
+      requestId,
+      route: "/randevu",
+      reason: "Booking server action replay window matched an existing recent submission.",
+      meta: {
+        resetAt: replayClaim.resetAt,
+      },
+    })
   }
 
   try {

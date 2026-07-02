@@ -12,6 +12,7 @@ import {
   type BookingFormDraft,
   validateBookingForm,
 } from "@/lib/booking"
+import type { PublicFormChallenge } from "@/lib/request-security"
 import { siteContent } from "@/lib/site-content"
 import { cn } from "@/lib/utils"
 
@@ -39,8 +40,10 @@ type AvailabilityResponse = {
 }
 
 export function BookingForm({
+  securityChallenge,
   services = siteContent.services,
 }: {
+  securityChallenge: PublicFormChallenge
   services?: Array<{
     slug: string
     title: string
@@ -63,11 +66,30 @@ export function BookingForm({
     phone: "",
     email: "",
     website: "",
+    formIssuedAt: securityChallenge.formIssuedAt,
+    formSignature: securityChallenge.formSignature,
+    turnstileToken: "",
+    clientFingerprint: "",
   })
 
   const minDate = getBookingMinDate()
   const normalizedSelectedDate = normalizeBookingDateInput(formData.date)
   const selectedService = services.find((service) => service.slug === formData.service) ?? services[0]
+
+  useEffect(() => {
+    const browserFingerprint = [
+      navigator.userAgent ?? "",
+      navigator.language ?? "",
+      Intl.DateTimeFormat().resolvedOptions().timeZone ?? "",
+      window.screen?.width ?? "",
+      window.screen?.height ?? "",
+    ].join("|")
+
+    setFormData((prev) => ({
+      ...prev,
+      clientFingerprint: browserFingerprint.slice(0, 200),
+    }))
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -242,6 +264,10 @@ export function BookingForm({
               phone: "",
               email: "",
               website: "",
+              formIssuedAt: securityChallenge.formIssuedAt,
+              formSignature: securityChallenge.formSignature,
+              turnstileToken: "",
+              clientFingerprint: formData.clientFingerprint,
             })
             setErrors({})
             setFormMessage("")

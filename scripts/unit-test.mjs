@@ -31,6 +31,10 @@ const originalEnv = {
   ADMIN_USERNAME: process.env.ADMIN_USERNAME,
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
   ALLOWED_ORIGIN_HOSTS: process.env.ALLOWED_ORIGIN_HOSTS,
+  APP_SECURITY_SECRET: process.env.APP_SECURITY_SECRET,
+  TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+  ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
   NODE_ENV: process.env.NODE_ENV,
 }
 
@@ -52,6 +56,7 @@ function primeEnv() {
   process.env.ADMIN_USERNAME = "admin-user"
   process.env.ADMIN_PASSWORD = "very-strong-pass"
   process.env.ALLOWED_ORIGIN_HOSTS = "api.example.com, booking.example.com"
+  process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
   process.env.NODE_ENV = "development"
   resetEnvCacheForTests()
 }
@@ -59,6 +64,7 @@ function primeEnv() {
 function testEnvRules() {
   process.env.DATABASE_URL = "postgresql://demo"
   process.env.NODE_ENV = "development"
+  process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
   process.env.ADMIN_USERNAME = "admin"
   delete process.env.ADMIN_PASSWORD
   resetEnvCacheForTests()
@@ -70,6 +76,7 @@ function testEnvRules() {
 
   process.env.NODE_ENV = "production"
   delete process.env.NEXT_PUBLIC_SITE_URL
+  delete process.env.APP_SECURITY_SECRET
   delete process.env.ADMIN_USERNAME
   delete process.env.ADMIN_PASSWORD
   resetEnvCacheForTests()
@@ -129,6 +136,9 @@ function testHealthSummary() {
     envIssues: ["NEXT_PUBLIC_SITE_URL eksik."],
     hasCanonicalUrl: false,
     adminConfigured: true,
+    securitySecretConfigured: true,
+    turnstileConfigured: false,
+    adminAllowlistConfigured: false,
     allowedHostsConfigured: true,
     rateLimitStorageOk: false,
     auditLogStorageOk: false,
@@ -142,6 +152,9 @@ function testHealthSummary() {
     envIssues: [],
     hasCanonicalUrl: true,
     adminConfigured: true,
+    securitySecretConfigured: true,
+    turnstileConfigured: true,
+    adminAllowlistConfigured: true,
     allowedHostsConfigured: true,
     rateLimitStorageOk: true,
     auditLogStorageOk: false,

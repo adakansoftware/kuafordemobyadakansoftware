@@ -50,6 +50,9 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
   const envIssues = getEnvIssues()
   const adminConfigured = Boolean(optionalEnv.ADMIN_USERNAME && optionalEnv.ADMIN_PASSWORD)
   const hasCanonicalUrl = Boolean(optionalEnv.NEXT_PUBLIC_SITE_URL)
+  const securitySecretConfigured = Boolean(optionalEnv.APP_SECURITY_SECRET && optionalEnv.APP_SECURITY_SECRET.length >= 24)
+  const turnstileConfigured = Boolean(optionalEnv.TURNSTILE_SECRET_KEY && optionalEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+  const adminAllowlistConfigured = Boolean(optionalEnv.ADMIN_ALLOWLIST_IPS)
   const allowedHostsConfigured = Boolean(optionalEnv.ALLOWED_ORIGIN_HOSTS || optionalEnv.NEXT_PUBLIC_SITE_URL)
   const canViewDetailedChecks = shouldExposeDetailedHealth(
     scope,
@@ -72,6 +75,9 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
       envIssues,
       hasCanonicalUrl,
       adminConfigured,
+      securitySecretConfigured,
+      turnstileConfigured,
+      adminAllowlistConfigured,
       allowedHostsConfigured,
       rateLimitStorageOk,
       auditLogStorageOk,
@@ -108,6 +114,9 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
       envIssues,
       hasCanonicalUrl,
       adminConfigured,
+      securitySecretConfigured,
+      turnstileConfigured,
+      adminAllowlistConfigured,
       allowedHostsConfigured,
       rateLimitStorageOk: false,
       auditLogStorageOk: false,

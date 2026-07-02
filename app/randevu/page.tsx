@@ -3,6 +3,7 @@ import { Clock, MapPin, Phone, ShieldCheck } from "lucide-react"
 import { BookingForm } from "@/components/booking-form"
 import { listServicesFromDb } from "@/lib/bookings-repository"
 import { getBookingPageViewModel } from "@/lib/public-site"
+import { createPublicFormChallenge } from "@/lib/request-security"
 import { buildMetadata } from "@/lib/seo"
 
 export const metadata: Metadata = buildMetadata({
@@ -14,6 +15,7 @@ export const metadata: Metadata = buildMetadata({
 export default async function RandevuPage() {
   const viewModel = getBookingPageViewModel()
   const services = await listServicesFromDb()
+  const securityChallenge = createPublicFormChallenge("booking-form")
 
   return (
     <>
@@ -30,6 +32,7 @@ export default async function RandevuPage() {
           <div className="grid gap-12 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <BookingForm
+                securityChallenge={securityChallenge}
                 services={services.map((service) => ({
                   slug: service.slug,
                   title: service.title,

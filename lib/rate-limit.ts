@@ -13,6 +13,12 @@ export type RateLimitResult = {
   source: "database" | "memory"
 }
 
+export type RateLimitState = {
+  count: number
+  resetAt: number
+  source: "database" | "memory"
+}
+
 const memoryStores = new Map<string, Map<string, RateLimitEntry>>()
 const MAX_NAMESPACES = 100
 const MAX_KEYS_PER_NAMESPACE = 5000
@@ -133,6 +139,64 @@ function applyMemoryRateLimit(input: {
   }
 }
 
+function peekMemoryRateLimitState(input: {
+  key: string
+  namespace: string
+}): RateLimitState | null {
+  const now = Date.now()
+  const safeKey = input.key.trim().slice(0, 128) || "unknown"
+  const namespaceStore = memoryStores.get(input.namespace)
+
+  if (!namespaceStore) {
+    return null
+  }
+
+  pruneMemoryStores(now)
+  pruneMemoryNamespace(namespaceStore, now)
+
+  const existing = namespaceStore.get(safeKey)
+
+  if (!existing || existing.resetAt <= now) {
+    return null
+  }
+
+  return {
+    count: existing.count,
+    resetAt: existing.resetAt,
+    source: "memory",
+  }
+}
+
+function setMemoryRateLimitState(input: {
+  key: string
+  namespace: string
+  count: number
+  windowMs: number
+}): RateLimitState {
+  const now = Date.now()
+  const safeKey = input.key.trim().slice(0, 128) || "unknown"
+  const namespaceStore = memoryStores.get(input.namespace) ?? new Map<string, RateLimitEntry>()
+
+  if (!memoryStores.has(input.namespace)) {
+    memoryStores.set(input.namespace, namespaceStore)
+  }
+
+  pruneMemoryStores(now)
+  pruneMemoryNamespace(namespaceStore, now)
+
+  const resetAt = now + input.windowMs
+  namespaceStore.set(safeKey, {
+    count: Math.max(0, input.count),
+    resetAt,
+  })
+
+  return {
+    count: Math.max(0, input.count),
+    resetAt,
+    source: "memory",
+  }
+}
+
 async function pruneExpiredRateLimits(now: Date) {
   const nowTime = now.getTime()
 
@@ -248,5 +312,78 @@ export async function applyRateLimit(input: {
   } catch (error) {
     logRateLimitFallback(input.namespace, error)
     return applyMemoryRateLimit(input)
+  }
+}
+
+export async function peekRateLimitState(input: {
+  key: string
+  namespace: string
+}): Promise<RateLimitState | null> {
+  const safeKey = input.key.trim().slice(0, 128) || "unknown"
+  const now = new Date()
+
+  try {
+    const existing = await db.rateLimitBucket.findUnique({
+      where: {
+        namespace_key: {
+          namespace: input.namespace,
+          key: safeKey,
+        },
+      },
+    })
+
+    if (!existing || existing.resetAt.getTime() <= now.getTime()) {
+      return null
+    }
+
+    return {
+      count: existing.count,
+      resetAt: existing.resetAt.getTime(),
+      source: "database",
+    }
+  } catch (error) {
+    logRateLimitFallback(input.namespace, error)
+    return peekMemoryRateLimitState(input)
+  }
+}
+
+export async function setRateLimitState(input: {
+  key: string
+  namespace: string
+  count: number
+  windowMs: number
+}): Promise<RateLimitState> {
+  const safeKey = input.key.trim().slice(0, 128) || "unknown"
+  const now = new Date()
+  const resetAt = new Date(now.getTime() + input.windowMs)
+
+  try {
+    await db.rateLimitBucket.upsert({
+      where: {
+        namespace_key: {
+          namespace: input.namespace,
+          key: safeKey,
+        },
+      },
+      create: {
+        namespace: input.namespace,
+        key: safeKey,
+        count: Math.max(0, input.count),
+        resetAt,
+      },
+      update: {
+        count: Math.max(0, input.count),
+        resetAt,
+      },
+    })
+
+    return {
+      count: Math.max(0, input.count),
+      resetAt: resetAt.getTime(),
+      source: "database",
+    }
+  } catch (error) {
+    logRateLimitFallback(input.namespace, error)
+    return setMemoryRateLimitState(input)
   }
 }

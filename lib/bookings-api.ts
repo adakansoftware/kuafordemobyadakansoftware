@@ -42,6 +42,10 @@ export function parseBookingPayload(payload: unknown): BookingFormDraft | null {
     phone: candidate.phone,
     email: candidate.email,
     website: typeof candidate.website === "string" ? candidate.website : "",
+    formIssuedAt: typeof candidate.formIssuedAt === "string" ? candidate.formIssuedAt : "",
+    formSignature: typeof candidate.formSignature === "string" ? candidate.formSignature : "",
+    turnstileToken: typeof candidate.turnstileToken === "string" ? candidate.turnstileToken : "",
+    clientFingerprint: typeof candidate.clientFingerprint === "string" ? candidate.clientFingerprint : "",
   }
 }
 

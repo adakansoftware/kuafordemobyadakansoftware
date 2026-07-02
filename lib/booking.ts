@@ -61,6 +61,10 @@ export type BookingFormDraft = {
   phone: string
   email: string
   website?: string
+  formIssuedAt?: string
+  formSignature?: string
+  turnstileToken?: string
+  clientFingerprint?: string
 }
 
 export type BookingFieldErrors = Partial<Record<keyof BookingFormValues, string>>
@@ -78,6 +82,10 @@ export function sanitizeBookingForm(values: BookingFormDraft): BookingFormDraft 
     phone: normalizedPhone,
     email: values.email.trim().toLowerCase(),
     website: values.website?.trim() ?? "",
+    formIssuedAt: values.formIssuedAt?.trim() ?? "",
+    formSignature: values.formSignature?.trim() ?? "",
+    turnstileToken: values.turnstileToken?.trim() ?? "",
+    clientFingerprint: values.clientFingerprint?.trim() ?? "",
   }
 }
 

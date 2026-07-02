@@ -3,8 +3,16 @@ import { NextResponse } from "next/server"
 import { getRequestIdFromHeaders } from "@/lib/http"
 import { getRetryAfterSeconds } from "@/lib/http-core"
 import { getDurationMs, logEvent } from "@/lib/observability"
+import { blockTemporarily, getTemporaryBlock, recordSuspicion } from "@/lib/request-security"
 import { applyRateLimit } from "@/lib/rate-limit"
-import { authorizeAdminRequest, getAdminBasicAuthHeader, getRequestIpFromHeaders } from "@/lib/security"
+import {
+  authorizeAdminRequest,
+  getAdminAllowlistIps,
+  getAdminBasicAuthHeader,
+  getRequestIpFromHeaders,
+  getBasicAuthUsername,
+  isIpAllowed,
+} from "@/lib/security"
 
 function getBaseHeaders(requestId: string) {
   return {
@@ -34,6 +42,21 @@ function buildRateLimitHeaders(rateLimit?: {
 export async function proxy(request: NextRequest) {
   const startedAt = Date.now()
   const requestId = getRequestIdFromHeaders(request.headers)
+  const ip = getRequestIpFromHeaders(request.headers)
+
+  if (["TRACE", "TRACK"].includes(request.method)) {
+    return new NextResponse("Method not allowed", {
+      status: 405,
+      headers: getBaseHeaders(requestId),
+    })
+  }
+
+  if (request.nextUrl.search.length > 512) {
+    return new NextResponse("Request URI too long", {
+      status: 414,
+      headers: getBaseHeaders(requestId),
+    })
+  }
 
   if (!request.nextUrl.pathname.startsWith("/admin")) {
     const response = NextResponse.next()
@@ -61,17 +84,48 @@ export async function proxy(request: NextRequest) {
       })
     }
 
-    const ip = getRequestIpFromHeaders(request.headers)
+    const allowlist = getAdminAllowlistIps()
+
+    if (!isIpAllowed(ip, allowlist)) {
+      await recordSuspicion({
+        scope: "admin-auth",
+        clientKey: ip,
+        score: 6,
+        requestId,
+        route: request.nextUrl.pathname,
+        reason: "Admin access attempted from a non-allowlisted IP address.",
+        audit: true,
+      })
+
+      return new NextResponse("Forbidden", {
+        status: 403,
+        headers: getBaseHeaders(requestId),
+      })
+    }
+
+    const blockState = await getTemporaryBlock("admin-auth", ip)
+
+    if (blockState && blockState.resetAt > Date.now()) {
+      return new NextResponse("Too many authentication attempts", {
+        status: 429,
+        headers: {
+          ...getBaseHeaders(requestId),
+          "Retry-After": getRetryAfterSeconds(blockState.resetAt),
+        },
+      })
+    }
+
     const authorized = authorizeAdminRequest(request.headers.get("authorization"))
 
     if (!authorized) {
+      const authUsername = getBasicAuthUsername(request.headers.get("authorization")) ?? "unknown-user"
       const rateLimitConfig = {
         limit: 8,
         windowMs: 5 * 60 * 1000,
       }
 
       const attempt = await applyRateLimit({
-        key: ip,
+        key: `${ip}:${authUsername}`,
         namespace: "admin-auth-attempts",
         ...rateLimitConfig,
       })
@@ -90,6 +144,20 @@ export async function proxy(request: NextRequest) {
             responseTimeMs: getDurationMs(startedAt),
           },
         })
+
+        await recordSuspicion({
+          scope: "admin-auth",
+          clientKey: ip,
+          score: 5,
+          requestId,
+          route: request.nextUrl.pathname,
+          reason: "Admin authentication attempts exceeded the configured rate limit.",
+          meta: {
+            authUsername,
+          },
+          audit: true,
+        })
+        await blockTemporarily("admin-auth", ip, 30 * 60_000)
 
         return new NextResponse("Too many authentication attempts", {
           status: 429,
@@ -113,6 +181,19 @@ export async function proxy(request: NextRequest) {
           rateLimitSource: attempt.source,
           responseTimeMs: getDurationMs(startedAt),
         },
+      })
+
+      await recordSuspicion({
+        scope: "admin-auth",
+        clientKey: ip,
+        score: 2,
+        requestId,
+        route: request.nextUrl.pathname,
+        reason: "Admin authentication challenge issued for unauthorized request.",
+        meta: {
+          authUsername,
+        },
+        audit: true,
       })
 
       return new NextResponse("Authentication required", {
@@ -164,5 +245,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 }
