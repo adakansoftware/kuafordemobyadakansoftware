@@ -6,7 +6,7 @@ export type AdminAccessContext = {
   actorIdentifier: string
   role: AdminUserRole
   staffId: string | null
-  source: "admin_user" | "basic_auth_fallback"
+  source: "admin_user" | "admin_session" | "basic_auth_fallback"
 }
 
 export function hasRequiredRole(role: AdminUserRole, allowedRoles: AdminUserRole[]) {

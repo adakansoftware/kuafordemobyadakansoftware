@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
+import { ADMIN_SESSION_COOKIE_NAME, resolveAdminSessionFromRequest } from "@/lib/admin-session"
 import { getRequestIdFromHeaders } from "@/lib/http"
 import { getRetryAfterSeconds } from "@/lib/http-core"
 import { getDurationMs, logEvent } from "@/lib/observability"
@@ -85,6 +86,7 @@ export async function proxy(request: NextRequest) {
     }
 
     const allowlist = getAdminAllowlistIps()
+    const isAdminLoginPath = request.nextUrl.pathname === "/admin/login"
 
     if (!isIpAllowed(ip, allowlist)) {
       await recordSuspicion({
@@ -101,6 +103,33 @@ export async function proxy(request: NextRequest) {
         status: 403,
         headers: getBaseHeaders(requestId),
       })
+    }
+
+    const sessionToken = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value?.trim()
+
+    if (sessionToken) {
+      const session = await resolveAdminSessionFromRequest({
+        token: sessionToken,
+        requestHeaders: request.headers,
+        rotateCookie: false,
+      })
+
+      if (session) {
+        const response = NextResponse.next()
+        response.headers.set("Cache-Control", "no-store")
+        response.headers.set("Vary", "Authorization, Cookie")
+        response.headers.set("X-Request-Id", requestId)
+        response.headers.set("X-Content-Type-Options", "nosniff")
+        return response
+      }
+    }
+
+    if (isAdminLoginPath) {
+      const response = NextResponse.next()
+      response.headers.set("Cache-Control", "no-store")
+      response.headers.set("X-Request-Id", requestId)
+      response.headers.set("X-Content-Type-Options", "nosniff")
+      return response
     }
 
     const blockState = await getTemporaryBlock("admin-auth", ip)

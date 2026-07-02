@@ -2,6 +2,7 @@ import { headers } from "next/headers"
 import { AdminUserRole } from "@prisma/client"
 import type { AdminAccessContext } from "./admin-access.ts"
 import { hasRequiredRole } from "./admin-access.ts"
+import { createAdminSession, resolveAdminSession, setAdminSessionCookie } from "./admin-session.ts"
 import { db } from "./db.ts"
 import { getEnv } from "./env.ts"
 import { verifyPassword } from "./password.ts"
@@ -104,6 +105,12 @@ export async function requireAdminAccess(): Promise<AdminAccessContext> {
     throw new AdminAccessError("Bu IP adresi admin erisimi icin izinli degil.")
   }
 
+  const existingSession = await resolveAdminSession()
+
+  if (existingSession) {
+    return existingSession
+  }
+
   if (username && password) {
     const adminUser = await db.adminUser.findFirst({
       where: {
@@ -122,12 +129,19 @@ export async function requireAdminAccess(): Promise<AdminAccessContext> {
     })
 
     if (adminUser && verifyPassword(password, adminUser.passwordHash)) {
+      const session = await createAdminSession({
+        tenantId: adminUser.tenantId,
+        adminUserId: adminUser.id,
+      })
+
       await db.adminUser.update({
         where: { id: adminUser.id },
         data: {
           lastLoginAt: new Date(),
         },
       })
+
+      await setAdminSessionCookie(session.token, session.expiresAt)
 
       return {
         tenantId: adminUser.tenantId,

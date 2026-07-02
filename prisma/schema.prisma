@@ -106,6 +106,7 @@ model Tenant {
   customerAccessCodes CustomerAccessCode[]
   cancellationRequests AppointmentCancellationRequest[]
   auditLogs          AuditLog[]
+  adminSessions      AdminSession[]
 }
 
 model BusinessSettings {
@@ -330,10 +331,32 @@ model AdminUser {
   updatedAt    DateTime      @updatedAt
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   staff        Staff?        @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  sessions     AdminSession[]
 
   @@unique([tenantId, username])
   @@unique([tenantId, email])
   @@index([tenantId, role, isActive])
+}
+
+model AdminSession {
+  id                 String        @id @default(cuid())
+  tenantId           String
+  adminUserId        String
+  tokenHash          String        @unique
+  userAgentHash      String
+  acceptLanguageHash String
+  ipContextHash      String
+  expiresAt          DateTime
+  lastSeenAt         DateTime      @default(now())
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  revokedAt          DateTime?
+  adminUser          AdminUser     @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, expiresAt])
+  @@index([adminUserId, expiresAt])
+  @@index([revokedAt, expiresAt])
 }
 
 model TenantSubscription {

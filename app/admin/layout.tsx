@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { AdminUserRole } from "@prisma/client"
+import { adminLogoutAction } from "@/app/admin/login/actions"
 import { requireAdminAccess } from "@/lib/security"
 
 export default async function AdminLayout({
@@ -33,6 +34,14 @@ export default async function AdminLayout({
           <div className="text-right text-sm text-muted-foreground">
             <div>{access.actorIdentifier}</div>
             <div>{access.role}</div>
+            <form action={adminLogoutAction} className="mt-2">
+              <button
+                type="submit"
+                className="rounded-full border border-input bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:border-accent"
+              >
+                Oturumu Kapat
+              </button>
+            </form>
           </div>
         </div>
         <nav className="mx-auto flex max-w-7xl flex-wrap gap-3 px-6 pb-5 lg:px-8">
