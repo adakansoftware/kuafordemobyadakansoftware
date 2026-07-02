@@ -2,7 +2,7 @@ import { headers } from "next/headers"
 import { AdminUserRole } from "@prisma/client"
 import type { AdminAccessContext } from "./admin-access.ts"
 import { hasRequiredRole } from "./admin-access.ts"
-import { createAdminSession, resolveAdminSession, setAdminSessionCookie } from "./admin-session.ts"
+import { createAdminSession, requireAdminSessionStepUp, resolveAdminSession, setAdminSessionCookie } from "./admin-session.ts"
 import { db } from "./db.ts"
 import { getEnv } from "./env.ts"
 import { verifyPassword } from "./password.ts"
@@ -206,4 +206,18 @@ export async function getCurrentTenantContext() {
 
 export function getDefaultTenantSlug() {
   return DEFAULT_TENANT_SLUG
+}
+
+export async function requireCriticalAdminStepUp(input: {
+  accessContext: AdminAccessContext
+  password?: string | null
+  maxAgeMs?: number
+}) {
+  if (input.accessContext.source === "admin_session" && input.accessContext.sessionId) {
+    await requireAdminSessionStepUp({
+      sessionId: input.accessContext.sessionId,
+      password: input.password,
+      maxAgeMs: input.maxAgeMs,
+    })
+  }
 }

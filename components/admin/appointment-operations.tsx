@@ -159,6 +159,7 @@ export function AppointmentOperations({
         <div className="space-y-4">
           <form action={appointmentFormAction} className="grid gap-3 rounded-2xl border border-border/80 bg-secondary/20 p-4">
             <input type="hidden" name="appointmentId" value={appointment.id} />
+            <input type="hidden" name="currentStatus" value={appointment.status} />
 
             <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-2 text-sm text-foreground">
@@ -202,6 +203,17 @@ export function AppointmentOperations({
                 placeholder="Onay notu, musteri talebi veya operasyon bilgisi"
                 maxLength={500}
                 className="resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm text-foreground">
+              <span className="font-medium">Admin Sifresi (kritik degisikliklerde)</span>
+              <input
+                type="password"
+                name="adminPassword"
+                autoComplete="current-password"
+                placeholder="Son 10 dakikada dogrulandiysa bos birakilabilir"
+                className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
               />
             </label>
 
@@ -251,6 +263,17 @@ export function AppointmentOperations({
                   type="text"
                   name="note"
                   placeholder="Pos slip no, aciklama veya IBAN notu"
+                  className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm text-foreground">
+                <span className="font-medium">Admin Sifresi</span>
+                <input
+                  type="password"
+                  name="adminPassword"
+                  autoComplete="current-password"
+                  placeholder="Kritik odeme islemi icin gerekli olabilir"
                   className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </label>

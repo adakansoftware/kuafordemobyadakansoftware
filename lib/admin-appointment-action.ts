@@ -20,6 +20,10 @@ export function mapAdminAppointmentSecurityError(error: unknown) {
     return "Istek kaynagi dogrulanamadi."
   }
 
+  if (error instanceof Error && error.name === "AdminStepUpError") {
+    return error.message
+  }
+
   return "Guvenlik dogrulamasi basarisiz oldu."
 }
 

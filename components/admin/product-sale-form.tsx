@@ -79,6 +79,17 @@ export function ProductSaleForm({
           <span className="font-medium">Not</span>
           <input type="text" name="note" className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
         </label>
+
+        <label className="grid gap-2 text-sm text-foreground">
+          <span className="font-medium">Admin Sifresi</span>
+          <input
+            type="password"
+            name="adminPassword"
+            autoComplete="current-password"
+            placeholder="Kritik stok/satis islemi icin gerekli olabilir"
+            className="rounded-xl border border-input bg-background px-4 py-3 text-sm"
+          />
+        </label>
       </div>
 
       <div className="flex items-center justify-between gap-4">

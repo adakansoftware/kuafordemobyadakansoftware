@@ -347,6 +347,7 @@ model AdminSession {
   acceptLanguageHash String
   ipContextHash      String
   expiresAt          DateTime
+  stepUpVerifiedAt   DateTime?
   lastSeenAt         DateTime      @default(now())
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt

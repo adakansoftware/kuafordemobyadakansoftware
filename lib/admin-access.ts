@@ -1,6 +1,8 @@
 import { AdminUserRole, SubscriptionPlan } from "@prisma/client"
 
 export type AdminAccessContext = {
+  sessionId?: string | null
+  stepUpVerifiedAt?: Date | null
   tenantId: string
   tenantSlug: string
   actorIdentifier: string

@@ -4,11 +4,20 @@ import type { AdminUserRole } from "@prisma/client"
 import { db } from "./db.ts"
 import { getOptionalEnv } from "./env.ts"
 import { logEvent } from "./observability.ts"
+import { verifyPassword } from "./password.ts"
 import { getRequestIpFromHeaders } from "./security-core.ts"
 
 export const ADMIN_SESSION_COOKIE_NAME = "admin_session"
 const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12
 const ADMIN_SESSION_ROTATE_AFTER_MS = 1000 * 60 * 30
+const ADMIN_STEP_UP_MAX_AGE_MS = 1000 * 60 * 10
+
+export class AdminStepUpError extends Error {
+  constructor(message = "Kritik islem icin yonetici sifresi ile ek dogrulama gereklidir.") {
+    super(message)
+    this.name = "AdminStepUpError"
+  }
+}
 
 type SessionBinding = {
   userAgentHash: string
@@ -84,6 +93,7 @@ export async function createAdminSession(input: {
       acceptLanguageHash: binding.acceptLanguageHash,
       ipContextHash: binding.ipContextHash,
       expiresAt,
+      stepUpVerifiedAt: new Date(),
     },
   })
 
@@ -257,6 +267,7 @@ export async function resolveAdminSessionFromRequest(input: {
 
   return {
     sessionId: session.id,
+    stepUpVerifiedAt: session.stepUpVerifiedAt,
     tenantId: session.tenantId,
     tenantSlug: session.tenant.slug,
     actorIdentifier: session.adminUser.username,
@@ -264,4 +275,56 @@ export async function resolveAdminSessionFromRequest(input: {
     staffId: session.adminUser.staffId,
     source: "admin_session" as const,
   }
+}
+
+export async function requireAdminSessionStepUp(input: {
+  sessionId: string
+  password?: string | null
+  maxAgeMs?: number
+}) {
+  const session = await db.adminSession.findFirst({
+    where: {
+      id: input.sessionId,
+      revokedAt: null,
+      expiresAt: {
+        gt: new Date(),
+      },
+    },
+    select: {
+      id: true,
+      stepUpVerifiedAt: true,
+      adminUser: {
+        select: {
+          passwordHash: true,
+        },
+      },
+    },
+  })
+
+  if (!session) {
+    throw new AdminStepUpError("Admin oturumu gecersiz veya suresi dolmus.")
+  }
+
+  const maxAgeMs = input.maxAgeMs ?? ADMIN_STEP_UP_MAX_AGE_MS
+
+  if (session.stepUpVerifiedAt && Date.now() - session.stepUpVerifiedAt.getTime() <= maxAgeMs) {
+    return
+  }
+
+  const password = input.password?.trim()
+
+  if (!password) {
+    throw new AdminStepUpError()
+  }
+
+  if (!verifyPassword(password, session.adminUser.passwordHash)) {
+    throw new AdminStepUpError("Yonetici sifresi dogrulanamadi.")
+  }
+
+  await db.adminSession.update({
+    where: { id: session.id },
+    data: {
+      stepUpVerifiedAt: new Date(),
+    },
+  })
 }

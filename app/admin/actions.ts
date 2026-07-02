@@ -38,6 +38,7 @@ import {
 } from "@/lib/salon-ops-repository"
 import {
   getRequestIpAddress,
+  requireCriticalAdminStepUp,
   requireAdminAccess,
   verifyTrustedOrigin,
 } from "@/lib/security"
@@ -78,6 +79,14 @@ export type StaffTimeOffActionState = {
 export type ProductSaleActionState = {
   success: boolean
   message: string
+}
+
+function isHighRiskAppointmentMutation(statusValue: string, currentStatus?: AppointmentStatus | null) {
+  return (
+    statusValue === AppointmentStatus.CANCELLED ||
+    statusValue === AppointmentStatus.COMPLETED ||
+    (currentStatus ? statusValue !== currentStatus : false)
+  )
 }
 
 async function requireAdminMutationGuard(namespace: string, requestId: string) {
@@ -156,9 +165,11 @@ export async function updateAppointmentAction(
   }
 
   const appointmentId = String(formData.get("appointmentId") ?? "").trim()
+  const currentStatusValue = String(formData.get("currentStatus") ?? "").trim()
   const statusValue = String(formData.get("status") ?? "").trim()
   const staffId = String(formData.get("staffId") ?? "").trim()
   const notes = String(formData.get("notes") ?? "").trim()
+  const adminPassword = String(formData.get("adminPassword") ?? "")
 
   if (!appointmentId) {
     return {
@@ -182,6 +193,21 @@ export async function updateAppointmentAction(
       success: false,
       message: validatedNotes.error.issues[0]?.message ?? "Operasyon notu gecersiz.",
       appointmentId,
+    }
+  }
+
+  if (isHighRiskAppointmentMutation(statusValue, currentStatusValue as AppointmentStatus | null)) {
+    try {
+      await requireCriticalAdminStepUp({
+        accessContext,
+        password: adminPassword,
+      })
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Ek yonetici dogrulamasi basarisiz oldu.",
+        appointmentId,
+      }
     }
   }
 
@@ -274,6 +300,19 @@ export async function recordAppointmentPaymentAction(
   }
 
   try {
+    await requireCriticalAdminStepUp({
+      accessContext,
+      password: String(formData.get("adminPassword") ?? ""),
+    })
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Ek yonetici dogrulamasi basarisiz oldu.",
+      appointmentId: validation.data.appointmentId,
+    }
+  }
+
+  try {
     const result = await recordAppointmentPayment({
       ...validation.data,
       actorIdentifier,
@@ -358,6 +397,18 @@ export async function updateBusinessSettingsAction(
     return {
       success: false,
       message: validation.error.issues[0]?.message ?? "Isletme ayarlari formu gecersiz.",
+    }
+  }
+
+  try {
+    await requireCriticalAdminStepUp({
+      accessContext,
+      password: String(formData.get("adminPassword") ?? ""),
+    })
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Ek yonetici dogrulamasi basarisiz oldu.",
     }
   }
 
@@ -625,6 +676,18 @@ export async function recordProductSaleAction(
     return {
       success: false,
       message: validation.error.issues[0]?.message ?? "Satis formu gecersiz.",
+    }
+  }
+
+  try {
+    await requireCriticalAdminStepUp({
+      accessContext,
+      password: String(formData.get("adminPassword") ?? ""),
+    })
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Ek yonetici dogrulamasi basarisiz oldu.",
     }
   }
 
