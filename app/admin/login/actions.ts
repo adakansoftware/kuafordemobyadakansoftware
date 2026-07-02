@@ -2,12 +2,12 @@
 
 import { redirect } from "next/navigation"
 import { createAdminSession, setAdminSessionCookie } from "@/lib/admin-session"
-import { decryptAdminMfaSecret, verifyTotpCode } from "@/lib/admin-mfa"
+import { decryptAdminMfaSecret, verifyTotpCodeDetailed } from "@/lib/admin-mfa"
 import { db } from "@/lib/db"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
 import { verifyPassword } from "@/lib/password"
-import { applyRateLimit } from "@/lib/rate-limit"
+import { applyRateLimit, claimRateLimitWindow } from "@/lib/rate-limit"
 import { blockTemporarily, getTemporaryBlock, recordSuspicion, verifyPublicFormChallenge } from "@/lib/request-security"
 import { getRequestIpAddress, verifyTrustedOrigin } from "@/lib/security"
 import { getTenantContextBySlugOrDefault, getTenantRequestCandidate } from "@/lib/tenant"
@@ -161,8 +161,9 @@ export async function adminLoginAction(
 
   if (adminUser.mfaEnabledAt && adminUser.mfaSecretCiphertext) {
     const secret = decryptAdminMfaSecret(adminUser.mfaSecretCiphertext)
+    const verifiedCode = verifyTotpCodeDetailed({ secret, code: totpCode })
 
-    if (!verifyTotpCode({ secret, code: totpCode })) {
+    if (!verifiedCode) {
       await recordSuspicion({
         scope: "admin-login",
         clientKey,
@@ -188,6 +189,29 @@ export async function adminLoginAction(
       return {
         success: false,
         message: "Authenticator kodu gecersiz.",
+      }
+    }
+
+    const codeClaim = await claimRateLimitWindow({
+      namespace: "admin-mfa-login",
+      key: `${adminUser.id}:${verifiedCode.counter}`,
+      windowMs: 2 * 60_000,
+    })
+
+    if (!codeClaim.ok) {
+      await recordSuspicion({
+        scope: "admin-login",
+        clientKey,
+        score: 3,
+        requestId,
+        route: "/admin/login",
+        reason: "Admin login MFA code replay was detected.",
+        audit: true,
+      })
+
+      return {
+        success: false,
+        message: "Bu authenticator kodu daha once kullanildi. Yeni kod bekleyin.",
       }
     }
   }

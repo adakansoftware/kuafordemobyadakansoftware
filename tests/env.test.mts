@@ -12,6 +12,7 @@ const originalEnv = {
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
   ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
   SETUP_ACCESS_TOKEN: process.env.SETUP_ACCESS_TOKEN,
+  HEALTHCHECK_TOKEN: process.env.HEALTHCHECK_TOKEN,
   NODE_ENV: process.env.NODE_ENV,
 }
 
@@ -60,6 +61,7 @@ export function runEnvTests() {
   delete process.env.APP_SECURITY_SECRET
   delete process.env.ADMIN_USERNAME
   delete process.env.ADMIN_PASSWORD
+  delete process.env.HEALTHCHECK_TOKEN
   resetEnvCacheForTests()
   issues = getEnvIssues()
   assert.equal(issues.includes("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur."), true)
@@ -69,8 +71,13 @@ export function runEnvTests() {
   process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
   process.env.ADMIN_USERNAME = "admin"
   process.env.ADMIN_PASSWORD = "short"
+  process.env.HEALTHCHECK_TOKEN = "short"
   resetEnvCacheForTests()
   assert.throws(() => getEnv(), /ADMIN_PASSWORD en az 12 karakter olmalidir/)
+
+  process.env.ADMIN_PASSWORD = "very-strong-pass"
+  resetEnvCacheForTests()
+  assert.throws(() => getEnv(), /HEALTHCHECK_TOKEN en az 24 karakter olmalidir/)
 
   restoreEnv()
 }

@@ -5,7 +5,8 @@ import { db } from "./db.ts"
 import { getOptionalEnv } from "./env.ts"
 import { logEvent } from "./observability.ts"
 import { verifyPassword } from "./password.ts"
-import { decryptAdminMfaSecret, verifyTotpCode } from "./admin-mfa.ts"
+import { claimRateLimitWindow } from "./rate-limit.ts"
+import { decryptAdminMfaSecret, verifyTotpCodeDetailed } from "./admin-mfa.ts"
 import { getRequestIpFromHeaders } from "./security-core.ts"
 
 export const ADMIN_SESSION_COOKIE_NAME = "admin_session"
@@ -337,9 +338,20 @@ export async function requireAdminSessionStepUp(input: {
     }
 
     const secret = decryptAdminMfaSecret(session.adminUser.mfaSecretCiphertext)
+    const verifiedCode = verifyTotpCodeDetailed({ secret, code: totpCode })
 
-    if (!verifyTotpCode({ secret, code: totpCode })) {
+    if (!verifiedCode) {
       throw new AdminStepUpError("Authenticator kodu dogrulanamadi.")
+    }
+
+    const codeClaim = await claimRateLimitWindow({
+      namespace: "admin-mfa-stepup",
+      key: `${session.adminUser.id}:${verifiedCode.counter}`,
+      windowMs: 2 * 60_000,
+    })
+
+    if (!codeClaim.ok) {
+      throw new AdminStepUpError("Authenticator kodu daha once kullanildi. Yeni kod bekleyin.")
     }
   }
 

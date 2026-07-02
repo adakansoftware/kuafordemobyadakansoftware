@@ -116,10 +116,19 @@ export function verifyTotpCode(input: {
   at?: number
   window?: number
 }) {
+  return Boolean(verifyTotpCodeDetailed(input))
+}
+
+export function verifyTotpCodeDetailed(input: {
+  secret: string
+  code: string
+  at?: number
+  window?: number
+}) {
   const code = normalizeTotpCode(input.code)
 
   if (code.length !== TOTP_DIGITS) {
-    return false
+    return null
   }
 
   const at = input.at ?? Date.now()
@@ -134,11 +143,14 @@ export function verifyTotpCode(input: {
     }
 
     if (constantTimeEqual(hotp(input.secret, candidateCounter), code)) {
-      return true
+      return {
+        counter: candidateCounter,
+        code,
+      }
     }
   }
 
-  return false
+  return null
 }
 
 export function buildAdminTotpUri(input: {

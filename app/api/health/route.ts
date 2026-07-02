@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getEnvIssues, getOptionalEnv } from "@/lib/env"
+import { getRetryAfterSeconds } from "@/lib/http-core"
+import { applyRateLimit } from "@/lib/rate-limit"
+import { blockTemporarily, getTemporaryBlock, recordSuspicion } from "@/lib/request-security"
 import { authorizeAdminRequest } from "@/lib/security"
+import { getRequestIpFromHeaders } from "@/lib/security"
 import { buildHealthSummary, resolveHealthScope, shouldExposeDetailedHealth, type HealthScope } from "@/lib/health"
 import { getDurationMs, logEvent } from "@/lib/observability"
 
@@ -47,17 +51,105 @@ async function checkTableAvailability(tableName: "RateLimitBucket" | "AuditLog")
 async function handleHealthRequest(scope: HealthScope, headers: Headers) {
   const startedAt = Date.now()
   const optionalEnv = getOptionalEnv()
+  const ipAddress = getRequestIpFromHeaders(headers)
+  const healthToken = headers.get("x-health-token")?.trim()
   const envIssues = getEnvIssues()
   const adminConfigured = Boolean(optionalEnv.ADMIN_USERNAME && optionalEnv.ADMIN_PASSWORD)
   const hasCanonicalUrl = Boolean(optionalEnv.NEXT_PUBLIC_SITE_URL)
   const securitySecretConfigured = Boolean(optionalEnv.APP_SECURITY_SECRET && optionalEnv.APP_SECURITY_SECRET.length >= 24)
+  const healthTokenConfigured = Boolean(optionalEnv.HEALTHCHECK_TOKEN && optionalEnv.HEALTHCHECK_TOKEN.length >= 24)
   const turnstileConfigured = Boolean(optionalEnv.TURNSTILE_SECRET_KEY && optionalEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
   const adminAllowlistConfigured = Boolean(optionalEnv.ADMIN_ALLOWLIST_IPS)
   const allowedHostsConfigured = Boolean(optionalEnv.ALLOWED_ORIGIN_HOSTS || optionalEnv.NEXT_PUBLIC_SITE_URL)
+  const isHealthTokenAuthorized = Boolean(
+    optionalEnv.HEALTHCHECK_TOKEN &&
+      healthToken &&
+      optionalEnv.HEALTHCHECK_TOKEN === healthToken
+  )
+  const isAuthorized = authorizeAdminRequest(headers.get("authorization")) || isHealthTokenAuthorized
   const canViewDetailedChecks = shouldExposeDetailedHealth(
     scope,
-    authorizeAdminRequest(headers.get("authorization"))
+    isAuthorized
   )
+  const rateLimit = await applyRateLimit({
+    namespace: `health:${scope}`,
+    key: `${ipAddress}:${scope}`,
+    limit: scope === "live" ? 30 : 10,
+    windowMs: 60_000,
+  })
+
+  if (!rateLimit.allowed) {
+    return jsonResponse(
+      {
+        success: false,
+        scope,
+        status: "error",
+        timestamp: new Date().toISOString(),
+        message: "Health endpoint gecici olarak sinirlandi.",
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": getRetryAfterSeconds(rateLimit.resetAt),
+          "X-Health-Scope": scope,
+        },
+      }
+    )
+  }
+
+  if (scope === "ready") {
+    const blockState = await getTemporaryBlock("health-ready", ipAddress)
+
+    if (blockState && blockState.resetAt > Date.now()) {
+      return jsonResponse(
+        {
+          success: false,
+          scope,
+          status: "error",
+          timestamp: new Date().toISOString(),
+          message: "Readiness endpoint erisimi gecici olarak engellendi.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": getRetryAfterSeconds(blockState.resetAt),
+            "X-Health-Scope": scope,
+          },
+        }
+      )
+    }
+
+    if (!isAuthorized) {
+      const accumulatedScore = await recordSuspicion({
+        scope: "health-ready",
+        clientKey: ipAddress,
+        score: 4,
+        route: "/api/health",
+        reason: "Unauthorized readiness probe attempted.",
+        audit: true,
+      })
+
+      if (accumulatedScore >= 8) {
+        await blockTemporarily("health-ready", ipAddress, 30 * 60_000)
+      }
+
+      return jsonResponse(
+        {
+          success: false,
+          scope,
+          status: "error",
+          timestamp: new Date().toISOString(),
+          message: "Readiness endpoint icin ek yetkilendirme gereklidir.",
+        },
+        {
+          status: 403,
+          headers: {
+            "X-Health-Scope": scope,
+          },
+        }
+      )
+    }
+  }
 
   try {
     const [databaseOk, rateLimitStorageOk, auditLogStorageOk] = await Promise.all([
@@ -76,6 +168,7 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
       hasCanonicalUrl,
       adminConfigured,
       securitySecretConfigured,
+      healthTokenConfigured,
       turnstileConfigured,
       adminAllowlistConfigured,
       allowedHostsConfigured,
@@ -105,7 +198,12 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
         ...(canViewDetailedChecks ? { checks: summary.checks } : {}),
         responseTimeMs: getDurationMs(startedAt),
       },
-      { status: statusCode }
+      {
+        status: statusCode,
+        headers: {
+          "X-Health-Scope": scope,
+        },
+      }
     )
   } catch (error) {
     const summary = buildHealthSummary({
@@ -115,6 +213,7 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
       hasCanonicalUrl,
       adminConfigured,
       securitySecretConfigured,
+      healthTokenConfigured,
       turnstileConfigured,
       adminAllowlistConfigured,
       allowedHostsConfigured,
@@ -143,7 +242,12 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
         ...(canViewDetailedChecks ? { checks: summary.checks } : {}),
         responseTimeMs: getDurationMs(startedAt),
       },
-      { status: 503 }
+      {
+        status: 503,
+        headers: {
+          "X-Health-Scope": scope,
+        },
+      }
     )
   }
 }

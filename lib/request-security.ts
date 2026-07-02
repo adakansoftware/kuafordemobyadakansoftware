@@ -3,7 +3,7 @@ import { AuditActorType, type AuditEvent } from "@prisma/client"
 import { createAuditLog } from "./audit-log.ts"
 import { getEnv, getOptionalEnv } from "./env.ts"
 import { logEvent } from "./observability.ts"
-import { peekRateLimitState, setRateLimitState } from "./rate-limit.ts"
+import { claimRateLimitWindow, peekRateLimitState, setRateLimitState } from "./rate-limit.ts"
 import { withCircuitBreaker, withTimeout } from "./resilience.ts"
 import { getRequestIpFromHeaders } from "./security-core.ts"
 
@@ -114,30 +114,11 @@ export function buildReplayKey(scope: string, headers: Headers, payload: string)
 }
 
 export async function claimReplayWindow(scope: string, replayKey: string, windowMs: number) {
-  const namespace = `replay:${scope}`
-  const existing = await peekRateLimitState({
-    namespace,
+  return claimRateLimitWindow({
+    namespace: `replay:${scope}`,
     key: replayKey,
-  })
-
-  if (existing && existing.resetAt > Date.now()) {
-    return {
-      ok: false,
-      resetAt: existing.resetAt,
-    }
-  }
-
-  await setRateLimitState({
-    namespace,
-    key: replayKey,
-    count: 1,
     windowMs,
   })
-
-  return {
-    ok: true,
-    resetAt: Date.now() + windowMs,
-  }
 }
 
 export async function getTemporaryBlock(scope: string, clientKey: string) {

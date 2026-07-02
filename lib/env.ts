@@ -29,6 +29,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: optionalTrimmedString,
   ADMIN_ALLOWLIST_IPS: optionalTrimmedString,
   SETUP_ACCESS_TOKEN: optionalTrimmedString,
+  HEALTHCHECK_TOKEN: optionalTrimmedString,
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 })
 
@@ -48,6 +49,7 @@ function parseEnv() {
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
     SETUP_ACCESS_TOKEN: process.env.SETUP_ACCESS_TOKEN,
+    HEALTHCHECK_TOKEN: process.env.HEALTHCHECK_TOKEN,
     NODE_ENV: process.env.NODE_ENV,
   })
 }
@@ -76,6 +78,10 @@ function collectEnvIssues(env: AppEnv) {
 
   if (env.NODE_ENV === "production" && !env.NEXT_PUBLIC_SITE_URL) {
     issues.push("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur.")
+  }
+
+  if (env.HEALTHCHECK_TOKEN && env.HEALTHCHECK_TOKEN.length < 24) {
+    issues.push("HEALTHCHECK_TOKEN en az 24 karakter olmalidir.")
   }
 
   if (!normalizedDatabaseUrl.startsWith("postgres://") && !normalizedDatabaseUrl.startsWith("postgresql://")) {
@@ -140,6 +146,7 @@ export function getOptionalEnv() {
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
     SETUP_ACCESS_TOKEN: process.env.SETUP_ACCESS_TOKEN,
+    HEALTHCHECK_TOKEN: process.env.HEALTHCHECK_TOKEN,
     NODE_ENV: process.env.NODE_ENV,
   })
 }

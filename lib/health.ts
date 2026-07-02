@@ -26,6 +26,7 @@ export function buildHealthSummary(options: {
   hasCanonicalUrl: boolean
   adminConfigured: boolean
   securitySecretConfigured: boolean
+  healthTokenConfigured: boolean
   turnstileConfigured: boolean
   adminAllowlistConfigured: boolean
   allowedHostsConfigured: boolean
@@ -61,6 +62,13 @@ export function buildHealthSummary(options: {
       detail: options.securitySecretConfigured
         ? "Uygulama guvenlik sirri tanimli."
         : "APP_SECURITY_SECRET eksik veya zayif.",
+    },
+    {
+      key: "health_token",
+      ok: options.healthTokenConfigured,
+      detail: options.healthTokenConfigured
+        ? "Health readiness token tanimli."
+        : "HEALTHCHECK_TOKEN tanimli degil veya zayif.",
     },
     {
       key: "turnstile",
@@ -100,7 +108,7 @@ export function buildHealthSummary(options: {
   const requiredKeys =
     options.scope === "live"
       ? new Set<HealthCheckItem["key"]>(["database"])
-      : new Set<HealthCheckItem["key"]>(["database", "rate_limit_storage", "audit_log_storage"])
+      : new Set<HealthCheckItem["key"]>(["database", "rate_limit_storage", "audit_log_storage", "health_token"])
 
   const hasError = checks.some((check) => requiredKeys.has(check.key) && !check.ok)
   const hasWarning = checks.some((check) => !check.ok)

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import { logEvent } from "@/lib/observability"
+import { Prisma } from "@prisma/client"
 
 type RateLimitEntry = {
   count: number
@@ -15,6 +16,12 @@ export type RateLimitResult = {
 
 export type RateLimitState = {
   count: number
+  resetAt: number
+  source: "database" | "memory"
+}
+
+export type RateLimitClaimResult = {
+  ok: boolean
   resetAt: number
   source: "database" | "memory"
 }
@@ -192,6 +199,45 @@ function setMemoryRateLimitState(input: {
 
   return {
     count: Math.max(0, input.count),
+    resetAt,
+    source: "memory",
+  }
+}
+
+function claimMemoryRateLimitWindow(input: {
+  key: string
+  namespace: string
+  windowMs: number
+}): RateLimitClaimResult {
+  const now = Date.now()
+  const safeKey = input.key.trim().slice(0, 128) || "unknown"
+  const namespaceStore = memoryStores.get(input.namespace) ?? new Map<string, RateLimitEntry>()
+
+  if (!memoryStores.has(input.namespace)) {
+    memoryStores.set(input.namespace, namespaceStore)
+  }
+
+  pruneMemoryStores(now)
+  pruneMemoryNamespace(namespaceStore, now)
+
+  const existing = namespaceStore.get(safeKey)
+
+  if (existing && existing.resetAt > now) {
+    return {
+      ok: false,
+      resetAt: existing.resetAt,
+      source: "memory",
+    }
+  }
+
+  const resetAt = now + input.windowMs
+  namespaceStore.set(safeKey, {
+    count: 1,
+    resetAt,
+  })
+
+  return {
+    ok: true,
     resetAt,
     source: "memory",
   }
@@ -385,5 +431,103 @@ export async function setRateLimitState(input: {
   } catch (error) {
     logRateLimitFallback(input.namespace, error)
     return setMemoryRateLimitState(input)
+  }
+}
+
+export async function claimRateLimitWindow(input: {
+  key: string
+  namespace: string
+  windowMs: number
+}): Promise<RateLimitClaimResult> {
+  const safeKey = input.key.trim().slice(0, 128) || "unknown"
+  const now = new Date()
+  const nextResetAt = new Date(now.getTime() + input.windowMs)
+
+  try {
+    const existing = await db.rateLimitBucket.findUnique({
+      where: {
+        namespace_key: {
+          namespace: input.namespace,
+          key: safeKey,
+        },
+      },
+    })
+
+    if (!existing) {
+      try {
+        await db.rateLimitBucket.create({
+          data: {
+            namespace: input.namespace,
+            key: safeKey,
+            count: 1,
+            resetAt: nextResetAt,
+          },
+        })
+
+        return {
+          ok: true,
+          resetAt: nextResetAt.getTime(),
+          source: "database",
+        }
+      } catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+          throw error
+        }
+      }
+    } else if (existing.resetAt.getTime() > now.getTime()) {
+      return {
+        ok: false,
+        resetAt: existing.resetAt.getTime(),
+        source: "database",
+      }
+    }
+
+    const updated = await db.rateLimitBucket.updateMany({
+      where: {
+        namespace: input.namespace,
+        key: safeKey,
+        resetAt: {
+          lte: now,
+        },
+      },
+      data: {
+        count: 1,
+        resetAt: nextResetAt,
+      },
+    })
+
+    if (updated.count === 1) {
+      return {
+        ok: true,
+        resetAt: nextResetAt.getTime(),
+        source: "database",
+      }
+    }
+
+    const current = await db.rateLimitBucket.findUnique({
+      where: {
+        namespace_key: {
+          namespace: input.namespace,
+          key: safeKey,
+        },
+      },
+    })
+
+    if (current) {
+      return {
+        ok: current.resetAt.getTime() <= now.getTime(),
+        resetAt: current.resetAt.getTime(),
+        source: "database",
+      }
+    }
+
+    return {
+      ok: true,
+      resetAt: nextResetAt.getTime(),
+      source: "database",
+    }
+  } catch (error) {
+    logRateLimitFallback(input.namespace, error)
+    return claimMemoryRateLimitWindow(input)
   }
 }
