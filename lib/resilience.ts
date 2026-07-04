@@ -1,3 +1,5 @@
+import { peekRateLimitState, setRateLimitState } from "./rate-limit.ts"
+
 type ConcurrencyState = {
   inFlight: number
 }
@@ -68,11 +70,19 @@ export async function withCircuitBreaker<T>(
     coolDownMs: number
   }
 ): Promise<T> {
-  const state = circuitBreakerStore.get(namespace) ?? {
+  const inMemoryState = circuitBreakerStore.get(namespace) ?? {
     failures: 0,
     openUntil: 0,
   }
   const now = Date.now()
+  const storedState = await peekRateLimitState({
+    namespace: `circuit-breaker:${namespace}`,
+    key: "state",
+  })
+  const state = {
+    failures: Math.max(inMemoryState.failures, storedState?.count ?? 0),
+    openUntil: Math.max(inMemoryState.openUntil, storedState?.resetAt ?? 0),
+  }
 
   if (state.openUntil > now) {
     throw new Error("Circuit breaker is open.")
@@ -81,6 +91,12 @@ export async function withCircuitBreaker<T>(
   try {
     const result = await operation()
     circuitBreakerStore.delete(namespace)
+    await setRateLimitState({
+      namespace: `circuit-breaker:${namespace}`,
+      key: "state",
+      count: 0,
+      windowMs: 1_000,
+    })
     return result
   } catch (error) {
     state.failures += 1
@@ -90,6 +106,12 @@ export async function withCircuitBreaker<T>(
     }
 
     circuitBreakerStore.set(namespace, state)
+    await setRateLimitState({
+      namespace: `circuit-breaker:${namespace}`,
+      key: "state",
+      count: state.failures,
+      windowMs: state.openUntil > now ? options.coolDownMs : 60_000,
+    })
     throw error
   }
 }

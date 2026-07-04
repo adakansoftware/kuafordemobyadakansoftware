@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
 import {
+  claimReplayWindow,
   blockTemporarily,
   buildRequestFingerprint,
   getTemporaryBlock,
@@ -15,6 +16,8 @@ import {
   createCustomerPortalSessionValue,
   getCustomerPortalSessionMaxAgeSeconds,
   parseCustomerPortalSessionValue,
+  registerCustomerPortalSession,
+  resolveCustomerPortalSession,
 } from "@/lib/customer-portal"
 import { getRequestIpAddress, verifyTrustedOrigin } from "@/lib/security"
 import { beginCustomerPortalAccess, getCustomerPortalSnapshot, requestAppointmentCancellation, verifyCustomerPortalAccess } from "@/lib/salon-ops-repository"
@@ -208,16 +211,37 @@ export async function verifyCustomerPortalCodeAction(
       }
     }
 
+    const blockState = await getTemporaryBlock("customer-portal-verify", clientKey)
+
+    if (blockState && blockState.resetAt > Date.now()) {
+      return {
+        ...previousState,
+        step: "verify",
+        success: false,
+        message: "Cok fazla dogrulama denemesi yapildi. Lutfen biraz sonra tekrar deneyin.",
+      }
+    }
+
     const result = await verifyCustomerPortalAccess({
       tokenId,
       code: String(formData.get("code") ?? ""),
     })
-    const requestHeaders = await headers()
-    const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
+    const sessionFingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
     const expiresAt = Date.now() + getCustomerPortalSessionMaxAgeSeconds() * 1000
     const sessionValue = createCustomerPortalSessionValue({
       customerId: result.customerId,
-      fingerprint,
+      fingerprint: sessionFingerprint,
+      expiresAt,
+    })
+    const parsed = parseCustomerPortalSessionValue(sessionValue, sessionFingerprint)
+
+    if (!parsed?.sessionId) {
+      throw new Error("Musteri oturumu olusturulamadi.")
+    }
+
+    await registerCustomerPortalSession({
+      customerId: result.customerId,
+      sessionId: parsed.sessionId,
       expiresAt,
     })
 
@@ -275,7 +299,10 @@ export async function requestCancellationAction(appointmentId: string, reason: s
   const ipAddress = await getRequestIpAddress()
   const requestHeaders = await headers()
   const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
-  const customerSession = parseCustomerPortalSessionValue((await cookies()).get("customer_portal_session")?.value, fingerprint)
+  const customerSession = await resolveCustomerPortalSession({
+    value: (await cookies()).get("customer_portal_session")?.value,
+    fingerprint,
+  })
   const customerId = customerSession?.customerId
 
   if (!customerId) {
@@ -292,6 +319,16 @@ export async function requestCancellationAction(appointmentId: string, reason: s
 
   if (!rateLimit.allowed) {
     throw new Error("Cok fazla iptal talebi gonderildi. Lutfen biraz sonra tekrar deneyin.")
+  }
+
+  const replayClaim = await claimReplayWindow(
+    "customer-portal-cancellation",
+    `${customerId}:${appointmentId}:${reason.trim().slice(0, 120)}`,
+    2 * 60_000
+  )
+
+  if (!replayClaim.ok) {
+    throw new Error("Bu iptal talebi zaten isleme alindi. Lutfen tekrar denemeden once bekleyin.")
   }
 
   try {
@@ -321,7 +358,10 @@ export async function requestCancellationAction(appointmentId: string, reason: s
 export async function getCustomerPortalSessionSnapshot() {
   const requestHeaders = await headers()
   const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
-  const customerSession = parseCustomerPortalSessionValue((await cookies()).get("customer_portal_session")?.value, fingerprint)
+  const customerSession = await resolveCustomerPortalSession({
+    value: (await cookies()).get("customer_portal_session")?.value,
+    fingerprint,
+  })
   const customerId = customerSession?.customerId
 
   if (!customerId) {

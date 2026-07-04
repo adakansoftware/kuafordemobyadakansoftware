@@ -1,5 +1,5 @@
-import { db } from "@/lib/db"
-import { logEvent } from "@/lib/observability"
+import { db } from "./db.ts"
+import { logEvent } from "./observability.ts"
 import { Prisma } from "@prisma/client"
 
 type RateLimitEntry = {

@@ -57,12 +57,15 @@ export function runSalonOpsTests() {
   assert.equal(normalizeCustomerPortalIdentifier(" Demo@Example.com "), "demo@example.com")
   assert.equal(normalizeCustomerPortalIdentifier("+90 (532) 111 00 01"), "905321110001")
   assert.equal(getCustomerPortalSessionMaxAgeSeconds(), 43200)
+  const sessionFingerprint = "ua|lang"
   const sessionValue = createCustomerPortalSessionValue({
     customerId: "cus_123",
-    fingerprint: "ua|lang",
+    fingerprint: sessionFingerprint,
     expiresAt: Date.now() + 60_000,
   })
-  assert.equal(parseCustomerPortalSessionValue(sessionValue, "ua|lang")?.customerId, "cus_123")
+  const parsedSession = parseCustomerPortalSessionValue(sessionValue, sessionFingerprint)
+  assert.equal(parsedSession?.customerId, "cus_123")
+  assert.equal(Boolean(parsedSession?.sessionId), true)
   assert.equal(parseCustomerPortalSessionValue(sessionValue, "other"), null)
 
   assert.equal(normalizeSetupSlug(" Sac & Sakal Deluxe "), "sac-sakal-deluxe")
