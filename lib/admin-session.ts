@@ -8,6 +8,7 @@ import { verifyPassword } from "./password.ts"
 import { claimRateLimitWindow } from "./rate-limit.ts"
 import { decryptAdminMfaSecret, verifyTotpCodeDetailed } from "./admin-mfa.ts"
 import { getRequestIpFromHeaders } from "./security-core.ts"
+import { isAdminSessionRevoked } from "./admin-session-policy.ts"
 
 export const ADMIN_SESSION_COOKIE_NAME = "admin_session"
 const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12
@@ -189,6 +190,7 @@ export async function resolveAdminSessionFromRequest(input: {
           isActive: true,
           tenantId: true,
           mfaEnabledAt: true,
+          sessionRevokedAt: true,
         },
       },
       tenant: {
@@ -201,6 +203,38 @@ export async function resolveAdminSessionFromRequest(input: {
 
   if (!session || !session.adminUser.isActive) {
     await clearAdminSessionCookie()
+    return null
+  }
+
+  if (
+    isAdminSessionRevoked({
+      sessionCreatedAt: session.createdAt,
+      sessionRevokedAt: session.adminUser.sessionRevokedAt,
+    })
+  ) {
+    await db.adminSession.updateMany({
+      where: {
+        id: session.id,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    })
+
+    await clearAdminSessionCookie()
+
+    logEvent({
+      level: "warn",
+      event: "admin_session_user_revoked",
+      route: "/admin",
+      message: "Admin session invalidated by user-level revocation.",
+      meta: {
+        sessionId: session.id,
+        adminUserId: session.adminUserId,
+      },
+    })
+
     return null
   }
 
@@ -298,6 +332,7 @@ export async function requireAdminSessionStepUp(input: {
     },
     select: {
       id: true,
+      createdAt: true,
       stepUpVerifiedAt: true,
       adminUser: {
         select: {
@@ -305,6 +340,7 @@ export async function requireAdminSessionStepUp(input: {
           passwordHash: true,
           mfaSecretCiphertext: true,
           mfaEnabledAt: true,
+          sessionRevokedAt: true,
         },
       },
     },
@@ -312,6 +348,22 @@ export async function requireAdminSessionStepUp(input: {
 
   if (!session) {
     throw new AdminStepUpError("Admin oturumu gecersiz veya suresi dolmus.")
+  }
+
+  if (
+    isAdminSessionRevoked({
+      sessionCreatedAt: session.createdAt,
+      sessionRevokedAt: session.adminUser.sessionRevokedAt,
+    })
+  ) {
+    await db.adminSession.update({
+      where: { id: session.id },
+      data: {
+        revokedAt: new Date(),
+      },
+    })
+
+    throw new AdminStepUpError("Admin oturumu guvenlik nedeniyle sonlandirildi. Lutfen tekrar giris yapin.")
   }
 
   const maxAgeMs = input.maxAgeMs ?? ADMIN_STEP_UP_MAX_AGE_MS
@@ -377,4 +429,33 @@ export async function revokeOtherAdminSessions(input: {
       revokedAt: new Date(),
     },
   })
+}
+
+export async function revokeAllAdminSessionsForUser(input: {
+  adminUserId: string
+  revokeBefore?: Date
+  keepSessionId?: string | null
+}) {
+  const revokedAt = input.revokeBefore ?? new Date()
+
+  await db.$transaction([
+    db.adminUser.update({
+      where: { id: input.adminUserId },
+      data: {
+        sessionRevokedAt: revokedAt,
+      },
+    }),
+    db.adminSession.updateMany({
+      where: {
+        adminUserId: input.adminUserId,
+        revokedAt: null,
+        ...(input.keepSessionId ? { id: { not: input.keepSessionId } } : {}),
+      },
+      data: {
+        revokedAt,
+      },
+    }),
+  ])
+
+  return revokedAt
 }

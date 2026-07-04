@@ -1,9 +1,19 @@
 "use client"
 
 import { useActionState } from "react"
-import { type AdminMfaActionState, configureAdminMfaAction } from "@/app/admin/actions"
+import {
+  type AdminMfaActionState,
+  type AdminSessionControlActionState,
+  configureAdminMfaAction,
+  revokeAdminSessionsAction,
+} from "@/app/admin/actions"
 
 const initialState: AdminMfaActionState = {
+  success: false,
+  message: "",
+}
+
+const initialSessionState: AdminSessionControlActionState = {
   success: false,
   message: "",
 }
@@ -23,6 +33,7 @@ type AdminMfaSettingsFormProps = {
 
 export function AdminMfaSettingsForm({ profile, enrollment }: AdminMfaSettingsFormProps) {
   const [state, formAction] = useActionState(configureAdminMfaAction, initialState)
+  const [sessionState, revokeSessionsAction] = useActionState(revokeAdminSessionsAction, initialSessionState)
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
@@ -128,8 +139,48 @@ export function AdminMfaSettingsForm({ profile, enrollment }: AdminMfaSettingsFo
         </form>
       </div>
 
+      <form action={revokeSessionsAction} className="mt-6 grid gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <div className="space-y-2 text-sm text-amber-950">
+          <p className="font-medium">Tum eski admin oturumlarini kapat</p>
+          <p>Supheli cihaz, paylasilmis tarayici veya eski cookie sizintisi durumlarinda onceki tum session'lar aninda gecersiz olur.</p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="grid gap-2 text-sm text-foreground">
+            <span className="font-medium">Mevcut Admin Sifresi</span>
+            <input
+              type="password"
+              name="adminPassword"
+              autoComplete="current-password"
+              className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none"
+            />
+          </label>
+
+          <label className="grid gap-2 text-sm text-foreground">
+            <span className="font-medium">Authenticator Kodu {profile.mfaEnabled ? "(zorunlu)" : "(opsiyonel)"}</span>
+            <input
+              name="totpCode"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="6 haneli kod"
+              className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none"
+            />
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          className="rounded-xl bg-amber-600 px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white"
+        >
+          Sessionlari Temizle
+        </button>
+      </form>
+
       <p className={state.success ? "mt-4 text-sm text-green-600" : "mt-4 text-sm text-muted-foreground"}>
         {state.message || "Kritik admin islemleri aktif MFA varsa parola ve TOTP birlikte ister."}
+      </p>
+      <p className={sessionState.success ? "mt-2 text-sm text-green-600" : "mt-2 text-sm text-muted-foreground"}>
+        {sessionState.message || "Bu islem eski admin cookie'lerini ve baska cihaz oturumlarini merkezi olarak dusurur."}
       </p>
     </div>
   )

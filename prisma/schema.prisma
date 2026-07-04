@@ -328,6 +328,7 @@ model AdminUser {
   isActive            Boolean       @default(true)
   mfaSecretCiphertext String?
   mfaEnabledAt        DateTime?
+  sessionRevokedAt    DateTime?
   lastLoginAt         DateTime?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt

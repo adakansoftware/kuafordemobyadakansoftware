@@ -11,6 +11,7 @@ import {
 } from "../lib/security-core.ts"
 import { runAdminAppointmentActionTests } from "../tests/admin-appointment-action.test.mts"
 import { runAdminMfaTests } from "../tests/admin-mfa.test.mts"
+import { runAdminSessionTests } from "../tests/admin-session.test.mts"
 import { runBookingActionTests } from "../tests/booking-action.test.mts"
 import { runBookingTests } from "../tests/booking.test.mts"
 import { runBookingRouteTests } from "../tests/booking-route.test.mts"
@@ -173,6 +174,7 @@ try {
   testHealthSummary()
   runAdminAppointmentActionTests()
   runAdminMfaTests()
+  runAdminSessionTests()
   runBookingActionTests()
   runBookingTests()
   runBookingRouteTests()

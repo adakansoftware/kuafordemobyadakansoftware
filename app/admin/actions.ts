@@ -45,7 +45,11 @@ import {
 } from "@/lib/security"
 import { db } from "@/lib/db"
 import { verifyPassword } from "@/lib/password"
-import { revokeOtherAdminSessions } from "@/lib/admin-session"
+import {
+  createAdminSession,
+  revokeAllAdminSessionsForUser,
+  setAdminSessionCookie,
+} from "@/lib/admin-session"
 
 export type UpdateAppointmentActionState = {
   success: boolean
@@ -86,6 +90,11 @@ export type ProductSaleActionState = {
 }
 
 export type AdminMfaActionState = {
+  success: boolean
+  message: string
+}
+
+export type AdminSessionControlActionState = {
   success: boolean
   message: string
 }
@@ -139,6 +148,18 @@ async function requireAdminMutationGuard(namespace: string, requestId: string) {
     actorIdentifier,
     ipAddress,
   }
+}
+
+async function rotateAdminSessionAfterSecurityChange(input: {
+  tenantId: string
+  adminUserId: string
+}) {
+  const session = await createAdminSession({
+    tenantId: input.tenantId,
+    adminUserId: input.adminUserId,
+  })
+
+  await setAdminSessionCookie(session.token, session.expiresAt)
 }
 
 export async function updateAppointmentAction(
@@ -855,16 +876,19 @@ export async function configureAdminMfaAction(
       },
     })
 
-    await revokeOtherAdminSessions({
+    await revokeAllAdminSessionsForUser({
       adminUserId: adminUser.id,
-      keepSessionId: accessContext.sessionId,
+    })
+    await rotateAdminSessionAfterSecurityChange({
+      tenantId: accessContext.tenantId,
+      adminUserId: adminUser.id,
     })
 
     revalidatePath("/admin/settings")
 
     return {
       success: true,
-      message: "Admin MFA aktif edildi. Diger oturumlar guvenlik icin kapatildi.",
+      message: "Admin MFA aktif edildi. Onceki tum oturumlar iptal edilip bu cihaz icin yeni bir oturum verildi.",
     }
   }
 
@@ -910,21 +934,143 @@ export async function configureAdminMfaAction(
       },
     })
 
-    await revokeOtherAdminSessions({
+    await revokeAllAdminSessionsForUser({
       adminUserId: adminUser.id,
-      keepSessionId: accessContext.sessionId,
+    })
+    await rotateAdminSessionAfterSecurityChange({
+      tenantId: accessContext.tenantId,
+      adminUserId: adminUser.id,
     })
 
     revalidatePath("/admin/settings")
 
     return {
       success: true,
-      message: "Admin MFA kapatildi. Diger oturumlar guvenlik icin kapatildi.",
+      message: "Admin MFA kapatildi. Onceki tum oturumlar iptal edilip bu cihaz icin yeni bir oturum verildi.",
     }
   }
 
   return {
     success: false,
     message: "Gecersiz MFA islemi.",
+  }
+}
+
+export async function revokeAdminSessionsAction(
+  _previousState: AdminSessionControlActionState,
+  formData: FormData
+): Promise<AdminSessionControlActionState> {
+  const requestId = await getCurrentRequestId()
+  let accessContext
+  let actorIdentifier = "admin"
+  let ipAddress = "unknown"
+
+  try {
+    const guard = await requireAdminMutationGuard("admin-session-revoke", requestId)
+    accessContext = guard.accessContext
+    actorIdentifier = guard.actorIdentifier
+    ipAddress = guard.ipAddress
+  } catch (error) {
+    return {
+      success: false,
+      message: mapAdminAppointmentSecurityError(error),
+    }
+  }
+
+  if (!accessContext?.adminUserId) {
+    return {
+      success: false,
+      message: "Oturum yonetimi icin aktif admin oturumu gereklidir.",
+    }
+  }
+
+  const adminUser = await db.adminUser.findFirst({
+    where: {
+      id: accessContext.adminUserId,
+      tenantId: accessContext.tenantId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      passwordHash: true,
+      mfaEnabledAt: true,
+      mfaSecretCiphertext: true,
+    },
+  })
+
+  if (!adminUser) {
+    return {
+      success: false,
+      message: "Admin kullanicisi bulunamadi.",
+    }
+  }
+
+  const adminPassword = String(formData.get("adminPassword") ?? "")
+  const totpCode = String(formData.get("totpCode") ?? "")
+
+  if (!verifyPassword(adminPassword, adminUser.passwordHash)) {
+    logEvent({
+      level: "warn",
+      event: "admin_session_revoke_password_failed",
+      requestId,
+      route: "/admin/settings",
+      message: "Admin session revoke password verification failed.",
+      meta: {
+        actorIdentifier,
+        ipAddress,
+      },
+    })
+
+    return {
+      success: false,
+      message: "Yonetici sifresi dogrulanamadi.",
+    }
+  }
+
+  if (adminUser.mfaEnabledAt) {
+    try {
+      await requireCriticalAdminStepUp({
+        accessContext,
+        password: adminPassword,
+        totpCode,
+      })
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Ek yonetici dogrulamasi basarisiz oldu.",
+      }
+    }
+  }
+
+  const revokedAt = await revokeAllAdminSessionsForUser({
+    adminUserId: adminUser.id,
+  })
+  await rotateAdminSessionAfterSecurityChange({
+    tenantId: accessContext.tenantId,
+    adminUserId: adminUser.id,
+  })
+
+  await db.auditLog.create({
+    data: {
+      tenantId: accessContext.tenantId,
+      actorType: AuditActorType.ADMIN,
+      actorIdentifier,
+      event: AuditEvent.ADMIN_USER_UPDATED,
+      targetType: "admin_user",
+      targetId: adminUser.id,
+      requestId,
+      ipAddress,
+      metadata: {
+        action: "sessions_revoked",
+        revokedAt: revokedAt.toISOString(),
+      },
+    },
+  })
+
+  revalidatePath("/admin/settings")
+
+  return {
+    success: true,
+    message: "Tum eski admin oturumlari kapatildi ve bu cihaz icin yeni bir oturum olusturuldu.",
   }
 }
