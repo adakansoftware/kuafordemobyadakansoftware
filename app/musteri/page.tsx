@@ -1,5 +1,5 @@
 import { CustomerPortalForm } from "@/components/customer-portal-form"
-import { getCustomerPortalSessionSnapshot, requestCancellationAction } from "@/app/musteri/actions"
+import { customerPortalLogoutAction, getCustomerPortalSessionSnapshot, requestCancellationAction } from "@/app/musteri/actions"
 import { createPublicFormChallenge } from "@/lib/request-security"
 
 export default async function CustomerPortalPage() {
@@ -30,6 +30,16 @@ export default async function CustomerPortalPage() {
 
         {snapshot ? (
           <div className="rounded-3xl border border-border bg-card p-8 shadow-sm">
+            <div className="mb-6 flex justify-end">
+              <form action={customerPortalLogoutAction}>
+                <button
+                  type="submit"
+                  className="rounded-full border border-input bg-background px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:border-accent"
+                >
+                  Cikis Yap
+                </button>
+              </form>
+            </div>
             <div className="grid gap-4 md:grid-cols-4">
               <MetricCard label="Sadakat Puani" value={String(snapshot.loyaltyPoints)} />
               <MetricCard label="Toplam Harcama" value={formatCurrency(snapshot.totalSpending)} />

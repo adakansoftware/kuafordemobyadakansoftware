@@ -43,7 +43,9 @@ export async function GET(request: Request) {
     method: "GET",
   })
   const clientKey = `${clientId}:${requestFingerprint}`
-  const concurrencyLease = enterConcurrencyGuard("api-bookings-get", 40)
+  const concurrencyLease = await enterConcurrencyGuard("api-bookings-get", 40, {
+    leaseMs: 10_000,
+  })
 
   if (!concurrencyLease) {
     return jsonResponse(
@@ -205,7 +207,7 @@ export async function GET(request: Request) {
       }
     )
   } finally {
-    concurrencyLease.release()
+    await concurrencyLease.release()
   }
 }
 
@@ -218,7 +220,9 @@ export async function POST(request: Request) {
     method: "POST",
   })
   const clientKey = `${clientId}:${requestFingerprint}`
-  const concurrencyLease = enterConcurrencyGuard("api-bookings-post", 20)
+  const concurrencyLease = await enterConcurrencyGuard("api-bookings-post", 20, {
+    leaseMs: 12_000,
+  })
 
   if (!concurrencyLease) {
     return jsonResponse(
@@ -640,7 +644,7 @@ export async function POST(request: Request) {
       )
     }
   } finally {
-    concurrencyLease.release()
+    await concurrencyLease.release()
   }
 }
 

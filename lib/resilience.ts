@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client"
+import { db } from "./db.ts"
 import { peekRateLimitState, setRateLimitState } from "./rate-limit.ts"
 
 type ConcurrencyState = {
@@ -13,10 +15,10 @@ const concurrencyStores = new Map<string, ConcurrencyState>()
 const circuitBreakerStore = new Map<string, CircuitBreakerState>()
 
 export type ConcurrencyLease = {
-  release: () => void
+  release: () => void | Promise<void>
 }
 
-export function enterConcurrencyGuard(namespace: string, limit: number): ConcurrencyLease | null {
+function enterMemoryConcurrencyGuard(namespace: string, limit: number): ConcurrencyLease | null {
   const state = concurrencyStores.get(namespace) ?? { inFlight: 0 }
 
   if (!concurrencyStores.has(namespace)) {
@@ -38,6 +40,145 @@ export function enterConcurrencyGuard(namespace: string, limit: number): Concurr
       }
     },
   }
+}
+
+async function enterDistributedConcurrencyGuard(input: {
+  namespace: string
+  limit: number
+  leaseMs: number
+}): Promise<ConcurrencyLease | null> {
+  const key = "state"
+  const rowNamespace = `concurrency:${input.namespace}`
+  const now = new Date()
+  const leaseUntil = new Date(now.getTime() + input.leaseMs)
+
+  try {
+    const existing = await db.rateLimitBucket.findUnique({
+      where: {
+        namespace_key: {
+          namespace: rowNamespace,
+          key,
+        },
+      },
+    })
+
+    if (!existing || existing.resetAt.getTime() <= now.getTime()) {
+      try {
+        await db.rateLimitBucket.upsert({
+          where: {
+            namespace_key: {
+              namespace: rowNamespace,
+              key,
+            },
+          },
+          create: {
+            namespace: rowNamespace,
+            key,
+            count: 1,
+            resetAt: leaseUntil,
+          },
+          update: {
+            count: 1,
+            resetAt: leaseUntil,
+          },
+        })
+
+        return {
+          release: async () => {
+            await releaseDistributedConcurrencyGuard(rowNamespace, key)
+          },
+        }
+      } catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+          throw error
+        }
+      }
+    } else if (existing.count >= input.limit) {
+      return null
+    }
+
+    const updated = await db.rateLimitBucket.updateMany({
+      where: {
+        namespace: rowNamespace,
+        key,
+        resetAt: {
+          gt: now,
+        },
+        count: {
+          lt: input.limit,
+        },
+      },
+      data: {
+        count: {
+          increment: 1,
+        },
+        resetAt: leaseUntil,
+      },
+    })
+
+    if (updated.count !== 1) {
+      return null
+    }
+
+    return {
+      release: async () => {
+        await releaseDistributedConcurrencyGuard(rowNamespace, key)
+      },
+    }
+  } catch {
+    return enterMemoryConcurrencyGuard(input.namespace, input.limit)
+  }
+}
+
+async function releaseDistributedConcurrencyGuard(namespace: string, key: string) {
+  const now = new Date()
+
+  try {
+    const zeroed = await db.rateLimitBucket.updateMany({
+      where: {
+        namespace,
+        key,
+        count: 1,
+      },
+      data: {
+        count: 0,
+        resetAt: now,
+      },
+    })
+
+    if (zeroed.count === 1) {
+      return
+    }
+
+    await db.rateLimitBucket.updateMany({
+      where: {
+        namespace,
+        key,
+        count: {
+          gt: 1,
+        },
+      },
+      data: {
+        count: {
+          decrement: 1,
+        },
+      },
+    })
+  } catch {
+    // best-effort release; lease expiry still prevents permanent deadlock
+  }
+}
+
+export async function enterConcurrencyGuard(
+  namespace: string,
+  limit: number,
+  options?: { leaseMs?: number }
+): Promise<ConcurrencyLease | null> {
+  return enterDistributedConcurrencyGuard({
+    namespace,
+    limit,
+    leaseMs: options?.leaseMs ?? 15_000,
+  })
 }
 
 export async function withTimeout<T>(

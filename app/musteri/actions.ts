@@ -13,10 +13,12 @@ import {
 } from "@/lib/request-security"
 import { applyRateLimit } from "@/lib/rate-limit"
 import {
+  CUSTOMER_PORTAL_SESSION_COOKIE_NAME,
   createCustomerPortalSessionValue,
   getCustomerPortalSessionMaxAgeSeconds,
   parseCustomerPortalSessionValue,
   registerCustomerPortalSession,
+  revokeCustomerPortalSession,
   resolveCustomerPortalSession,
 } from "@/lib/customer-portal"
 import { getRequestIpAddress, verifyTrustedOrigin } from "@/lib/security"
@@ -228,6 +230,10 @@ export async function verifyCustomerPortalCodeAction(
     })
     const sessionFingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
     const expiresAt = Date.now() + getCustomerPortalSessionMaxAgeSeconds() * 1000
+    const existingSession = await resolveCustomerPortalSession({
+      value: (await cookies()).get(CUSTOMER_PORTAL_SESSION_COOKIE_NAME)?.value,
+      fingerprint: sessionFingerprint,
+    })
     const sessionValue = createCustomerPortalSessionValue({
       customerId: result.customerId,
       fingerprint: sessionFingerprint,
@@ -245,7 +251,9 @@ export async function verifyCustomerPortalCodeAction(
       expiresAt,
     })
 
-    ;(await cookies()).set("customer_portal_session", sessionValue, {
+    await revokeCustomerPortalSession(existingSession?.sessionId)
+
+    ;(await cookies()).set(CUSTOMER_PORTAL_SESSION_COOKIE_NAME, sessionValue, {
       httpOnly: true,
       sameSite: "lax",
       path: "/musteri",
@@ -300,12 +308,20 @@ export async function requestCancellationAction(appointmentId: string, reason: s
   const requestHeaders = await headers()
   const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
   const customerSession = await resolveCustomerPortalSession({
-    value: (await cookies()).get("customer_portal_session")?.value,
+    value: (await cookies()).get(CUSTOMER_PORTAL_SESSION_COOKIE_NAME)?.value,
     fingerprint,
   })
   const customerId = customerSession?.customerId
 
   if (!customerId) {
+    ;(await cookies()).set(CUSTOMER_PORTAL_SESSION_COOKIE_NAME, "", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/musteri",
+      secure: process.env.NODE_ENV === "production",
+      expires: new Date(0),
+      maxAge: 0,
+    })
     throw new Error("Musteri oturumu bulunamadi.")
   }
 
@@ -358,15 +374,44 @@ export async function requestCancellationAction(appointmentId: string, reason: s
 export async function getCustomerPortalSessionSnapshot() {
   const requestHeaders = await headers()
   const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
+  const cookieStore = await cookies()
   const customerSession = await resolveCustomerPortalSession({
-    value: (await cookies()).get("customer_portal_session")?.value,
+    value: cookieStore.get(CUSTOMER_PORTAL_SESSION_COOKIE_NAME)?.value,
     fingerprint,
   })
   const customerId = customerSession?.customerId
 
   if (!customerId) {
+    cookieStore.set(CUSTOMER_PORTAL_SESSION_COOKIE_NAME, "", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/musteri",
+      secure: process.env.NODE_ENV === "production",
+      expires: new Date(0),
+      maxAge: 0,
+    })
     return null
   }
 
   return getCustomerPortalSnapshot({ customerId })
+}
+
+export async function customerPortalLogoutAction() {
+  const requestHeaders = await headers()
+  const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
+  const cookieStore = await cookies()
+  const session = await resolveCustomerPortalSession({
+    value: cookieStore.get(CUSTOMER_PORTAL_SESSION_COOKIE_NAME)?.value,
+    fingerprint,
+  })
+
+  await revokeCustomerPortalSession(session?.sessionId)
+  cookieStore.set(CUSTOMER_PORTAL_SESSION_COOKIE_NAME, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/musteri",
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(0),
+    maxAge: 0,
+  })
 }

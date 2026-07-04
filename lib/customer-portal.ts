@@ -3,6 +3,7 @@ import { getOptionalEnv } from "./env.ts"
 import { peekRateLimitState, setRateLimitState } from "./rate-limit.ts"
 
 const CUSTOMER_PORTAL_SESSION_NAMESPACE = "customer-portal-session"
+export const CUSTOMER_PORTAL_SESSION_COOKIE_NAME = "customer_portal_session"
 
 export function normalizeCustomerPortalIdentifier(identifier: string) {
   const normalized = identifier.trim()
@@ -97,6 +98,21 @@ export async function registerCustomerPortalSession(input: {
     key: input.sessionId,
     count: 1,
     windowMs,
+  })
+}
+
+export async function revokeCustomerPortalSession(sessionId: string | null | undefined) {
+  const normalizedSessionId = sessionId?.trim()
+
+  if (!normalizedSessionId) {
+    return
+  }
+
+  await setRateLimitState({
+    namespace: CUSTOMER_PORTAL_SESSION_NAMESPACE,
+    key: normalizedSessionId,
+    count: 0,
+    windowMs: 1_000,
   })
 }
 
