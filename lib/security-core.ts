@@ -74,6 +74,11 @@ export function getAdminAllowlistIps() {
   return parseIpAllowlist(env.ADMIN_ALLOWLIST_IPS)
 }
 
+export function getHealthcheckAllowlistIps() {
+  const env = getEnv()
+  return parseIpAllowlist(env.HEALTHCHECK_ALLOWLIST_IPS)
+}
+
 function stripPortFromIp(value: string) {
   const trimmed = value.trim().replace(/^for=/i, "").replace(/^"|"$/g, "")
 

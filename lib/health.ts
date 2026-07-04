@@ -29,6 +29,7 @@ export function buildHealthSummary(options: {
   healthTokenConfigured: boolean
   turnstileConfigured: boolean
   adminAllowlistConfigured: boolean
+  healthcheckAllowlistConfigured: boolean
   allowedHostsConfigured: boolean
   rateLimitStorageOk: boolean
   auditLogStorageOk: boolean
@@ -85,6 +86,13 @@ export function buildHealthSummary(options: {
         : "Admin IP allowlist tanimli degil.",
     },
     {
+      key: "healthcheck_allowlist",
+      ok: options.healthcheckAllowlistConfigured,
+      detail: options.healthcheckAllowlistConfigured
+        ? "Health readiness IP allowlist tanimli."
+        : "Health readiness IP allowlist tanimli degil.",
+    },
+    {
       key: "origin_hosts",
       ok: options.allowedHostsConfigured,
       detail: options.allowedHostsConfigured ? "Izinli host listesi hazir." : "Izinli host listesi eksik.",
@@ -108,7 +116,13 @@ export function buildHealthSummary(options: {
   const requiredKeys =
     options.scope === "live"
       ? new Set<HealthCheckItem["key"]>(["database"])
-      : new Set<HealthCheckItem["key"]>(["database", "rate_limit_storage", "audit_log_storage", "health_token"])
+      : new Set<HealthCheckItem["key"]>([
+          "database",
+          "rate_limit_storage",
+          "audit_log_storage",
+          "health_token",
+          "healthcheck_allowlist",
+        ])
 
   const hasError = checks.some((check) => requiredKeys.has(check.key) && !check.ok)
   const hasWarning = checks.some((check) => !check.ok)

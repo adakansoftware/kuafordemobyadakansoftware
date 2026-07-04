@@ -37,6 +37,7 @@ const originalEnv = {
   TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
   ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
+  HEALTHCHECK_ALLOWLIST_IPS: process.env.HEALTHCHECK_ALLOWLIST_IPS,
   SETUP_ACCESS_TOKEN: process.env.SETUP_ACCESS_TOKEN,
   NODE_ENV: process.env.NODE_ENV,
 }
@@ -61,6 +62,7 @@ function primeEnv() {
   process.env.ALLOWED_ORIGIN_HOSTS = "api.example.com, booking.example.com"
   process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
   process.env.NODE_ENV = "development"
+  process.env.HEALTHCHECK_ALLOWLIST_IPS = "198.51.100.10"
   resetEnvCacheForTests()
 }
 
@@ -143,6 +145,7 @@ function testHealthSummary() {
     healthTokenConfigured: false,
     turnstileConfigured: false,
     adminAllowlistConfigured: false,
+    healthcheckAllowlistConfigured: false,
     allowedHostsConfigured: true,
     rateLimitStorageOk: false,
     auditLogStorageOk: false,
@@ -160,6 +163,7 @@ function testHealthSummary() {
     healthTokenConfigured: true,
     turnstileConfigured: true,
     adminAllowlistConfigured: true,
+    healthcheckAllowlistConfigured: true,
     allowedHostsConfigured: true,
     rateLimitStorageOk: true,
     auditLogStorageOk: false,

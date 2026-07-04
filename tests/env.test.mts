@@ -11,6 +11,7 @@ const originalEnv = {
   TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
   ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
+  HEALTHCHECK_ALLOWLIST_IPS: process.env.HEALTHCHECK_ALLOWLIST_IPS,
   SETUP_ACCESS_TOKEN: process.env.SETUP_ACCESS_TOKEN,
   HEALTHCHECK_TOKEN: process.env.HEALTHCHECK_TOKEN,
   NODE_ENV: process.env.NODE_ENV,
@@ -51,6 +52,12 @@ export function runEnvTests() {
   assert.equal(issues.includes("ALLOWED_ORIGIN_HOSTS sadece host isimleri icermelidir."), true)
 
   process.env.ALLOWED_ORIGIN_HOSTS = "booking.example.com"
+  process.env.HEALTHCHECK_ALLOWLIST_IPS = "203.0.113.10/32"
+  resetEnvCacheForTests()
+  issues = getEnvIssues()
+  assert.equal(issues.includes("HEALTHCHECK_ALLOWLIST_IPS sadece virgulle ayrilmis tekil IP degerleri icermelidir."), true)
+
+  process.env.HEALTHCHECK_ALLOWLIST_IPS = "203.0.113.10"
   process.env.DATABASE_URL = "mysql://demo"
   resetEnvCacheForTests()
   issues = getEnvIssues()

@@ -3,6 +3,7 @@ import { resetEnvCacheForTests } from "../lib/env.ts"
 import {
   getAllowedHosts,
   getAllowedOrigins,
+  getHealthcheckAllowlistIps,
   getRequestIpFromHeaders,
   isTrustedRequestOriginHeaders,
   normalizeHost,
@@ -31,6 +32,7 @@ function primeEnv() {
   process.env.ALLOWED_ORIGIN_HOSTS = "api.example.com, booking.example.com"
   process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
   process.env.NODE_ENV = "development"
+  process.env.HEALTHCHECK_ALLOWLIST_IPS = "198.51.100.10,203.0.113.20"
   resetEnvCacheForTests()
 }
 
@@ -79,6 +81,11 @@ export function runSecurityTests() {
   const origins = getAllowedOrigins()
   assert.equal(origins.has("https://example.com"), true)
   assert.equal(origins.has("https://adakan.studio"), false)
+
+  const healthAllowlist = getHealthcheckAllowlistIps()
+  assert.equal(healthAllowlist.has("198.51.100.10"), true)
+  assert.equal(healthAllowlist.has("203.0.113.20"), true)
+  assert.equal(healthAllowlist.has("192.0.2.1"), false)
 
   const trustedHeaders = new Headers({
     origin: "https://example.com",

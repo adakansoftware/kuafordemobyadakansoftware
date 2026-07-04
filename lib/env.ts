@@ -28,6 +28,7 @@ const envSchema = z.object({
   TURNSTILE_SECRET_KEY: optionalTrimmedString,
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: optionalTrimmedString,
   ADMIN_ALLOWLIST_IPS: optionalTrimmedString,
+  HEALTHCHECK_ALLOWLIST_IPS: optionalTrimmedString,
   SETUP_ACCESS_TOKEN: optionalTrimmedString,
   HEALTHCHECK_TOKEN: optionalTrimmedString,
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -48,6 +49,7 @@ function parseEnv() {
     TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
+    HEALTHCHECK_ALLOWLIST_IPS: process.env.HEALTHCHECK_ALLOWLIST_IPS,
     SETUP_ACCESS_TOKEN: process.env.SETUP_ACCESS_TOKEN,
     HEALTHCHECK_TOKEN: process.env.HEALTHCHECK_TOKEN,
     NODE_ENV: process.env.NODE_ENV,
@@ -117,6 +119,17 @@ function collectEnvIssues(env: AppEnv) {
     issues.push("ADMIN_ALLOWLIST_IPS sadece virgulle ayrilmis tekil IP degerleri icermelidir.")
   }
 
+  if (
+    env.HEALTHCHECK_ALLOWLIST_IPS &&
+    env.HEALTHCHECK_ALLOWLIST_IPS
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .some((value) => value.includes("/") || value.includes(" "))
+  ) {
+    issues.push("HEALTHCHECK_ALLOWLIST_IPS sadece virgulle ayrilmis tekil IP degerleri icermelidir.")
+  }
+
   return issues
 }
 
@@ -145,6 +158,7 @@ export function getOptionalEnv() {
     TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
+    HEALTHCHECK_ALLOWLIST_IPS: process.env.HEALTHCHECK_ALLOWLIST_IPS,
     SETUP_ACCESS_TOKEN: process.env.SETUP_ACCESS_TOKEN,
     HEALTHCHECK_TOKEN: process.env.HEALTHCHECK_TOKEN,
     NODE_ENV: process.env.NODE_ENV,

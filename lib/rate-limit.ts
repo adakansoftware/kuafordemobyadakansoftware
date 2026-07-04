@@ -253,6 +253,16 @@ async function pruneExpiredRateLimits(now: Date) {
   lastPruneAt = nowTime
 
   try {
+    const pruneLease = await claimRateLimitWindow({
+      namespace: "maintenance",
+      key: "rate-limit-prune",
+      windowMs: PRUNE_INTERVAL_MS,
+    })
+
+    if (!pruneLease.ok) {
+      return
+    }
+
     await db.rateLimitBucket.deleteMany({
       where: {
         resetAt: {

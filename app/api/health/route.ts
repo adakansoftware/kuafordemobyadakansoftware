@@ -2,20 +2,19 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getEnvIssues, getOptionalEnv } from "@/lib/env"
 import { getRetryAfterSeconds } from "@/lib/http-core"
+import { getRequestIdFromHeaders, jsonNoStore } from "@/lib/http"
+import { buildRateLimitHeaders } from "@/lib/bookings-api"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { blockTemporarily, getTemporaryBlock, recordSuspicion } from "@/lib/request-security"
 import { authorizeAdminRequest } from "@/lib/security"
-import { getRequestIpFromHeaders } from "@/lib/security"
+import { getRequestIpFromHeaders, getHealthcheckAllowlistIps, isIpAllowed } from "@/lib/security"
 import { buildHealthSummary, resolveHealthScope, shouldExposeDetailedHealth, type HealthScope } from "@/lib/health"
 import { getDurationMs, logEvent } from "@/lib/observability"
 
 export const dynamic = "force-dynamic"
 
-function jsonResponse(body: unknown, init?: ResponseInit) {
-  const response = NextResponse.json(body, init)
-  response.headers.set("Cache-Control", "no-store")
-  response.headers.set("X-Robots-Tag", "noindex, nofollow")
-  return response
+function jsonResponse(body: unknown, init?: ResponseInit & { requestId?: string }) {
+  return jsonNoStore(body, init)
 }
 
 export async function GET(request: Request) {
@@ -50,8 +49,10 @@ async function checkTableAvailability(tableName: "RateLimitBucket" | "AuditLog")
 
 async function handleHealthRequest(scope: HealthScope, headers: Headers) {
   const startedAt = Date.now()
+  const requestId = getRequestIdFromHeaders(headers)
   const optionalEnv = getOptionalEnv()
   const ipAddress = getRequestIpFromHeaders(headers)
+  const healthAllowlist = getHealthcheckAllowlistIps()
   const healthToken = headers.get("x-health-token")?.trim()
   const envIssues = getEnvIssues()
   const adminConfigured = Boolean(optionalEnv.ADMIN_USERNAME && optionalEnv.ADMIN_PASSWORD)
@@ -60,6 +61,7 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
   const healthTokenConfigured = Boolean(optionalEnv.HEALTHCHECK_TOKEN && optionalEnv.HEALTHCHECK_TOKEN.length >= 24)
   const turnstileConfigured = Boolean(optionalEnv.TURNSTILE_SECRET_KEY && optionalEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
   const adminAllowlistConfigured = Boolean(optionalEnv.ADMIN_ALLOWLIST_IPS)
+  const healthcheckAllowlistConfigured = Boolean(optionalEnv.HEALTHCHECK_ALLOWLIST_IPS)
   const allowedHostsConfigured = Boolean(optionalEnv.ALLOWED_ORIGIN_HOSTS || optionalEnv.NEXT_PUBLIC_SITE_URL)
   const isHealthTokenAuthorized = Boolean(
     optionalEnv.HEALTHCHECK_TOKEN &&
@@ -92,7 +94,9 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
         headers: {
           "Retry-After": getRetryAfterSeconds(rateLimit.resetAt),
           "X-Health-Scope": scope,
+          ...(buildRateLimitHeaders({ ...rateLimit, limit: scope === "live" ? 30 : 10 }) ?? {}),
         },
+        requestId,
       }
     )
   }
@@ -115,17 +119,20 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
             "Retry-After": getRetryAfterSeconds(blockState.resetAt),
             "X-Health-Scope": scope,
           },
+          requestId,
         }
       )
     }
 
-    if (!isAuthorized) {
+    const isAllowlisted = isIpAllowed(ipAddress, healthAllowlist)
+
+    if (!isAuthorized || !isAllowlisted) {
       const accumulatedScore = await recordSuspicion({
         scope: "health-ready",
         clientKey: ipAddress,
-        score: 4,
+        score: isAuthorized ? 5 : 4,
         route: "/api/health",
-        reason: "Unauthorized readiness probe attempted.",
+        reason: !isAuthorized ? "Unauthorized readiness probe attempted." : "Readiness probe failed IP allowlist.",
         audit: true,
       })
 
@@ -146,6 +153,7 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
           headers: {
             "X-Health-Scope": scope,
           },
+          requestId,
         }
       )
     }
@@ -171,6 +179,7 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
       healthTokenConfigured,
       turnstileConfigured,
       adminAllowlistConfigured,
+      healthcheckAllowlistConfigured,
       allowedHostsConfigured,
       rateLimitStorageOk,
       auditLogStorageOk,
@@ -183,6 +192,7 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
       meta: {
         scope,
         status: summary.status,
+        requestId,
         responseTimeMs: getDurationMs(startedAt),
       },
     })
@@ -202,7 +212,9 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
         status: statusCode,
         headers: {
           "X-Health-Scope": scope,
+          ...(buildRateLimitHeaders({ ...rateLimit, limit: scope === "live" ? 30 : 10 }) ?? {}),
         },
+        requestId,
       }
     )
   } catch (error) {
@@ -216,6 +228,7 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
       healthTokenConfigured,
       turnstileConfigured,
       adminAllowlistConfigured,
+      healthcheckAllowlistConfigured,
       allowedHostsConfigured,
       rateLimitStorageOk: false,
       auditLogStorageOk: false,
@@ -229,6 +242,7 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
       meta: {
         scope,
         status: summary.status,
+        requestId,
         responseTimeMs: getDurationMs(startedAt),
       },
     })
@@ -246,7 +260,9 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
         status: 503,
         headers: {
           "X-Health-Scope": scope,
+          ...(buildRateLimitHeaders({ ...rateLimit, limit: scope === "live" ? 30 : 10 }) ?? {}),
         },
+        requestId,
       }
     )
   }
