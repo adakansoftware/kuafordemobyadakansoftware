@@ -50,6 +50,13 @@ export function BookingForm({
     teaser: string
   }>
 }) {
+  const availableServices = services.length
+    ? services
+    : siteContent.services.map((service) => ({
+        slug: service.slug,
+        title: service.title,
+        teaser: service.teaser,
+      }))
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [errors, setErrors] = useState<BookingFieldErrors>({})
@@ -59,7 +66,7 @@ export function BookingForm({
   const [availabilityLoading, setAvailabilityLoading] = useState(false)
   const [availabilityMessage, setAvailabilityMessage] = useState("")
   const [formData, setFormData] = useState<BookingFormDraft>({
-    service: services[0]?.slug ?? bookingServiceSlugs[0],
+    service: availableServices[0]?.slug ?? bookingServiceSlugs[0],
     date: "",
     time: "",
     name: "",
@@ -74,7 +81,7 @@ export function BookingForm({
 
   const minDate = getBookingMinDate()
   const normalizedSelectedDate = normalizeBookingDateInput(formData.date)
-  const selectedService = services.find((service) => service.slug === formData.service) ?? services[0]
+  const selectedService = availableServices.find((service) => service.slug === formData.service) ?? availableServices[0]
 
   useEffect(() => {
     const browserFingerprint = [
@@ -257,7 +264,7 @@ export function BookingForm({
           onClick={() => {
             setSubmitted(false)
             setFormData({
-              service: services[0]?.slug ?? bookingServiceSlugs[0],
+              service: availableServices[0]?.slug ?? bookingServiceSlugs[0],
               date: "",
               time: "",
               name: "",
@@ -314,7 +321,7 @@ export function BookingForm({
             required
             className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
           >
-            {services.map((service) => (
+            {availableServices.map((service) => (
               <option key={service.slug} value={service.slug}>
                 {service.title}
               </option>

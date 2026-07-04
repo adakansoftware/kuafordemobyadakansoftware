@@ -5,6 +5,7 @@ import { listServicesFromDb } from "@/lib/bookings-repository"
 import { getBookingPageViewModel } from "@/lib/public-site"
 import { createPublicFormChallenge } from "@/lib/request-security"
 import { buildMetadata } from "@/lib/seo"
+import { siteContent } from "@/lib/site-content"
 
 export const metadata: Metadata = buildMetadata({
   title: "Online Randevu",
@@ -14,7 +15,14 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function RandevuPage() {
   const viewModel = getBookingPageViewModel()
-  const services = await listServicesFromDb()
+  const servicesFromDb = await listServicesFromDb().catch(() => [])
+  const services = servicesFromDb.length
+    ? servicesFromDb
+    : siteContent.services.map((service) => ({
+        slug: service.slug,
+        title: service.title,
+        teaser: service.teaser,
+      }))
   const securityChallenge = createPublicFormChallenge("booking-form")
 
   return (

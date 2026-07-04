@@ -149,13 +149,13 @@ export function Footer() {
             <p className="text-sm text-primary-foreground/50">
               © {new Date().getFullYear()} {siteContent.brand.name}. Tüm hakları saklıdır.
             </p>
-            <p className="text-xs uppercase tracking-[0.18em] text-primary-foreground/45">
-              Designed by{" "}
+            <p className="text-[11px] font-light tracking-[0.12em] text-primary-foreground/45">
+              Design by{" "}
               <a
                 href={designerInstagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-accent transition-colors hover:text-primary-foreground"
+                className="font-medium text-primary-foreground/70 transition-colors hover:text-accent"
               >
                 Adakan Software
               </a>
