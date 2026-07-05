@@ -25,6 +25,7 @@ import { AppointmentConflictError, updateAppointmentFromAdmin } from "@/lib/book
 import { adminNotesSchema } from "@/lib/booking"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
+import { createAuditLog } from "@/lib/audit-log"
 import { buildRequestFingerprint } from "@/lib/request-security"
 import { applyRateLimit } from "@/lib/rate-limit"
 import {
@@ -859,20 +860,18 @@ export async function configureAdminMfaAction(
       },
     })
 
-    await db.auditLog.create({
-      data: {
-        tenantId: accessContext.tenantId,
-        actorType: AuditActorType.ADMIN,
-        actorIdentifier: accessContext.actorIdentifier,
-        event: AuditEvent.ADMIN_USER_UPDATED,
-        targetType: "admin_user",
-        targetId: adminUser.id,
-        requestId,
-        ipAddress,
-        metadata: {
-          action: "mfa_enabled",
-          role: AdminUserRole.OWNER,
-        },
+    await createAuditLog({
+      tenantId: accessContext.tenantId,
+      actorType: AuditActorType.ADMIN,
+      actorIdentifier: accessContext.actorIdentifier,
+      event: AuditEvent.ADMIN_USER_UPDATED,
+      targetType: "admin_user",
+      targetId: adminUser.id,
+      requestId,
+      ipAddress,
+      metadata: {
+        action: "mfa_enabled",
+        role: AdminUserRole.OWNER,
       },
     })
 
@@ -917,20 +916,18 @@ export async function configureAdminMfaAction(
       },
     })
 
-    await db.auditLog.create({
-      data: {
-        tenantId: accessContext.tenantId,
-        actorType: AuditActorType.ADMIN,
-        actorIdentifier: accessContext.actorIdentifier,
-        event: AuditEvent.ADMIN_USER_UPDATED,
-        targetType: "admin_user",
-        targetId: adminUser.id,
-        requestId,
-        ipAddress,
-        metadata: {
-          action: "mfa_disabled",
-          role: AdminUserRole.OWNER,
-        },
+    await createAuditLog({
+      tenantId: accessContext.tenantId,
+      actorType: AuditActorType.ADMIN,
+      actorIdentifier: accessContext.actorIdentifier,
+      event: AuditEvent.ADMIN_USER_UPDATED,
+      targetType: "admin_user",
+      targetId: adminUser.id,
+      requestId,
+      ipAddress,
+      metadata: {
+        action: "mfa_disabled",
+        role: AdminUserRole.OWNER,
       },
     })
 
@@ -1050,20 +1047,18 @@ export async function revokeAdminSessionsAction(
     adminUserId: adminUser.id,
   })
 
-  await db.auditLog.create({
-    data: {
-      tenantId: accessContext.tenantId,
-      actorType: AuditActorType.ADMIN,
-      actorIdentifier,
-      event: AuditEvent.ADMIN_USER_UPDATED,
-      targetType: "admin_user",
-      targetId: adminUser.id,
-      requestId,
-      ipAddress,
-      metadata: {
-        action: "sessions_revoked",
-        revokedAt: revokedAt.toISOString(),
-      },
+  await createAuditLog({
+    tenantId: accessContext.tenantId,
+    actorType: AuditActorType.ADMIN,
+    actorIdentifier,
+    event: AuditEvent.ADMIN_USER_UPDATED,
+    targetType: "admin_user",
+    targetId: adminUser.id,
+    requestId,
+    ipAddress,
+    metadata: {
+      action: "sessions_revoked",
+      revokedAt: revokedAt.toISOString(),
     },
   })
 

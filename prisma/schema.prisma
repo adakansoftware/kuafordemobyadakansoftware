@@ -308,6 +308,8 @@ model AuditLog {
   requestId       String?
   ipAddress       String?
   metadata        Json?
+  prevHash        String?
+  entryHash       String?        @unique
   createdAt       DateTime       @default(now())
   tenant          Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
@@ -315,6 +317,7 @@ model AuditLog {
   @@index([targetType, targetId, createdAt])
   @@index([actorType, createdAt])
   @@index([tenantId, event, createdAt])
+  @@index([tenantId, createdAt])
 }
 
 model AdminUser {

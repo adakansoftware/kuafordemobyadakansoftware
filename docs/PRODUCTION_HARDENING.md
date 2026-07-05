@@ -10,6 +10,7 @@
 - CDN/WAF katmaninda IP reputation, ASN denylist ve country-based anomaly kurallarini ac.
 - Veritabani tarafinda `npm run db:hardening` ve `npm run db:migrate` akislarini deployment pipeline'ina ekle.
 - Uygulama loglarini merkezi bir sisteme aktar; `requestId`, `event`, `route`, `level` alanlarini indeksle.
+- Audit log zincir sagligini duzenli kontrol et; `npm run ops:audit-summary` cikisindaki `chainIntegrityByTenant` alanini alarm kaynagi yap.
 - Health endpoint'ini load balancer readiness probe icin `/api/health?scope=ready` ile kullan; `x-health-token` header'i gonder ve public tarafta sadece `scope=live` kullan.
 - Readiness probe'larinda `X-Request-Id` kaydini koru; health tarafinda gelen request-id loglara yansitilir.
 - Production ortaminda admin basic auth credential'larini uzun, rastgele ve secret manager uzerinden yonet.

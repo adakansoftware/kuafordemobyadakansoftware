@@ -1,4 +1,5 @@
 import { db } from "../lib/db.ts"
+import { verifyAuditChainEntries } from "../lib/audit-chain.ts"
 
 function parseNumberArg(name, defaultValue) {
   const prefix = `--${name}=`
@@ -21,7 +22,7 @@ async function main() {
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
   try {
-    const [total, byEvent, byActorType, latestEntries] = await Promise.all([
+    const [total, byEvent, byActorType, latestEntries, chainEntries] = await Promise.all([
       db.auditLog.count({
         where: {
           createdAt: {
@@ -77,7 +78,43 @@ async function main() {
         },
         take: 10,
       }),
+      db.auditLog.findMany({
+        where: {
+          createdAt: {
+            gte: cutoff,
+          },
+        },
+        select: {
+          id: true,
+          tenantId: true,
+          actorType: true,
+          actorIdentifier: true,
+          event: true,
+          targetType: true,
+          targetId: true,
+          requestId: true,
+          ipAddress: true,
+          metadata: true,
+          prevHash: true,
+          entryHash: true,
+          createdAt: true,
+        },
+        orderBy: [{ tenantId: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+      }),
     ])
+
+    const chainIntegrityByTenant = Object.entries(
+      chainEntries.reduce((accumulator, entry) => {
+        const key = entry.tenantId ?? "__global__"
+        accumulator[key] ??= []
+        accumulator[key].push(entry)
+        return accumulator
+      }, {})
+    ).map(([tenantId, entries]) => ({
+      tenantId,
+      ...verifyAuditChainEntries(entries),
+      count: entries.length,
+    }))
 
     console.log(
       JSON.stringify(
@@ -92,6 +129,7 @@ async function main() {
             actorType: row.actorType,
             count: row._count._all,
           })),
+          chainIntegrityByTenant,
           latestEntries,
         },
         null,
