@@ -13,6 +13,7 @@ import { calculateAvailableDiscountCount } from "@/lib/salon-ops"
 import { countAvailableStaffForSlot } from "@/lib/staff-availability"
 import type { AdminAccessContext } from "@/lib/admin-access"
 import { getTenantContext } from "@/lib/tenant"
+import { formatSalonDateIso, salonDateTimeToUtc } from "@/lib/time"
 
 const ACTIVE_APPOINTMENT_STATUSES = [AppointmentStatus.NEW, AppointmentStatus.CONFIRMED] as const
 const BOOKING_IDEMPOTENCY_WINDOW_MS = 2 * 60 * 1000
@@ -1159,13 +1160,11 @@ function buildAppointmentWhere(
 
 
 function createScheduledAt(date: string, time: string) {
-  return new Date(`${date}T${time}:00+03:00`)
+  return salonDateTimeToUtc(date, time)
 }
 
 function getTodayInIstanbul() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-  }).format(new Date())
+  return formatSalonDateIso()
 }
 
 function isActiveAppointmentStatus(status: AppointmentStatus) {

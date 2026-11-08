@@ -810,7 +810,7 @@ export async function configureAdminMfaAction(
   const adminPassword = String(formData.get("adminPassword") ?? "")
   const totpCode = String(formData.get("totpCode") ?? "")
 
-  if (!verifyPassword(adminPassword, adminUser.passwordHash)) {
+  if (!(await verifyPassword(adminPassword, adminUser.passwordHash))) {
     logEvent({
       level: "warn",
       event: "admin_mfa_password_failed",
@@ -1005,7 +1005,7 @@ export async function revokeAdminSessionsAction(
   const adminPassword = String(formData.get("adminPassword") ?? "")
   const totpCode = String(formData.get("totpCode") ?? "")
 
-  if (!verifyPassword(adminPassword, adminUser.passwordHash)) {
+  if (!(await verifyPassword(adminPassword, adminUser.passwordHash))) {
     logEvent({
       level: "warn",
       event: "admin_session_revoke_password_failed",

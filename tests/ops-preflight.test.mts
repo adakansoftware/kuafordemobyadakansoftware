@@ -53,3 +53,9 @@ export function runOpsPreflightTests() {
   ])
   assert.deepEqual(filterPreflightEnvIssues(["DATABASE_URL tanimlanmalidir."], { ci: true }), [])
 }
+
+import { test } from "vitest"
+
+test("ops-preflight suite", () => {
+  runOpsPreflightTests()
+})

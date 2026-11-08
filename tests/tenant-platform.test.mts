@@ -116,3 +116,9 @@ export function runTenantPlatformTests() {
   })
   assert.equal(blockedCount, 0)
 }
+
+import { test } from "vitest"
+
+test("tenant-platform suite", () => {
+  runTenantPlatformTests()
+})

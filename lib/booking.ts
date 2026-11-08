@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { siteContent } from "./site-content.ts"
+import { formatSalonDateIso, salonDateTimeToUtc } from "./time.ts"
 
 export const bookingTimeSlots = [
   "09:00",
@@ -90,19 +91,7 @@ export function sanitizeBookingForm(values: BookingFormDraft): BookingFormDraft 
 }
 
 export function getBookingMinDate() {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
-
-  const parts = formatter.formatToParts(new Date())
-  const year = parts.find((part) => part.type === "year")?.value ?? ""
-  const month = parts.find((part) => part.type === "month")?.value ?? ""
-  const day = parts.find((part) => part.type === "day")?.value ?? ""
-
-  return `${year}-${month}-${day}`
+  return formatSalonDateIso()
 }
 
 export function normalizeBookingDateInput(value: string) {
@@ -128,7 +117,7 @@ export function normalizeBookingDateInput(value: string) {
 
 export function isBookingTimeInPast(date: string, time: string) {
   const now = new Date()
-  const bookingDate = new Date(`${date}T${time}:00+03:00`)
+  const bookingDate = salonDateTimeToUtc(date, time)
 
   return bookingDate.getTime() < now.getTime() + 1000 * 60 * 30
 }

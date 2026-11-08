@@ -62,3 +62,9 @@ export function runSiteConfigTests() {
 
   restoreEnv()
 }
+
+import { test } from "vitest"
+
+test("site-config suite", () => {
+  runSiteConfigTests()
+})

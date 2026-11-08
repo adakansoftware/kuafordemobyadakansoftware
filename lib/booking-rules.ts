@@ -1,4 +1,5 @@
 import { bookingTimeSlots } from "./booking.ts"
+import { salonDateTimeToUtc } from "./time.ts"
 
 export type AppointmentWindowInput = {
   scheduledDate: string
@@ -16,7 +17,7 @@ export type StaffScheduleConflictCandidate = AppointmentWindowInput & {
 const SLOT_DURATION_MINUTES = 30
 
 function createScheduledAt(date: string, time: string) {
-  return new Date(`${date}T${time}:00+03:00`)
+  return salonDateTimeToUtc(date, time)
 }
 
 function getScheduledRange(window: AppointmentWindowInput) {

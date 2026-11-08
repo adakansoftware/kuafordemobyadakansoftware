@@ -88,3 +88,9 @@ export function runEnvTests() {
 
   restoreEnv()
 }
+
+import { test } from "vitest"
+
+test("env suite", () => {
+  runEnvTests()
+})

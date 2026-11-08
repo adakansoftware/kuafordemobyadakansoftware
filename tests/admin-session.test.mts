@@ -36,3 +36,9 @@ export function runAdminSessionTests() {
     true
   )
 }
+
+import { test } from "vitest"
+
+test("admin-session suite", () => {
+  runAdminSessionTests()
+})

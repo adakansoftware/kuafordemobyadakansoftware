@@ -130,7 +130,7 @@ export async function adminLoginAction(
     },
   })
 
-  if (!adminUser || !verifyPassword(password, adminUser.passwordHash)) {
+  if (!adminUser || !(await verifyPassword(password, adminUser.passwordHash))) {
     await recordSuspicion({
       scope: "admin-login",
       clientKey,

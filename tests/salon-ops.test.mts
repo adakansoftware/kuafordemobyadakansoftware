@@ -144,3 +144,9 @@ export function runSalonOpsTests() {
   paymentError.name = "AdminPaymentError"
   assert.equal(mapAdminPaymentError(paymentError), "Odeme zaten alinmis")
 }
+
+import { test } from "vitest"
+
+test("salon-ops suite", () => {
+  runSalonOpsTests()
+})

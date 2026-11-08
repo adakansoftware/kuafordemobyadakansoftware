@@ -26,3 +26,9 @@ export function runObservabilityTests() {
   assert.equal(Array.isArray(sanitized.list), true)
   assert.equal((sanitized.list as unknown[]).length, 20)
 }
+
+import { test } from "vitest"
+
+test("observability suite", () => {
+  runObservabilityTests()
+})

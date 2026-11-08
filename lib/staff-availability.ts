@@ -1,4 +1,5 @@
 import { hasAppointmentWindowOverlap, type AppointmentWindowInput } from "./booking-rules.ts"
+import { salonDayOfWeek } from "./time.ts"
 
 export type StaffAvailabilityWindow = {
   dayOfWeek: number
@@ -25,8 +26,7 @@ export type StaffScheduleSnapshot = {
 }
 
 export function getDayOfWeekForDate(date: string) {
-  const day = new Date(`${date}T12:00:00+03:00`).getDay()
-  return day === 0 ? 7 : day
+  return salonDayOfWeek(date)
 }
 
 export function timeToMinutes(time: string) {

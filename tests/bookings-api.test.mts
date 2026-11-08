@@ -65,3 +65,9 @@ export function runBookingsApiTests() {
 
   assert.equal(getContentLength(invalidRequest), 0)
 }
+
+import { test } from "vitest"
+
+test("bookings-api suite", () => {
+  runBookingsApiTests()
+})

@@ -43,3 +43,9 @@ export function runAdminAppointmentActionTests() {
     "Guncelleme sirasinda beklenmeyen bir hata olustu."
   )
 }
+
+import { test } from "vitest"
+
+test("admin-appointment-action suite", () => {
+  runAdminAppointmentActionTests()
+})

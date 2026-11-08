@@ -1,3 +1,5 @@
+import { formatSalonDateIso, salonDayRange } from "./time.ts"
+
 export class ReportRangeError extends Error {
   constructor(message: string) {
     super(message)
@@ -52,17 +54,18 @@ export function normalizeReportDateRange(input: { from: string; to: string }) {
 export function toReportWindow(input: { from: string; to: string }) {
   const normalized = normalizeReportDateRange(input)
 
+  const fromRange = salonDayRange(normalized.from)
+  const toRange = salonDayRange(normalized.to)
+
   return {
     ...normalized,
-    fromDateTime: new Date(`${normalized.from}T00:00:00+03:00`),
-    toDateTime: new Date(`${normalized.to}T23:59:59.999+03:00`),
+    fromDateTime: fromRange.start,
+    toDateTime: toRange.end,
   }
 }
 
 export function getTodayInIstanbulDate() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-  }).format(new Date())
+  return formatSalonDateIso()
 }
 
 export function resolveSafeReportDateRange(input: { from?: string | null; to?: string | null; fallbackDate?: string }) {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { test } from "vitest"
 
 import { getEnvIssues, resetEnvCacheForTests } from "../lib/env.ts"
 import { buildHealthSummary } from "../lib/health.ts"
@@ -9,65 +10,8 @@ import {
   normalizeHost,
   normalizeOrigin,
 } from "../lib/security-core.ts"
-import { runAdminAppointmentActionTests } from "../tests/admin-appointment-action.test.mts"
-import { runAuditChainTests } from "../tests/audit-chain.test.mts"
-import { runAdminMfaTests } from "../tests/admin-mfa.test.mts"
-import { runAdminSessionTests } from "../tests/admin-session.test.mts"
-import { runBookingActionTests } from "../tests/booking-action.test.mts"
-import { runBookingTests } from "../tests/booking.test.mts"
-import { runBookingRouteTests } from "../tests/booking-route.test.mts"
-import { runBookingsApiTests } from "../tests/bookings-api.test.mts"
-import { runEnvTests } from "../tests/env.test.mts"
-import { runHealthTests } from "../tests/health.test.mts"
-import { runHttpTests } from "../tests/http.test.mts"
-import { runObservabilityTests } from "../tests/observability.test.mts"
-import { runOpsPreflightTests } from "../tests/ops-preflight.test.mts"
-import { runRepositoryTests } from "../tests/repository.test.mts"
-import { runSalonOpsTests } from "../tests/salon-ops.test.mts"
-import { runSecurityTests } from "../tests/security.test.mts"
-import { runSiteConfigTests } from "../tests/site-config.test.mts"
-import { runTenantPlatformTests } from "../tests/tenant-platform.test.mts"
 
-const originalEnv = {
-  DATABASE_URL: process.env.DATABASE_URL,
-  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-  ADMIN_USERNAME: process.env.ADMIN_USERNAME,
-  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
-  ALLOWED_ORIGIN_HOSTS: process.env.ALLOWED_ORIGIN_HOSTS,
-  APP_SECURITY_SECRET: process.env.APP_SECURITY_SECRET,
-  TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-  ADMIN_ALLOWLIST_IPS: process.env.ADMIN_ALLOWLIST_IPS,
-  HEALTHCHECK_ALLOWLIST_IPS: process.env.HEALTHCHECK_ALLOWLIST_IPS,
-  SETUP_ACCESS_TOKEN: process.env.SETUP_ACCESS_TOKEN,
-  NODE_ENV: process.env.NODE_ENV,
-}
-
-function restoreEnv() {
-  for (const [key, value] of Object.entries(originalEnv)) {
-    if (value === undefined) {
-      delete process.env[key]
-    } else {
-      process.env[key] = value
-    }
-  }
-
-  resetEnvCacheForTests()
-}
-
-function primeEnv() {
-  process.env.DATABASE_URL = "postgresql://demo"
-  process.env.NEXT_PUBLIC_SITE_URL = "https://example.com"
-  process.env.ADMIN_USERNAME = "admin-user"
-  process.env.ADMIN_PASSWORD = "very-strong-pass"
-  process.env.ALLOWED_ORIGIN_HOSTS = "api.example.com, booking.example.com"
-  process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
-  process.env.NODE_ENV = "development"
-  process.env.HEALTHCHECK_ALLOWLIST_IPS = "198.51.100.10"
-  resetEnvCacheForTests()
-}
-
-function testEnvRules() {
+test("env rules", () => {
   process.env.DATABASE_URL = "postgresql://demo"
   process.env.NODE_ENV = "development"
   process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
@@ -87,10 +31,18 @@ function testEnvRules() {
   delete process.env.ADMIN_PASSWORD
   resetEnvCacheForTests()
   assert.equal(getEnvIssues().includes("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur."), true)
-}
+})
 
-function testSecurityHelpers() {
-  primeEnv()
+test("security helpers", () => {
+  process.env.DATABASE_URL = "postgresql://demo"
+  process.env.NEXT_PUBLIC_SITE_URL = "https://example.com"
+  process.env.ADMIN_USERNAME = "admin-user"
+  process.env.ADMIN_PASSWORD = "very-strong-pass"
+  process.env.ALLOWED_ORIGIN_HOSTS = "api.example.com, booking.example.com"
+  process.env.APP_SECURITY_SECRET = "very-strong-app-security-secret"
+  process.env.NODE_ENV = "development"
+  process.env.HEALTHCHECK_ALLOWLIST_IPS = "198.51.100.10"
+  resetEnvCacheForTests()
 
   assert.equal(normalizeOrigin("https://example.com/"), "https://example.com")
   assert.equal(normalizeHost("Example.com:3000"), "example.com")
@@ -133,9 +85,9 @@ function testSecurityHelpers() {
 
   assert.equal(isTrustedRequestOriginHeaders(trustedHeaders), true)
   assert.equal(isTrustedRequestOriginHeaders(untrustedHeaders), false)
-}
+})
 
-function testHealthSummary() {
+test("health summary", () => {
   const liveSummary = buildHealthSummary({
     scope: "live",
     databaseOk: true,
@@ -171,34 +123,4 @@ function testHealthSummary() {
   })
 
   assert.equal(readinessSummary.status, "error")
-}
-
-try {
-  testEnvRules()
-  testSecurityHelpers()
-  testHealthSummary()
-  runAdminAppointmentActionTests()
-  runAuditChainTests()
-  runAdminMfaTests()
-  runAdminSessionTests()
-  runBookingActionTests()
-  runBookingTests()
-  runBookingRouteTests()
-  runBookingsApiTests()
-  runEnvTests()
-  runHealthTests()
-  runHttpTests()
-  runObservabilityTests()
-  runOpsPreflightTests()
-  runRepositoryTests()
-  runSalonOpsTests()
-  runSecurityTests()
-  runSiteConfigTests()
-  runTenantPlatformTests()
-  restoreEnv()
-  console.log("Unit checks passed.")
-} catch (error) {
-  restoreEnv()
-  console.error(error instanceof Error ? error.message : error)
-  process.exit(1)
-}
+})

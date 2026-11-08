@@ -1,21 +1,28 @@
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto"
+import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto"
+import { promisify } from "node:util"
+
+const scrypt = promisify(scryptCallback) as (
+  password: string | Buffer,
+  salt: string | Buffer,
+  keylen: number
+) => Promise<Buffer>
 
 const SCRYPT_KEY_LENGTH = 64
 
-export function hashPassword(password: string) {
+export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex")
-  const derived = scryptSync(password, salt, SCRYPT_KEY_LENGTH).toString("hex")
+  const derived = (await scrypt(password, salt, SCRYPT_KEY_LENGTH)).toString("hex")
   return `${salt}:${derived}`
 }
 
-export function verifyPassword(password: string, passwordHash: string) {
+export async function verifyPassword(password: string, passwordHash: string) {
   const [salt, storedHash] = passwordHash.split(":")
 
   if (!salt || !storedHash) {
     return false
   }
 
-  const candidate = scryptSync(password, salt, SCRYPT_KEY_LENGTH)
+  const candidate = await scrypt(password, salt, SCRYPT_KEY_LENGTH)
   const stored = Buffer.from(storedHash, "hex")
 
   if (candidate.length !== stored.length) {

@@ -113,3 +113,9 @@ export function runSecurityTests() {
 
   restoreEnv()
 }
+
+import { test } from "vitest"
+
+test("security suite", () => {
+  runSecurityTests()
+})

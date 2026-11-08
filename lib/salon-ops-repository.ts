@@ -26,6 +26,7 @@ import {
 import type { AdminAccessContext } from "@/lib/admin-access"
 import { canViewSettings, getPlanLimits } from "@/lib/admin-access"
 import { getTenantContext } from "@/lib/tenant"
+import { formatSalonDateIso, SALON_TIMEZONE, salonDayRange } from "@/lib/time"
 
 export class AdminPaymentError extends Error {
   constructor(message: string) {
@@ -250,8 +251,7 @@ export async function getUnpaidCompletedAppointments(limit = 6, options?: { tena
 
 export async function getEndOfDaySummary(date = getTodayInIstanbul(), options?: { tenantId?: string }) {
   const tenantId = await resolveTenantId(options?.tenantId)
-  const dayStart = new Date(`${date}T00:00:00+03:00`)
-  const dayEnd = new Date(`${date}T23:59:59.999+03:00`)
+  const { start: dayStart, end: dayEnd } = salonDayRange(date)
 
   const [payments, unpaidCompletedAppointments, totalTodayAppointments, completedTodayAppointments, cancelledTodayAppointments] =
     await Promise.all([
@@ -528,7 +528,7 @@ export async function updateBusinessSettings(input: {
           email: input.email,
           address: input.address,
           city: input.city,
-          timezone: "Europe/Istanbul",
+          timezone: SALON_TIMEZONE,
           currency: input.currency,
           dailyCapacity: input.dailyCapacity,
           workingHours,
@@ -1054,7 +1054,7 @@ export async function beginCustomerPortalAccess(input: {
       tenantId,
       customerId: customer.id,
       identifier: normalizedIdentifier,
-      codeHash: hashPassword(code),
+      codeHash: await hashPassword(code),
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     },
   })
@@ -1091,7 +1091,7 @@ export async function verifyCustomerPortalAccess(input: {
       throw new CustomerPortalAccessError("Kodun suresi dolmus veya gecersiz.")
     }
 
-    if (!verifyPassword(input.code.trim(), token.codeHash)) {
+    if (!(await verifyPassword(input.code.trim(), token.codeHash))) {
       throw new CustomerPortalAccessError("Kod gecersiz.")
     }
 
@@ -1261,7 +1261,7 @@ export async function completeSetupWizard(input: {
         email: input.ownerEmail,
         address: "Adres bilgisi kurulum sonrasinda guncellenecek.",
         city: "Istanbul",
-        timezone: "Europe/Istanbul",
+        timezone: SALON_TIMEZONE,
         currency: "TRY",
         dailyCapacity: 24,
       },
@@ -1274,7 +1274,7 @@ export async function completeSetupWizard(input: {
         email: input.ownerEmail,
         address: "Adres bilgisi kurulum sonrasinda guncellenecek.",
         city: "Istanbul",
-        timezone: "Europe/Istanbul",
+        timezone: SALON_TIMEZONE,
         currency: "TRY",
         dailyCapacity: 24,
       },
@@ -1343,7 +1343,7 @@ export async function completeSetupWizard(input: {
       },
       update: {
         email: input.ownerEmail,
-        passwordHash: hashPassword(input.ownerPassword),
+        passwordHash: await hashPassword(input.ownerPassword),
         role: AdminUserRole.OWNER,
         isActive: true,
       },
@@ -1351,7 +1351,7 @@ export async function completeSetupWizard(input: {
         tenantId: tenant.id,
         username: input.ownerUsername,
         email: input.ownerEmail,
-        passwordHash: hashPassword(input.ownerPassword),
+        passwordHash: await hashPassword(input.ownerPassword),
         role: AdminUserRole.OWNER,
         isActive: true,
       },
@@ -1391,7 +1391,5 @@ export function buildAppointmentWhatsAppLinks(input: {
 }
 
 function getTodayInIstanbul() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-  }).format(new Date())
+  return formatSalonDateIso()
 }

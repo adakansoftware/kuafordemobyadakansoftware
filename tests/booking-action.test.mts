@@ -31,3 +31,9 @@ export function runBookingActionTests() {
     "Randevu kaydedilirken beklenmeyen bir sorun olustu."
   )
 }
+
+import { test } from "vitest"
+
+test("booking-action suite", () => {
+  runBookingActionTests()
+})

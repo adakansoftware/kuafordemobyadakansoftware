@@ -79,3 +79,9 @@ export function runBookingTests() {
     assert.equal(typeof honeypotResult.errors.website, "string")
   }
 }
+
+import { test } from "vitest"
+
+test("booking suite", () => {
+  runBookingTests()
+})

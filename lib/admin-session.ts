@@ -378,7 +378,7 @@ export async function requireAdminSessionStepUp(input: {
     throw new AdminStepUpError()
   }
 
-  if (!verifyPassword(password, session.adminUser.passwordHash)) {
+  if (!(await verifyPassword(password, session.adminUser.passwordHash))) {
     throw new AdminStepUpError("Yonetici sifresi dogrulanamadi.")
   }
 

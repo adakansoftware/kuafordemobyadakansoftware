@@ -131,7 +131,7 @@ export async function requireAdminAccess(): Promise<AdminAccessContext> {
       },
     })
 
-    if (adminUser && verifyPassword(password, adminUser.passwordHash)) {
+    if (adminUser && (await verifyPassword(password, adminUser.passwordHash))) {
       if (adminUser.mfaEnabledAt) {
         throw new AdminAccessError("MFA aktif hesaplar icin form tabanli admin girisi gereklidir.")
       }

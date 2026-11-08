@@ -64,3 +64,9 @@ export function runHealthTests() {
 
   assert.equal(readinessOkSummary.status, "ok")
 }
+
+import { test } from "vitest"
+
+test("health suite", () => {
+  runHealthTests()
+})

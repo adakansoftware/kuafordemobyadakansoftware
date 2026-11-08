@@ -182,3 +182,9 @@ export function runRepositoryTests() {
     ReportRangeError
   )
 }
+
+import { test } from "vitest"
+
+test("repository suite", () => {
+  runRepositoryTests()
+})

@@ -65,3 +65,9 @@ export function runBookingRouteTests() {
     message: "Randevu kaydi sirasinda beklenmeyen bir hata olustu.",
   })
 }
+
+import { test } from "vitest"
+
+test("booking-route suite", () => {
+  runBookingRouteTests()
+})

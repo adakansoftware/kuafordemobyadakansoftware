@@ -119,3 +119,9 @@ export function runAuditChainTests() {
     false
   )
 }
+
+import { test } from "vitest"
+
+test("audit-chain suite", () => {
+  runAuditChainTests()
+})

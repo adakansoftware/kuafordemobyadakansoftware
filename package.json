@@ -10,13 +10,14 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:unit": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/unit-test.mjs",
+    "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:smoke": "node scripts/smoke-check.mjs",
     "ops:migration-check": "node scripts/migration-check.mjs",
     "ops:hardening-check": "node scripts/hardening-check.mjs",
-    "ops:preflight": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/ops-preflight.mjs",
-    "ops:retention": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/ops-retention.mjs",
-    "ops:audit-summary": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/audit-summary.mjs",
+    "ops:preflight": "node --experimental-strip-types scripts/ops-preflight.mjs",
+    "ops:retention": "node --experimental-strip-types scripts/ops-retention.mjs",
+    "ops:audit-summary": "node --experimental-strip-types scripts/audit-summary.mjs",
     "verify": "node scripts/verify.mjs",
     "verify:ci": "node scripts/verify.mjs --ci",
     "prisma:generate": "prisma generate",
@@ -86,11 +87,13 @@
     "@types/node": "^22",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@vitest/coverage-v8": "^5.1.0",
     "eslint": "^9.38.0",
     "eslint-config-next": "^16.1.6",
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
     "tw-animate-css": "1.3.3",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "vitest": "^5.1.0"
   }
 }

@@ -22,3 +22,9 @@ export function runHttpTests() {
   assert.equal(getRetryAfterSeconds(65_000, 5_000), "60")
   assert.equal(getRetryAfterSeconds(5_000, 65_000), "0")
 }
+
+import { test } from "vitest"
+
+test("http suite", () => {
+  runHttpTests()
+})

@@ -49,3 +49,9 @@ export function runAdminMfaTests() {
     null
   )
 }
+
+import { test } from "vitest"
+
+test("admin-mfa suite", () => {
+  runAdminMfaTests()
+})
