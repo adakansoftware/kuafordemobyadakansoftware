@@ -12,6 +12,9 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
 
+  const isHome = pathname === "/" || pathname === "/en"
+  const solid = scrolled || !isHome
+
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20)
@@ -25,7 +28,7 @@ export function Navbar() {
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        scrolled
+        solid
           ? "border-b border-border/80 bg-background/90 shadow-[0_18px_48px_rgba(25,20,13,0.08)] backdrop-blur-xl"
           : "bg-transparent"
       )}

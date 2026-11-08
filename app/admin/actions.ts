@@ -3,7 +3,7 @@
 import { AdminUserRole, AppointmentStatus, AuditActorType, AuditEvent } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
-import { createPendingMfaEnrollmentToken, decryptAdminMfaSecret, encryptAdminMfaSecret, resolvePendingMfaEnrollmentToken, verifyTotpCode } from "@/lib/admin-mfa"
+import { decryptAdminMfaSecret, encryptAdminMfaSecret, resolvePendingMfaEnrollmentToken, verifyTotpCode } from "@/lib/admin-mfa"
 import {
   businessSettingsSchema,
   customerNotesSchema,

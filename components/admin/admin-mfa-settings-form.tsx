@@ -142,7 +142,7 @@ export function AdminMfaSettingsForm({ profile, enrollment }: AdminMfaSettingsFo
       <form action={revokeSessionsAction} className="mt-6 grid gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
         <div className="space-y-2 text-sm text-amber-950">
           <p className="font-medium">Tum eski admin oturumlarini kapat</p>
-          <p>Supheli cihaz, paylasilmis tarayici veya eski cookie sizintisi durumlarinda onceki tum session'lar aninda gecersiz olur.</p>
+          <p>Supheli cihaz, paylasilmis tarayici veya eski cookie sizintisi durumlarinda onceki tum session&apos;lar aninda gecersiz olur.</p>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
