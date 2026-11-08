@@ -1,16 +1,18 @@
-export function mapSubmitBookingSecurityError(error: unknown) {
+import { bookingActionMessages, type Locale } from "./i18n/validation.ts"
+
+export function mapSubmitBookingSecurityError(error: unknown, locale: Locale = "tr") {
   if (error instanceof Error && error.name === "RequestSecurityError") {
-    return "Istek kaynagi dogrulanamadi. Sayfayi yenileyip yeniden deneyin."
+    return bookingActionMessages[locale].securityError
   }
 
   return null
 }
 
-export function getSubmitBookingRateLimitMessage() {
-  return "Kisa sure icinde cok fazla talep gonderildi. Lutfen bir dakika sonra tekrar deneyin."
+export function getSubmitBookingRateLimitMessage(locale: Locale = "tr") {
+  return bookingActionMessages[locale].rateLimited
 }
 
-export function mapSubmitBookingCreateError(error: unknown) {
+export function mapSubmitBookingCreateError(error: unknown, locale: Locale = "tr") {
   if (error instanceof Error && error.name === "CustomerIdentityConflictError") {
     return error.message
   }
@@ -19,5 +21,5 @@ export function mapSubmitBookingCreateError(error: unknown) {
     return error.message
   }
 
-  return "Randevu kaydedilirken beklenmeyen bir sorun olustu."
+  return bookingActionMessages[locale].createFailed
 }

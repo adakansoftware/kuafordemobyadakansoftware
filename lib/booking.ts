@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { bookingValidationMessages, type BookingValidationMessages, type Locale } from "./i18n/validation.ts"
 import { siteContent } from "./site-content.ts"
 import { formatSalonDateIso, salonDateTimeToUtc } from "./time.ts"
 
@@ -29,29 +30,33 @@ export const bookingTimeSlots = [
 
 export const bookingServiceSlugs = siteContent.services.map((service) => service.slug) as [string, ...string[]]
 
-export const bookingSchema = z.object({
-  service: z
-    .string()
-    .trim()
-    .min(1, "Lutfen bir hizmet secin.")
-    .regex(/^[a-z0-9-]+$/, "Gecerli bir hizmet secin."),
-  date: z
-    .string()
-    .min(1, "Lütfen bir tarih seçin.")
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Geçerli bir tarih seçin."),
-  time: z.enum(bookingTimeSlots, {
-    message: "Lütfen bir saat seçin.",
-  }),
-  name: z
-    .string()
-    .trim()
-    .min(3, "Ad soyad en az 3 karakter olmalı.")
-    .max(80, "Ad soyad çok uzun.")
-    .regex(/^[\p{L}\s'.-]+$/u, "Ad soyad alanında yalnızca harf kullanın."),
-  phone: z.string().trim().min(10, "Telefon numarası eksik görünüyor.").max(20, "Telefon numarası çok uzun."),
-  email: z.string().trim().email("Geçerli bir e-posta girin."),
-  website: z.string().trim().max(0).optional().default(""),
-})
+export function createBookingSchema(messages: BookingValidationMessages) {
+  return z.object({
+    service: z
+      .string()
+      .trim()
+      .min(1, messages.serviceRequired)
+      .regex(/^[a-z0-9-]+$/, messages.serviceInvalid),
+    date: z
+      .string()
+      .min(1, messages.dateRequired)
+      .regex(/^\d{4}-\d{2}-\d{2}$/, messages.dateInvalid),
+    time: z.enum(bookingTimeSlots, {
+      message: messages.timeRequired,
+    }),
+    name: z
+      .string()
+      .trim()
+      .min(3, messages.nameTooShort)
+      .max(80, messages.nameTooLong)
+      .regex(/^[\p{L}\s'.-]+$/u, messages.nameInvalidChars),
+    phone: z.string().trim().min(10, messages.phoneTooShort).max(20, messages.phoneTooLong),
+    email: z.string().trim().email(messages.emailInvalid),
+    website: z.string().trim().max(0).optional().default(""),
+  })
+}
+
+export const bookingSchema = createBookingSchema(bookingValidationMessages.tr)
 
 export type BookingFormValues = z.infer<typeof bookingSchema>
 export type BookingFormDraft = {
@@ -122,17 +127,18 @@ export function isBookingTimeInPast(date: string, time: string) {
   return bookingDate.getTime() < now.getTime() + 1000 * 60 * 30
 }
 
-export function validateBookingForm(values: BookingFormDraft) {
+export function validateBookingForm(values: BookingFormDraft, locale: Locale = "tr") {
+  const messages = bookingValidationMessages[locale]
   const sanitizedValues = sanitizeBookingForm(values)
   sanitizedValues.date = normalizeBookingDateInput(sanitizedValues.date)
-  const result = bookingSchema.safeParse(sanitizedValues)
+  const result = createBookingSchema(messages).safeParse(sanitizedValues)
 
   if (result.success) {
     if (result.data.date < getBookingMinDate()) {
       return {
         success: false as const,
         errors: {
-          date: "Geçmiş bir tarih seçemezsiniz.",
+          date: messages.dateInPast,
         } satisfies BookingFieldErrors,
       }
     }
@@ -141,7 +147,7 @@ export function validateBookingForm(values: BookingFormDraft) {
       return {
         success: false as const,
         errors: {
-          time: "Yaklaşan 30 dakika içindeki saatler için online talep alınmıyor. Lütfen daha ileri bir saat seçin.",
+          time: messages.timeTooSoon,
         } satisfies BookingFieldErrors,
       }
     }

@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
+import createMiddleware from "next-intl/middleware"
 import { ADMIN_SESSION_COOKIE_NAME, resolveAdminSessionFromRequest } from "@/lib/admin-session"
+import { routing } from "@/i18n/routing"
 import { getRequestIdFromHeaders } from "@/lib/http"
 import { getRetryAfterSeconds } from "@/lib/http-core"
 import { getDurationMs, logEvent } from "@/lib/observability"
@@ -14,6 +16,15 @@ import {
   getBasicAuthUsername,
   isIpAllowed,
 } from "@/lib/security"
+
+const intlMiddleware = createMiddleware(routing)
+
+const NON_INTL_PREFIXES = ["/admin", "/api", "/setup"]
+const NON_INTL_PATHNAMES = new Set(["/sitemap.xml", "/robots.txt", "/manifest.webmanifest"])
+
+function isNonIntlPath(pathname: string) {
+  return NON_INTL_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) || NON_INTL_PATHNAMES.has(pathname)
+}
 
 function getBaseHeaders(requestId: string) {
   return {
@@ -60,7 +71,13 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!request.nextUrl.pathname.startsWith("/admin")) {
-    const response = NextResponse.next()
+    if (isNonIntlPath(request.nextUrl.pathname)) {
+      const response = NextResponse.next()
+      response.headers.set("X-Request-Id", requestId)
+      return response
+    }
+
+    const response = await intlMiddleware(request)
     response.headers.set("X-Request-Id", requestId)
     return response
   }

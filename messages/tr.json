@@ -1,0 +1,67 @@
+{
+  "common": {
+    "skipToContent": "İçeriğe geç",
+    "bookNow": "Randevu Oluştur",
+    "pages": "Sayfalar",
+    "contact": "İletişim",
+    "workingHours": "Çalışma Saatleri",
+    "allRightsReserved": "Tüm hakları saklıdır.",
+    "phone": "Telefon",
+    "address": "Adres",
+    "hours": "Çalışma saatleri",
+    "contactInfo": "İletişim bilgileri",
+    "bookingNotice": "Randevu bilgilendirmesi",
+    "trustAndProcess": "Güven ve süreç"
+  },
+  "localeToggle": {
+    "label": "EN",
+    "ariaLabel": "Switch to English"
+  },
+  "bookingForm": {
+    "serviceLabel": "Hizmet seçimi",
+    "dateLabel": "Tarih seçimi",
+    "timeLabel": "Saat seçimi",
+    "nameLabel": "Ad Soyad",
+    "phoneLabel": "Telefon",
+    "emailLabel": "E-posta",
+    "namePlaceholder": "Adınızı ve soyadınızı girin",
+    "phonePlaceholder": "05XX XXX XX XX",
+    "emailPlaceholder": "ornek@email.com",
+    "selectDateFirst": "Önce tarih seçin",
+    "loadingAvailability": "Uygunluk yükleniyor",
+    "selectTime": "Saat seçin",
+    "lastAvailability": " • Son uygunluk",
+    "full": " • Dolu",
+    "updatingSlots": "Uygun saatler güncelleniyor.",
+    "availabilitySummaryTitle": "{date} için canlı uygunluk özeti",
+    "availableSlots": "Müsait slot sayısı: {available} / {total}",
+    "teamCapacity": "Ekip kapasitesi: aynı anda yaklaşık {capacity} aktif randevu.",
+    "availabilityUnavailable": "Uygunluk bilgisi şu anda alınamıyor.",
+    "availabilityConnectionError": "Uygunluk bilgisi alınırken bağlantı sorunu oluştu.",
+    "slotNoLongerAvailable": "Seçtiğiniz saat artık uygun görünmüyor. Lütfen listedeki başka bir saat seçin.",
+    "slotFull": "Bu saat dolu görünüyor. Lütfen uygun bir saat seçin.",
+    "submitting": "Talep kaydediliyor...",
+    "submit": "Randevu talebi oluştur",
+    "confirmationTitle": "Randevu talebiniz alındı",
+    "confirmationBody": "Sayın {name}, talebiniz başarıyla kaydedildi. Ekibimiz planlamayı teyit etmek için en kısa sürede sizinle iletişime geçecek.",
+    "service": "Hizmet:",
+    "date": "Tarih:",
+    "time": "Saat:",
+    "requestNo": "Talep No:",
+    "newRequest": "Yeni talep oluştur"
+  },
+  "errorPage": {
+    "eyebrow": "Beklenmeyen Durum",
+    "title": "Sayfa yüklenirken beklenmeyen bir sorun oluştu",
+    "description": "Kısa süreli bir sistem aksaması yaşanmış olabilir. Sayfayı yeniden deneyebilir veya doğrudan randevu ekranına geçebilirsiniz.",
+    "retry": "Tekrar Dene",
+    "goToBooking": "Randevu Sayfasına Git"
+  },
+  "notFoundPage": {
+    "eyebrow": "404",
+    "title": "Aradığınız sayfa bulunamadı",
+    "description": "Bağlantı güncellenmiş olabilir ya da sayfa artık kullanılmıyor olabilir. Ana sayfaya dönebilir veya doğrudan hizmetleri inceleyebilirsiniz.",
+    "backHome": "Ana Sayfaya Dön",
+    "browseServices": "Hizmetleri İncele"
+  }
+}

@@ -1,20 +1,43 @@
 import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
+import { notFound } from "next/navigation"
+import { setRequestLocale } from "next-intl/server"
 import { Award, Settings, ShieldCheck, Sparkles } from "lucide-react"
+import { getSiteContent } from "@/lib/content"
+import { normalizeLocale } from "@/lib/i18n/validation"
 import { getAboutPageViewModel } from "@/lib/public-site"
 import { buildMetadata } from "@/lib/seo"
+import { routing } from "@/i18n/routing"
 
-export const metadata: Metadata = buildMetadata({
-  title: "Hakkımızda",
-  description: "Adakan Hair Studio ekibini, hizmet yaklaşımını ve salon değerlerini yakından inceleyin.",
-  path: "/hakkimizda",
-})
+type PageProps = {
+  params: Promise<{ locale: string }>
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale } = await params
+  const normalized = normalizeLocale(locale)
+  const content = getSiteContent(normalized)
+
+  return buildMetadata({
+    title: content.pages.about.seoTitle,
+    description: content.pages.about.seoDescription,
+    path: "/hakkimizda",
+    locale: normalized,
+  })
+}
 
 const valueIcons = [Sparkles, Award, ShieldCheck, Settings]
 
-export default function HakkimizdaPage() {
-  const viewModel = getAboutPageViewModel()
+export default async function HakkimizdaPage({ params }: PageProps) {
+  const { locale } = await params
+
+  if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
+    notFound()
+  }
+
+  setRequestLocale(locale)
+  const viewModel = getAboutPageViewModel(normalizeLocale(locale))
 
   return (
     <>

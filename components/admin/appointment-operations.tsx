@@ -9,7 +9,7 @@ import {
   type UpdateAppointmentActionState,
   recordAppointmentPaymentAction,
   updateAppointmentAction,
-} from "@/app/admin/actions"
+} from "@/app/(admin)/admin/actions"
 import {
   buildAppointmentWhatsAppMessages,
   buildCustomerWhatsAppUrl,

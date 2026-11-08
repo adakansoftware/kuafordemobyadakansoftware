@@ -1,17 +1,40 @@
 import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
+import { notFound } from "next/navigation"
+import { setRequestLocale } from "next-intl/server"
+import { getSiteContent } from "@/lib/content"
+import { normalizeLocale } from "@/lib/i18n/validation"
 import { getServicesPageViewModel } from "@/lib/public-site"
 import { buildMetadata } from "@/lib/seo"
+import { routing } from "@/i18n/routing"
 
-export const metadata: Metadata = buildMetadata({
-  title: "Hizmetler",
-  description: "Saç kesimi, boyama, keratin bakımı, şekillendirme ve kaynak işlemlerini profesyonel hizmet detaylarıyla inceleyin.",
-  path: "/hizmetler",
-})
+type PageProps = {
+  params: Promise<{ locale: string }>
+}
 
-export default function HizmetlerPage() {
-  const viewModel = getServicesPageViewModel()
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale } = await params
+  const normalized = normalizeLocale(locale)
+  const content = getSiteContent(normalized)
+
+  return buildMetadata({
+    title: content.pages.services.seoTitle,
+    description: content.pages.services.seoDescription,
+    path: "/hizmetler",
+    locale: normalized,
+  })
+}
+
+export default async function HizmetlerPage({ params }: PageProps) {
+  const { locale } = await params
+
+  if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
+    notFound()
+  }
+
+  setRequestLocale(locale)
+  const viewModel = getServicesPageViewModel(normalizeLocale(locale))
 
   return (
     <>

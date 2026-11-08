@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
-import { siteContent } from "./site-content.ts"
+import { getSiteContent } from "./content/index.ts"
+import type { Locale } from "./i18n/validation.ts"
 import { getSiteUrl, getSiteUrlString } from "./site-url.ts"
 
 export const siteUrl = getSiteUrl()
@@ -8,27 +9,36 @@ type BuildMetadataInput = {
   title?: string
   description?: string
   path?: string
+  locale?: Locale
 }
 
 export function buildMetadata(input: BuildMetadataInput = {}): Metadata {
-  const title = input.title ?? siteContent.seo.defaultTitle
-  const description = input.description ?? siteContent.seo.description
+  const locale = input.locale ?? "tr"
+  const content = getSiteContent(locale)
+  const title = input.title ?? content.seo.defaultTitle
+  const description = input.description ?? content.seo.description
   const canonicalPath = input.path ?? "/"
   const url = new URL(canonicalPath, siteUrl)
+  const localizedPath = locale === "en" ? `/en${canonicalPath}` : canonicalPath
 
   return {
     title,
     description,
-    keywords: [...siteContent.seo.keywords],
+    keywords: [...content.seo.keywords],
     metadataBase: siteUrl,
     alternates: {
-      canonical: url.pathname === "/" ? "/" : url.pathname,
+      canonical: localizedPath === "/" ? "/" : localizedPath,
+      languages: {
+        tr: canonicalPath === "/" ? "/" : canonicalPath,
+        en: `/en${canonicalPath}`,
+        "x-default": canonicalPath === "/" ? "/" : canonicalPath,
+      },
     },
     openGraph: {
       type: "website",
-      locale: "tr_TR",
+      locale: locale === "en" ? "en_US" : "tr_TR",
       url,
-      siteName: siteContent.brand.name,
+      siteName: content.brand.name,
       title,
       description,
       images: [
@@ -36,7 +46,7 @@ export function buildMetadata(input: BuildMetadataInput = {}): Metadata {
           url: "/images/hero-salon.jpg",
           width: 1600,
           height: 900,
-          alt: siteContent.brand.name,
+          alt: content.brand.name,
         },
       ],
     },
@@ -51,21 +61,22 @@ export function buildMetadata(input: BuildMetadataInput = {}): Metadata {
 }
 
 export function getOrganizationJsonLd() {
-  const sameAs = [siteContent.social.instagram, siteContent.social.tiktok].filter(Boolean)
+  const content = getSiteContent("tr")
+  const sameAs = [content.social.instagram, content.social.tiktok].filter(Boolean)
   const canonicalSiteUrl = getSiteUrlString()
 
   return {
     "@context": "https://schema.org",
     "@type": "HairSalon",
-    name: siteContent.brand.name,
+    name: content.brand.name,
     url: canonicalSiteUrl,
     image: `${canonicalSiteUrl}/images/hero-salon.jpg`,
-    telephone: siteContent.contact.phoneDisplay,
-    email: siteContent.contact.email,
+    telephone: content.contact.phoneDisplay,
+    email: content.contact.email,
     address: {
       "@type": "PostalAddress",
-      streetAddress: siteContent.contact.address,
-      addressLocality: siteContent.contact.city,
+      streetAddress: content.contact.address,
+      addressLocality: content.contact.city,
       addressCountry: "TR",
     },
     openingHoursSpecification: [

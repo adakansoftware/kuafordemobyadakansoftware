@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useTransition } from "react"
+import { useLocale, useTranslations } from "next-intl"
 import { CalendarDays, CheckCircle2, Clock, LoaderCircle, Mail, Phone, User } from "lucide-react"
 import { submitBookingAction } from "@/app/randevu/actions"
 import {
@@ -12,8 +13,9 @@ import {
   type BookingFormDraft,
   validateBookingForm,
 } from "@/lib/booking"
+import { getSiteContent } from "@/lib/content"
+import { normalizeLocale } from "@/lib/i18n/validation"
 import type { PublicFormChallenge } from "@/lib/request-security"
-import { siteContent } from "@/lib/site-content"
 import { cn } from "@/lib/utils"
 
 type ConfirmationState = {
@@ -41,7 +43,7 @@ type AvailabilityResponse = {
 
 export function BookingForm({
   securityChallenge,
-  services = siteContent.services,
+  services,
 }: {
   securityChallenge: PublicFormChallenge
   services?: Array<{
@@ -50,9 +52,12 @@ export function BookingForm({
     teaser: string
   }>
 }) {
-  const availableServices = services.length
+  const locale = normalizeLocale(useLocale())
+  const t = useTranslations("bookingForm")
+  const content = getSiteContent(locale)
+  const availableServices = services?.length
     ? services
-    : siteContent.services.map((service) => ({
+    : content.services.map((service) => ({
         slug: service.slug,
         title: service.title,
         teaser: service.teaser,
@@ -124,7 +129,7 @@ export function BookingForm({
 
         if (!response.ok || !payload.success || !payload.data) {
           setAvailability(null)
-          setAvailabilityMessage(payload.message ?? "Uygunluk bilgisi şu anda alınamıyor.")
+          setAvailabilityMessage(payload.message ?? t("availabilityUnavailable"))
           return
         }
 
@@ -136,13 +141,13 @@ export function BookingForm({
           setFormData((prev) => ({ ...prev, time: "" }))
           setErrors((prev) => ({
             ...prev,
-            time: "Seçtiğiniz saat artık uygun görünmüyor. Lütfen listedeki başka bir saat seçin.",
+            time: t("slotNoLongerAvailable"),
           }))
         }
       } catch {
         if (!cancelled) {
           setAvailability(null)
-          setAvailabilityMessage("Uygunluk bilgisi alınırken bağlantı sorunu oluştu.")
+          setAvailabilityMessage(t("availabilityConnectionError"))
         }
       } finally {
         if (!cancelled) {
@@ -156,7 +161,7 @@ export function BookingForm({
     return () => {
       cancelled = true
     }
-  }, [formData.time, normalizedSelectedDate])
+  }, [formData.time, normalizedSelectedDate, t])
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -167,7 +172,7 @@ export function BookingForm({
       date: normalizedSelectedDate,
     }
 
-    const result = validateBookingForm(payload)
+    const result = validateBookingForm(payload, locale)
 
     if (!result.success) {
       setErrors(result.errors)
@@ -179,7 +184,7 @@ export function BookingForm({
     if (payload.date && selectedSlot && !selectedSlot.isAvailable) {
       setErrors((prev) => ({
         ...prev,
-        time: "Bu saat dolu görünüyor. Lütfen uygun bir saat seçin.",
+        time: t("slotFull"),
       }))
       return
     }
@@ -234,28 +239,27 @@ export function BookingForm({
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
           <CheckCircle2 className="h-8 w-8 text-accent" />
         </div>
-        <h3 className="mt-6 font-serif text-2xl font-bold text-foreground">Randevu talebiniz alındı</h3>
+        <h3 className="mt-6 font-serif text-2xl font-bold text-foreground">{t("confirmationTitle")}</h3>
         <p className="mt-3 max-w-md text-base leading-relaxed text-muted-foreground">
-          Sayın <span className="font-medium text-foreground">{confirmation?.name}</span>, talebiniz başarıyla
-          kaydedildi. Ekibimiz planlamayı teyit etmek için en kısa sürede sizinle iletişime geçecek.
+          {t("confirmationBody", { name: confirmation?.name ?? "" })}
         </p>
         {formMessage ? <p className="mt-2 text-sm text-accent">{formMessage}</p> : null}
         <div className="mt-6 rounded-[1.5rem] bg-secondary p-4">
           <div className="grid gap-2 text-sm">
             <p>
-              <span className="text-muted-foreground">Hizmet:</span>{" "}
+              <span className="text-muted-foreground">{t("service")}</span>{" "}
               <span className="font-medium text-foreground">{confirmation?.serviceTitle}</span>
             </p>
             <p>
-              <span className="text-muted-foreground">Tarih:</span>{" "}
+              <span className="text-muted-foreground">{t("date")}</span>{" "}
               <span className="font-medium text-foreground">{confirmation?.date}</span>
             </p>
             <p>
-              <span className="text-muted-foreground">Saat:</span>{" "}
+              <span className="text-muted-foreground">{t("time")}</span>{" "}
               <span className="font-medium text-foreground">{confirmation?.time}</span>
             </p>
             <p>
-              <span className="text-muted-foreground">Talep No:</span>{" "}
+              <span className="text-muted-foreground">{t("requestNo")}</span>{" "}
               <span className="font-medium text-foreground">{confirmation?.bookingId}</span>
             </p>
           </div>
@@ -284,7 +288,7 @@ export function BookingForm({
           }}
           className="mt-8 rounded-full bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-primary-foreground transition-all duration-200 hover:opacity-90"
         >
-          Yeni talep oluştur
+          {t("newRequest")}
         </button>
       </div>
     )
@@ -294,8 +298,8 @@ export function BookingForm({
     <form onSubmit={handleSubmit} className="rounded-[2rem] border border-border bg-card p-8 shadow-sm md:p-10">
       <div className="grid gap-6">
         <div className="space-y-2">
-          <h2 className="font-serif text-2xl font-bold text-foreground">{siteContent.booking.introTitle}</h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">{siteContent.booking.introDescription}</p>
+          <h2 className="font-serif text-2xl font-bold text-foreground">{content.booking.introTitle}</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">{content.booking.introDescription}</p>
         </div>
 
         <input
@@ -311,7 +315,7 @@ export function BookingForm({
 
         <div>
           <label htmlFor="service" className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-            <CalendarDays className="h-4 w-4 text-accent" /> Hizmet seçimi
+            <CalendarDays className="h-4 w-4 text-accent" /> {t("serviceLabel")}
           </label>
           <select
             id="service"
@@ -334,7 +338,7 @@ export function BookingForm({
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
             <label htmlFor="date" className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-              <CalendarDays className="h-4 w-4 text-accent" /> Tarih seçimi
+              <CalendarDays className="h-4 w-4 text-accent" /> {t("dateLabel")}
             </label>
             <input
               type="date"
@@ -350,7 +354,7 @@ export function BookingForm({
           </div>
           <div>
             <label htmlFor="time" className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-              <Clock className="h-4 w-4 text-accent" /> Saat seçimi
+              <Clock className="h-4 w-4 text-accent" /> {t("timeLabel")}
             </label>
             <select
               id="time"
@@ -362,20 +366,20 @@ export function BookingForm({
               className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
             >
               <option value="" disabled>
-                {!normalizedSelectedDate ? "Önce tarih seçin" : availabilityLoading ? "Uygunluk yükleniyor" : "Saat seçin"}
+                {!normalizedSelectedDate ? t("selectDateFirst") : availabilityLoading ? t("loadingAvailability") : t("selectTime")}
               </option>
               {(availability?.slots ?? bookingTimeSlots.map((time) => ({ time, isAvailable: true, available: 1 }))).map(
                 (slot) => (
                   <option key={slot.time} value={slot.time} disabled={!slot.isAvailable}>
                     {slot.time}
-                    {slot.isAvailable ? (slot.available <= 1 ? " • Son uygunluk" : "") : " • Dolu"}
+                    {slot.isAvailable ? (slot.available <= 1 ? t("lastAvailability") : "") : t("full")}
                   </option>
                 )
               )}
             </select>
             {availabilityLoading ? (
               <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Uygun saatler güncelleniyor.
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> {t("updatingSlots")}
               </p>
             ) : null}
             {availabilityMessage ? <p className="mt-2 text-xs text-muted-foreground">{availabilityMessage}</p> : null}
@@ -385,17 +389,20 @@ export function BookingForm({
 
         {availability && normalizedSelectedDate ? (
           <div className="rounded-[1.5rem] border border-border/80 bg-secondary/50 p-4 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">{normalizedSelectedDate} için canlı uygunluk özeti</p>
+            <p className="font-medium text-foreground">{t("availabilitySummaryTitle", { date: normalizedSelectedDate })}</p>
             <p className="mt-1">
-              Müsait slot sayısı: {availability.slots.filter((slot) => slot.isAvailable).length} / {availability.slots.length}
+              {t("availableSlots", {
+                available: availability.slots.filter((slot) => slot.isAvailable).length,
+                total: availability.slots.length,
+              })}
             </p>
-            <p className="mt-1">Ekip kapasitesi: aynı anda yaklaşık {availability.capacity} aktif randevu.</p>
+            <p className="mt-1">{t("teamCapacity", { capacity: availability.capacity })}</p>
           </div>
         ) : null}
 
         <div>
           <label htmlFor="name" className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-            <User className="h-4 w-4 text-accent" /> Ad Soyad
+            <User className="h-4 w-4 text-accent" /> {t("nameLabel")}
           </label>
           <input
             type="text"
@@ -406,7 +413,7 @@ export function BookingForm({
             onChange={handleChange}
             required
             maxLength={80}
-            placeholder="Adınızı ve soyadınızı girin"
+            placeholder={t("namePlaceholder")}
             className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
           />
           {errors.name ? <p className="mt-2 text-sm text-destructive">{errors.name}</p> : null}
@@ -415,7 +422,7 @@ export function BookingForm({
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
             <label htmlFor="phone" className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-              <Phone className="h-4 w-4 text-accent" /> Telefon
+              <Phone className="h-4 w-4 text-accent" /> {t("phoneLabel")}
             </label>
             <input
               type="tel"
@@ -427,14 +434,14 @@ export function BookingForm({
               onChange={handleChange}
               required
               maxLength={20}
-              placeholder="05XX XXX XX XX"
+              placeholder={t("phonePlaceholder")}
               className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
             />
             {errors.phone ? <p className="mt-2 text-sm text-destructive">{errors.phone}</p> : null}
           </div>
           <div>
             <label htmlFor="email" className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-              <Mail className="h-4 w-4 text-accent" /> E-posta
+              <Mail className="h-4 w-4 text-accent" /> {t("emailLabel")}
             </label>
             <input
               type="email"
@@ -444,7 +451,7 @@ export function BookingForm({
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="ornek@email.com"
+              placeholder={t("emailPlaceholder")}
               className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
             />
             {errors.email ? <p className="mt-2 text-sm text-destructive">{errors.email}</p> : null}
@@ -459,7 +466,7 @@ export function BookingForm({
             (isPending || availabilityLoading) && "cursor-not-allowed opacity-70"
           )}
         >
-          {isPending ? "Talep kaydediliyor..." : "Randevu talebi oluştur"}
+          {isPending ? t("submitting") : t("submit")}
         </button>
 
         {formMessage && !submitted ? (

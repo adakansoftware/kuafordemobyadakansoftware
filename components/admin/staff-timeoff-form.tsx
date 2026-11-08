@@ -1,7 +1,7 @@
 "use client"
 
 import { useActionState } from "react"
-import { type StaffTimeOffActionState, createStaffTimeOffAction } from "@/app/admin/actions"
+import { type StaffTimeOffActionState, createStaffTimeOffAction } from "@/app/(admin)/admin/actions"
 
 const initialState: StaffTimeOffActionState = {
   success: false,

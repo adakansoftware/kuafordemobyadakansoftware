@@ -2,7 +2,7 @@
 
 import { PaymentMethod } from "@prisma/client"
 import { useActionState } from "react"
-import { type ProductSaleActionState, recordProductSaleAction } from "@/app/admin/actions"
+import { type ProductSaleActionState, recordProductSaleAction } from "@/app/(admin)/admin/actions"
 import { getPaymentMethodOptions } from "@/lib/salon-ops"
 
 const initialState: ProductSaleActionState = {

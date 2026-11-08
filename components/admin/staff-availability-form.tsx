@@ -1,7 +1,7 @@
 "use client"
 
 import { useActionState } from "react"
-import { type StaffAvailabilityActionState, updateStaffAvailabilityAction } from "@/app/admin/actions"
+import { type StaffAvailabilityActionState, updateStaffAvailabilityAction } from "@/app/(admin)/admin/actions"
 
 const initialState: StaffAvailabilityActionState = {
   success: false,

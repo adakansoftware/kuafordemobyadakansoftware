@@ -375,21 +375,29 @@ export async function getCustomerPortalSessionSnapshot() {
   const requestHeaders = await headers()
   const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
   const cookieStore = await cookies()
+  const staleSessionValue = cookieStore.get(CUSTOMER_PORTAL_SESSION_COOKIE_NAME)?.value
   const customerSession = await resolveCustomerPortalSession({
-    value: cookieStore.get(CUSTOMER_PORTAL_SESSION_COOKIE_NAME)?.value,
+    value: staleSessionValue,
     fingerprint,
   })
   const customerId = customerSession?.customerId
 
   if (!customerId) {
-    cookieStore.set(CUSTOMER_PORTAL_SESSION_COOKIE_NAME, "", {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/musteri",
-      secure: process.env.NODE_ENV === "production",
-      expires: new Date(0),
-      maxAge: 0,
-    })
+    if (staleSessionValue) {
+      try {
+        cookieStore.set(CUSTOMER_PORTAL_SESSION_COOKIE_NAME, "", {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/musteri",
+          secure: process.env.NODE_ENV === "production",
+          expires: new Date(0),
+          maxAge: 0,
+        })
+      } catch {
+        // Cookie clearing is only possible in a Server Action or Route Handler.
+        // Stale cookies fall through here; login/logout actions clear them.
+      }
+    }
     return null
   }
 

@@ -10,5 +10,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified,
     changeFrequency: route === "/" ? "weekly" : "monthly",
     priority: route === "/" ? 1 : 0.7,
+    alternates: {
+      languages: {
+        tr: new URL(route, siteUrl).toString(),
+        en: new URL(`/en${route}`, siteUrl).toString(),
+      },
+    },
   }))
 }

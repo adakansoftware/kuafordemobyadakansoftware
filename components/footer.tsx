@@ -1,7 +1,10 @@
 import type { ReactNode } from "react"
-import Link from "next/link"
+import NextLink from "next/link"
 import { Clock, Instagram, Mail, MapPin, Phone, Scissors } from "lucide-react"
-import { siteContent } from "@/lib/site-content"
+import { getSiteContent } from "@/lib/content"
+import { normalizeLocale } from "@/lib/i18n/validation"
+import { getLocale, getTranslations } from "next-intl/server"
+import { Link } from "@/i18n/navigation"
 
 function TikTokIcon({ className }: { className?: string }) {
   return (
@@ -11,20 +14,23 @@ function TikTokIcon({ className }: { className?: string }) {
   )
 }
 
-export function Footer() {
+export async function Footer() {
   const designerInstagramUrl = "https://www.instagram.com/adakansoftware/"
+  const locale = normalizeLocale(await getLocale())
+  const t = await getTranslations({ locale, namespace: "common" })
+  const content = getSiteContent(locale)
 
   const socialLinks = [
-    siteContent.social.instagram
+    content.social.instagram
       ? {
-          href: siteContent.social.instagram,
+          href: content.social.instagram,
           label: "Instagram",
           icon: <Instagram className="h-4 w-4" />,
         }
       : null,
-    siteContent.social.tiktok
+    content.social.tiktok
       ? {
-          href: siteContent.social.tiktok,
+          href: content.social.tiktok,
           label: "TikTok",
           icon: <TikTokIcon className="h-4 w-4" />,
         }
@@ -38,21 +44,21 @@ export function Footer() {
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-accent">Adakan Hair Studio</p>
             <h2 className="mt-3 max-w-xl font-serif text-3xl font-bold text-primary-foreground">
-              Saç bakım ve tasarım sürecinizi sakin, planlı ve güven veren bir deneyime dönüştürelim.
+              {content.pages.footer.headline}
             </h2>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
             <a
-              href={siteContent.contact.phoneHref}
+              href={content.contact.phoneHref}
               className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold uppercase tracking-[0.14em] text-accent-foreground transition-opacity hover:opacity-90"
             >
-              {siteContent.cta.secondaryLabel}
+              {content.cta.secondaryLabel}
             </a>
             <Link
               href="/randevu"
               className="rounded-full border border-primary-foreground/20 px-6 py-3 text-center text-sm font-semibold uppercase tracking-[0.14em] text-primary-foreground transition-colors hover:bg-primary-foreground/10"
             >
-              {siteContent.cta.primaryLabel}
+              {content.cta.primaryLabel}
             </Link>
           </div>
         </div>
@@ -63,9 +69,9 @@ export function Footer() {
               <span className="flex h-11 w-11 items-center justify-center rounded-full border border-primary-foreground/15 bg-primary-foreground/10">
                 <Scissors className="h-5 w-5 text-accent" />
               </span>
-              <span className="font-serif text-xl font-bold tracking-[0.18em]">{siteContent.brand.shortName}</span>
+              <span className="font-serif text-xl font-bold tracking-[0.18em]">{content.brand.shortName}</span>
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-primary-foreground/70">{siteContent.brand.heroDescription}</p>
+            <p className="mt-4 text-sm leading-relaxed text-primary-foreground/70">{content.brand.heroDescription}</p>
             {socialLinks.length ? (
               <div className="mt-6 flex gap-4">
                 {socialLinks.map((item) => (
@@ -85,40 +91,48 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em]">Sayfalar</h3>
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em]">{t("pages")}</h3>
             <ul className="space-y-3">
-              {siteContent.navigation.map((link) => (
+              {content.navigation.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="text-sm text-primary-foreground/70 transition-colors hover:text-accent">
                     {link.label}
                   </Link>
                 </li>
               ))}
+              <li>
+                <NextLink
+                  href={locale === "en" ? "/" : "/en"}
+                  className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
+                >
+                  {locale === "en" ? "TR" : "EN"}
+                </NextLink>
+              </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em]">İletişim</h3>
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em]">{t("contact")}</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
                 <Phone className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                <span className="text-sm text-primary-foreground/70">{siteContent.contact.phoneDisplay}</span>
+                <span className="text-sm text-primary-foreground/70">{content.contact.phoneDisplay}</span>
               </li>
               <li className="flex items-start gap-3">
                 <Mail className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                <span className="text-sm text-primary-foreground/70">{siteContent.contact.email}</span>
+                <span className="text-sm text-primary-foreground/70">{content.contact.email}</span>
               </li>
               <li className="flex items-start gap-3">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                <span className="text-sm text-primary-foreground/70">{siteContent.contact.address}</span>
+                <span className="text-sm text-primary-foreground/70">{content.contact.address}</span>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em]">Çalışma Saatleri</h3>
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em]">{t("workingHours")}</h3>
             <ul className="space-y-3">
-              {siteContent.contact.hours.map((item) => (
+              {content.contact.hours.map((item) => (
                 <li key={item.label} className="flex items-start gap-3">
                   <Clock className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                   <div className="text-sm text-primary-foreground/70">
@@ -133,21 +147,21 @@ export function Footer() {
 
         <div className="mt-12 overflow-hidden rounded-[1.75rem] border border-primary-foreground/10">
           <iframe
-            src={siteContent.contact.mapEmbed}
+            src={content.contact.mapEmbed}
             width="100%"
             height="250"
             style={{ border: 0 }}
             allowFullScreen
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
-            title={siteContent.contact.mapTitle}
+            title={content.contact.mapTitle}
           />
         </div>
 
         <div className="mt-12 border-t border-primary-foreground/10 pt-8">
           <div className="flex flex-col items-center justify-center gap-2 text-center md:items-end md:text-right">
             <p className="text-sm text-primary-foreground/50">
-              © {new Date().getFullYear()} {siteContent.brand.name}. Tüm hakları saklıdır.
+              © {new Date().getFullYear()} {content.brand.name}. {t("allRightsReserved")}
             </p>
             <p className="text-[11px] font-light tracking-[0.12em] text-primary-foreground/45">
               Design by{" "}

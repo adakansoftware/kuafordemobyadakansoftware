@@ -1,7 +1,7 @@
 "use client"
 
 import { useActionState } from "react"
-import { type CustomerNotesActionState, updateCustomerNotesAction } from "@/app/admin/actions"
+import { type CustomerNotesActionState, updateCustomerNotesAction } from "@/app/(admin)/admin/actions"
 
 const initialState: CustomerNotesActionState = {
   success: false,

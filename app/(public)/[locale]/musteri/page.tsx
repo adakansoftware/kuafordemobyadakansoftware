@@ -1,8 +1,22 @@
+import { notFound } from "next/navigation"
+import { setRequestLocale } from "next-intl/server"
 import { CustomerPortalForm } from "@/components/customer-portal-form"
 import { customerPortalLogoutAction, getCustomerPortalSessionSnapshot, requestCancellationAction } from "@/app/musteri/actions"
 import { createPublicFormChallenge } from "@/lib/request-security"
+import { routing } from "@/i18n/routing"
 
-export default async function CustomerPortalPage() {
+export default async function CustomerPortalPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
+
+  if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
+    notFound()
+  }
+
+  setRequestLocale(locale)
   const snapshot = await getCustomerPortalSessionSnapshot()
   const securityChallenge = createPublicFormChallenge("customer-portal-request")
 

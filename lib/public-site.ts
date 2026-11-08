@@ -1,119 +1,114 @@
-import { siteContent } from "./site-content.ts"
+import type { Locale } from "./i18n/validation.ts"
+import { getSiteContent } from "./content/index.ts"
 
-export function getHomePageViewModel() {
+export function getHomePageViewModel(locale: Locale = "tr") {
+  const content = getSiteContent(locale)
+
   return {
     hero: {
-      eyebrow: siteContent.brand.heroEyebrow,
-      title: siteContent.brand.heroTitle,
-      description: siteContent.brand.heroDescription,
-      highlights: [...siteContent.brand.heroHighlights],
-      tagline: siteContent.brand.tagline,
-      primaryCtaLabel: "Randevu Olustur",
+      eyebrow: content.brand.heroEyebrow,
+      title: content.brand.heroTitle,
+      description: content.brand.heroDescription,
+      highlights: [...content.brand.heroHighlights],
+      tagline: content.brand.tagline,
+      primaryCtaLabel: content.pages.home.hero.primaryCtaLabel,
       primaryCtaHref: "/randevu",
-      secondaryCtaLabel: "Hizmetleri Incele",
+      secondaryCtaLabel: content.pages.home.hero.secondaryCtaLabel,
       secondaryCtaHref: "/hizmetler",
-      noteTitle: "Salon Notu",
-      noteDescription:
-        "Ilk temastan son dokunusa kadar net iletisim, duzenli operasyon ve profesyonel sac tasarimi odagini birlikte koruyoruz.",
-      metrics: [
-        { value: "09:00 - 21:00", label: "Hafta ici ve cumartesi calisma saatleri" },
-        { value: "4.9/5", label: "Ortalama misafir degerlendirmesi" },
-        { value: "15 kisilik", label: "Alaninda uzman ekip yapilanmasi" },
-      ],
+      noteTitle: content.pages.home.hero.noteTitle,
+      noteDescription: content.pages.home.hero.noteDescription,
+      metrics: content.pages.home.hero.metrics.map((metric) => ({ ...metric })),
     },
-    stats: [...siteContent.stats],
+    stats: [...content.stats],
     intro: {
-      eyebrow: "Marka Hakkinda",
-      title: "Sac tasarimini guvenli surec ve olculu estetikle bulusturuyoruz",
-      lead: siteContent.brand.aboutLead,
-      description: siteContent.brand.aboutDescription,
-      highlights: [
-        {
-          title: "Kisiye ozel",
-          description: "Yuz hatti, sac yapisi ve kullanim aliskanligi birlikte degerlendirilir.",
-        },
-        {
-          title: "Premium",
-          description: "Urun secimi, uygulama disiplini ve misafir iletisimi ayni cizgide ilerler.",
-        },
-      ],
+      eyebrow: content.pages.home.intro.eyebrow,
+      title: content.pages.home.intro.title,
+      lead: content.brand.aboutLead,
+      description: content.brand.aboutDescription,
+      highlights: content.pages.home.intro.highlights.map((highlight) => ({ ...highlight })),
     },
     reasons: {
-      eyebrow: "Farkimiz",
-      title: "Neden Adakan Hair Studio?",
-      description: "Hizmet kalitesini yalnizca sonucla degil, surec disiplini ve iletisim guveniyle birlikte ele aliyoruz.",
-      items: [...siteContent.reasons],
+      eyebrow: content.pages.home.reasons.eyebrow,
+      title: content.pages.home.reasons.title,
+      description: content.pages.home.reasons.description,
+      items: [...content.reasons],
     },
     featuredServices: {
-      eyebrow: "Hizmetlerimiz",
-      title: "En cok talep goren hizmetler",
-      description: "Salon ici en sik tercih edilen uygulamalari, net fiyat baslangiclari ve kisa icerikleriyle inceleyin.",
-      items: siteContent.services.slice(0, 3),
+      eyebrow: content.pages.home.featuredServices.eyebrow,
+      title: content.pages.home.featuredServices.title,
+      description: content.pages.home.featuredServices.description,
+      items: content.services.slice(0, 3).map((service) => ({ ...service })),
       allServicesHref: "/hizmetler",
-      allServicesLabel: "Tum hizmetleri goruntule",
+      allServicesLabel: content.pages.home.featuredServices.allServicesLabel,
       bookingHref: "/randevu",
-      bookingLabel: "Bu hizmet icin talep olustur",
+      bookingLabel: content.pages.home.featuredServices.bookingLabel,
     },
     gallery: {
-      eyebrow: "Galeri",
-      title: "Oncesi ve sonrasi",
-      description: "Uygulama disiplinimizi ve elde edilen sonuclari gorsel orneklerle inceleyin.",
-      items: [...siteContent.gallery],
+      eyebrow: content.pages.home.gallery.eyebrow,
+      title: content.pages.home.gallery.title,
+      description: content.pages.home.gallery.description,
+      items: [...content.gallery],
     },
     testimonials: {
-      eyebrow: "Misafir Yorumlari",
-      title: "Misafirlerimiz deneyimi nasil anlatiyor?",
-      items: [...siteContent.testimonials],
+      eyebrow: content.pages.home.testimonials.eyebrow,
+      title: content.pages.home.testimonials.title,
+      items: [...content.testimonials],
     },
     cta: {
-      eyebrow: siteContent.cta.eyebrow,
-      title: siteContent.cta.title,
-      description: siteContent.cta.description,
-      primaryLabel: siteContent.cta.primaryLabel,
+      eyebrow: content.cta.eyebrow,
+      title: content.cta.title,
+      description: content.cta.description,
+      primaryLabel: content.cta.primaryLabel,
       primaryHref: "/randevu",
-      secondaryLabel: siteContent.cta.secondaryLabel,
-      secondaryHref: siteContent.contact.phoneHref,
+      secondaryLabel: content.cta.secondaryLabel,
+      secondaryHref: content.contact.phoneHref,
     },
   }
 }
 
-export function getBookingPageViewModel() {
+export function getBookingPageViewModel(locale: Locale = "tr") {
+  const content = getSiteContent(locale)
+
   return {
-    eyebrow: "Randevu",
-    title: "Online randevu olusturun",
-    description: siteContent.booking.introDescription,
-    contact: { ...siteContent.contact },
-    notes: [...siteContent.booking.notes],
-    trustPoints: [...siteContent.booking.trustPoints],
+    eyebrow: content.pages.booking.eyebrow,
+    title: content.pages.booking.title,
+    description: content.booking.introDescription,
+    contact: { ...content.contact },
+    notes: [...content.booking.notes],
+    trustPoints: [...content.booking.trustPoints],
   }
 }
 
-export function getServicesPageViewModel() {
+export function getServicesPageViewModel(locale: Locale = "tr") {
+  const content = getSiteContent(locale)
+
   return {
-    eyebrow: "Hizmetlerimiz",
-    title: "Premium sac bakim hizmetleri",
-    description: "Her uygulamayi sac yapiniza, kullanim aliskanliginiza ve hedef sonuca gore planliyoruz.",
-    services: [...siteContent.services],
+    eyebrow: content.pages.services.eyebrow,
+    title: content.pages.services.title,
+    description: content.pages.services.description,
+    services: [...content.services],
     bookingHref: "/randevu",
-    bookingLabel: "Bu hizmet icin randevu olustur",
+    bookingLabel: content.pages.services.bookingLabel,
   }
 }
 
-export function getAboutPageViewModel() {
+export function getAboutPageViewModel(locale: Locale = "tr") {
+  const content = getSiteContent(locale)
+
   return {
-    eyebrow: "Hakkimizda",
-    title: "Hikayemiz",
-    description: "Butik salon deneyimini teknik uzmanlik, sakin iletisim ve ozenli bakim anlayisiyla birlestiriyoruz.",
-    leadTitle: "Guzellige ozenli ve profesyonel bir yaklasim",
-    aboutLead: siteContent.brand.aboutLead,
-    aboutDescription: siteContent.brand.aboutDescription,
-    valuesEyebrow: "Degerlerimiz",
-    valuesTitle: "Temel degerlerimiz",
-    values: [...siteContent.values],
-    team: [...siteContent.team],
-    ctaTitle: "Ekibimizle tanismak ister misiniz?",
-    ctaDescription: "Ihtiyaciniza uygun hizmeti birlikte planlamak icin hemen randevu talebinizi olusturun.",
+    eyebrow: content.pages.about.eyebrow,
+    title: content.pages.about.title,
+    description: content.pages.about.description,
+    leadTitle: content.pages.about.leadTitle,
+    aboutLead: content.brand.aboutLead,
+    aboutDescription: content.brand.aboutDescription,
+    valuesEyebrow: content.pages.about.valuesEyebrow,
+    valuesTitle: content.pages.about.valuesTitle,
+    values: [...content.values],
+    team: [...content.team],
+    ctaTitle: content.pages.about.ctaTitle,
+    ctaDescription: content.pages.about.ctaDescription,
     ctaHref: "/randevu",
-    ctaLabel: "Randevu olustur",
+    ctaLabel: content.pages.about.ctaLabel,
   }
 }

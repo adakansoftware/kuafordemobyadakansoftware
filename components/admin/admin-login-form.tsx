@@ -1,7 +1,7 @@
 "use client"
 
 import { useActionState } from "react"
-import { adminLoginAction, type AdminLoginState } from "@/app/admin/login/actions"
+import { adminLoginAction, type AdminLoginState } from "@/app/(admin)/admin/login/actions"
 import type { PublicFormChallenge } from "@/lib/request-security"
 
 const initialState: AdminLoginState = {

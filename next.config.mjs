@@ -1,6 +1,8 @@
 import { fileURLToPath } from "node:url"
+import createNextIntlPlugin from "next-intl/plugin"
 
 const rootDir = fileURLToPath(new URL(".", import.meta.url))
+const withNextIntl = createNextIntlPlugin()
 
 function getSecurityHeaders() {
   return [
@@ -76,4 +78,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withNextIntl(nextConfig)

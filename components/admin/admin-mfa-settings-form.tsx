@@ -6,7 +6,7 @@ import {
   type AdminSessionControlActionState,
   configureAdminMfaAction,
   revokeAdminSessionsAction,
-} from "@/app/admin/actions"
+} from "@/app/(admin)/admin/actions"
 
 const initialState: AdminMfaActionState = {
   success: false,

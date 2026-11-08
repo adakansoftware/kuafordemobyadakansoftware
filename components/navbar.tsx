@@ -1,19 +1,21 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import NextLink from "next/link"
+import { useLocale, useTranslations } from "next-intl"
 import { Menu, Scissors, X } from "lucide-react"
-import { siteContent } from "@/lib/site-content"
+import { getSiteContent } from "@/lib/content"
+import { normalizeLocale } from "@/lib/i18n/validation"
 import { cn } from "@/lib/utils"
+import { Link, usePathname } from "@/i18n/navigation"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
-
-  const isHome = pathname === "/" || pathname === "/en"
-  const solid = scrolled || !isHome
+  const locale = normalizeLocale(useLocale())
+  const t = useTranslations("common")
+  const content = getSiteContent(locale)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +25,9 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  const isHome = pathname === "/"
+  const solid = scrolled || !isHome
 
   return (
     <header
@@ -39,15 +44,15 @@ export function Navbar() {
             <Scissors className="h-5 w-5 text-accent" />
           </span>
           <span className="flex flex-col">
-            <span className="font-serif text-xl font-bold tracking-[0.18em] text-foreground">{siteContent.brand.shortName}</span>
+            <span className="font-serif text-xl font-bold tracking-[0.18em] text-foreground">{content.brand.shortName}</span>
             <span className="hidden text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:block">
-              {siteContent.brand.heroEyebrow}
+              {content.brand.heroEyebrow}
             </span>
           </span>
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">
-          {siteContent.navigation.map((link) => (
+          {content.navigation.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -59,13 +64,19 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
+          <NextLink
+            href={locale === "en" ? "/" : "/en"}
+            className="rounded-full border border-border/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-foreground/70 transition-colors hover:border-accent hover:text-accent"
+          >
+            {locale === "en" ? "TR" : "EN"}
+          </NextLink>
         </div>
 
         <Link
           href="/randevu"
           className="hidden rounded-full bg-primary px-5 py-3 text-sm font-semibold tracking-[0.14em] text-primary-foreground shadow-[0_10px_24px_rgba(25,20,13,0.18)] transition-all duration-200 hover:-translate-y-0.5 hover:opacity-95 md:block"
         >
-          Randevu Oluştur
+          {t("bookNow")}
         </Link>
 
         <button
@@ -79,7 +90,7 @@ export function Navbar() {
 
       <div className={cn("overflow-hidden transition-all duration-300 md:hidden", isOpen ? "max-h-80" : "max-h-0")}>
         <div className="border-t border-border bg-background/95 px-6 py-4 backdrop-blur-md">
-          {siteContent.navigation.map((link) => (
+          {content.navigation.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -92,12 +103,19 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
+          <NextLink
+            href={locale === "en" ? "/" : "/en"}
+            onClick={() => setIsOpen(false)}
+            className="block py-3 text-sm font-medium tracking-[0.16em] uppercase text-foreground/70 transition-colors hover:text-accent"
+          >
+            {locale === "en" ? "TR" : "EN"}
+          </NextLink>
           <Link
             href="/randevu"
             onClick={() => setIsOpen(false)}
             className="mt-3 block w-full rounded-full bg-primary px-5 py-3 text-center text-sm font-semibold tracking-[0.14em] text-primary-foreground transition-all duration-200 hover:opacity-90"
           >
-            Randevu Oluştur
+            {t("bookNow")}
           </Link>
         </div>
       </div>

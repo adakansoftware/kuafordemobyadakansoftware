@@ -1,6 +1,7 @@
 "use server"
 
 import { headers } from "next/headers"
+import { getLocale } from "next-intl/server"
 import {
   getSubmitBookingRateLimitMessage,
   mapSubmitBookingCreateError,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/booking-action"
 import { AppointmentConflictError, createAppointmentFromWeb } from "@/lib/bookings-repository"
 import { validateBookingForm, type BookingFormDraft } from "@/lib/booking"
+import { bookingActionMessages, normalizeLocale } from "@/lib/i18n/validation"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
 import {
@@ -42,6 +44,8 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
   const requestId = await getCurrentRequestId()
   const ipAddress = await getRequestIpAddress()
   const requestHeaders = await headers()
+  const locale = normalizeLocale(await getLocale())
+  const messages = bookingActionMessages[locale]
   const requestFingerprint = buildRequestFingerprint(requestHeaders, {
     clientFingerprint: values.clientFingerprint?.slice(0, 120) ?? "",
     service: values.service,
@@ -54,7 +58,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
   if (blockState && blockState.resetAt > Date.now()) {
     return {
       success: false,
-      message: getSubmitBookingRateLimitMessage(),
+      message: getSubmitBookingRateLimitMessage(locale),
     }
   }
 
@@ -82,7 +86,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
     return {
       success: false,
-      message: "Talebiniz dogrulanamadi. Lutfen formu yeniden deneyin.",
+      message: messages.honeypot,
     }
   }
 
@@ -111,14 +115,14 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
     return {
       success: false,
-      message: "Talep dogrulamasi basarisiz oldu. Lutfen formu yenileyip tekrar deneyin.",
+      message: messages.challengeFailed,
     }
   }
 
   try {
     await verifyTrustedOrigin({ allowHostFallback: true })
   } catch (error) {
-    const securityMessage = mapSubmitBookingSecurityError(error)
+    const securityMessage = mapSubmitBookingSecurityError(error, locale)
 
     if (securityMessage) {
       logEvent({
@@ -161,11 +165,11 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
     return {
       success: false,
-      message: "Guvenlik dogrulamasi tamamlanamadi. Lutfen tekrar deneyin.",
+      message: messages.turnstileFailed,
     }
   }
 
-  const validation = validateBookingForm(values)
+  const validation = validateBookingForm(values, locale)
 
   if (!validation.success) {
     logEvent({
@@ -182,7 +186,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
     return {
       success: false,
-      message: "Lutfen formdaki alanlari kontrol edin.",
+      message: messages.checkFields,
       errors: validation.errors,
     }
   }
@@ -209,7 +213,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
     return {
       success: false,
-      message: getSubmitBookingRateLimitMessage(),
+      message: getSubmitBookingRateLimitMessage(locale),
     }
   }
 
@@ -265,7 +269,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
       date: booking.scheduledDate,
       time: booking.scheduledTime,
       name: booking.customer.name,
-      message: "Randevu talebiniz basariyla alindi.",
+      message: messages.success,
     }
   } catch (error) {
     if (error instanceof AppointmentConflictError) {
@@ -285,7 +289,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
       return {
         success: false,
-        message: mapSubmitBookingCreateError(error),
+        message: mapSubmitBookingCreateError(error, locale),
       }
     }
 
@@ -305,7 +309,7 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
 
     return {
       success: false,
-      message: mapSubmitBookingCreateError(error),
+      message: mapSubmitBookingCreateError(error, locale),
     }
   }
 }

@@ -1,0 +1,67 @@
+{
+  "common": {
+    "skipToContent": "Skip to content",
+    "bookNow": "Book an Appointment",
+    "pages": "Pages",
+    "contact": "Contact",
+    "workingHours": "Opening Hours",
+    "allRightsReserved": "All rights reserved.",
+    "phone": "Phone",
+    "address": "Address",
+    "hours": "Opening hours",
+    "contactInfo": "Contact details",
+    "bookingNotice": "Booking information",
+    "trustAndProcess": "Trust and process"
+  },
+  "localeToggle": {
+    "label": "TR",
+    "ariaLabel": "Türkçe'ye geç"
+  },
+  "bookingForm": {
+    "serviceLabel": "Service",
+    "dateLabel": "Date",
+    "timeLabel": "Time",
+    "nameLabel": "Full Name",
+    "phoneLabel": "Phone",
+    "emailLabel": "Email",
+    "namePlaceholder": "Enter your first and last name",
+    "phonePlaceholder": "05XX XXX XX XX",
+    "emailPlaceholder": "example@email.com",
+    "selectDateFirst": "Select a date first",
+    "loadingAvailability": "Loading availability",
+    "selectTime": "Select a time",
+    "lastAvailability": " • Last spot",
+    "full": " • Full",
+    "updatingSlots": "Updating available time slots.",
+    "availabilitySummaryTitle": "Live availability summary for {date}",
+    "availableSlots": "Available slots: {available} / {total}",
+    "teamCapacity": "Team capacity: approximately {capacity} active appointments at once.",
+    "availabilityUnavailable": "Availability information is currently unavailable.",
+    "availabilityConnectionError": "A connection problem occurred while fetching availability.",
+    "slotNoLongerAvailable": "The selected time no longer appears to be available. Please choose another time from the list.",
+    "slotFull": "This time slot looks full. Please select an available time.",
+    "submitting": "Submitting your request...",
+    "submit": "Create appointment request",
+    "confirmationTitle": "Your appointment request has been received",
+    "confirmationBody": "Dear {name}, your request has been saved successfully. Our team will contact you shortly to confirm the schedule.",
+    "service": "Service:",
+    "date": "Date:",
+    "time": "Time:",
+    "requestNo": "Request No:",
+    "newRequest": "Create a new request"
+  },
+  "errorPage": {
+    "eyebrow": "Unexpected Situation",
+    "title": "An unexpected problem occurred while loading the page",
+    "description": "A temporary system disruption may have occurred. You can try the page again or go directly to the booking screen.",
+    "retry": "Try Again",
+    "goToBooking": "Go to Booking Page"
+  },
+  "notFoundPage": {
+    "eyebrow": "404",
+    "title": "The page you are looking for was not found",
+    "description": "The link may have been updated or the page may no longer be in use. You can return to the home page or browse our services directly.",
+    "backHome": "Back to Home",
+    "browseServices": "Browse Services"
+  }
+}

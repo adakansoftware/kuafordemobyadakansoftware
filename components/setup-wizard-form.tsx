@@ -1,7 +1,7 @@
 "use client"
 
 import { useActionState } from "react"
-import { completeSetupWizardAction, type SetupWizardState } from "@/app/setup/actions"
+import { completeSetupWizardAction, type SetupWizardState } from "@/app/(setup)/setup/actions"
 import type { PublicFormChallenge } from "@/lib/request-security"
 
 const initialState: SetupWizardState = {

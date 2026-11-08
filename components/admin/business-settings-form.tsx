@@ -4,7 +4,7 @@ import { useActionState } from "react"
 import {
   type BusinessSettingsActionState,
   updateBusinessSettingsAction,
-} from "@/app/admin/actions"
+} from "@/app/(admin)/admin/actions"
 
 const initialState: BusinessSettingsActionState = {
   success: false,

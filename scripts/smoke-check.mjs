@@ -1,27 +1,27 @@
 import { readFile } from "node:fs/promises"
 
 const filesToCheck = [
-  "app/page.tsx",
-  "app/randevu/page.tsx",
+  "app/(public)/[locale]/page.tsx",
+  "app/(public)/[locale]/randevu/page.tsx",
   "app/randevu/actions.ts",
-  "app/hizmetler/page.tsx",
-  "app/hakkimizda/page.tsx",
-  "app/admin/page.tsx",
-  "app/admin/customers/[id]/page.tsx",
-  "app/admin/dashboard/page.tsx",
-  "app/admin/appointments/page.tsx",
-  "app/admin/customers/page.tsx",
-  "app/admin/staff/page.tsx",
-  "app/admin/services/page.tsx",
-  "app/admin/packages/page.tsx",
-  "app/admin/payments/page.tsx",
-  "app/admin/reports/page.tsx",
-  "app/admin/settings/page.tsx",
-  "app/admin/inventory/page.tsx",
+  "app/(public)/[locale]/hizmetler/page.tsx",
+  "app/(public)/[locale]/hakkimizda/page.tsx",
+  "app/(admin)/admin/page.tsx",
+  "app/(admin)/admin/customers/[id]/page.tsx",
+  "app/(admin)/admin/dashboard/page.tsx",
+  "app/(admin)/admin/appointments/page.tsx",
+  "app/(admin)/admin/customers/page.tsx",
+  "app/(admin)/admin/staff/page.tsx",
+  "app/(admin)/admin/services/page.tsx",
+  "app/(admin)/admin/packages/page.tsx",
+  "app/(admin)/admin/payments/page.tsx",
+  "app/(admin)/admin/reports/page.tsx",
+  "app/(admin)/admin/settings/page.tsx",
+  "app/(admin)/admin/inventory/page.tsx",
   "app/api/bookings/route.ts",
-  "app/musteri/page.tsx",
-  "app/setup/page.tsx",
-  "app/admin/actions.ts",
+  "app/(public)/[locale]/musteri/page.tsx",
+  "app/(setup)/setup/page.tsx",
+  "app/(admin)/admin/actions.ts",
   "components/admin/appointment-operations.tsx",
   "components/home/cta-section.tsx",
   "components/home/featured-services.tsx",
@@ -59,7 +59,7 @@ async function main() {
     new URL("../components/admin/appointment-operations.tsx", import.meta.url),
     "utf8"
   )
-  const adminPage = await readFile(new URL("../app/admin/page.tsx", import.meta.url), "utf8")
+  const adminPage = await readFile(new URL("../app/(admin)/admin/page.tsx", import.meta.url), "utf8")
 
   if (!adminOperations.includes("Odeme Alindi")) {
     throw new Error('Smoke check failed: "Odeme Alindi" aksiyonu bulunamadi -> components/admin/appointment-operations.tsx')
