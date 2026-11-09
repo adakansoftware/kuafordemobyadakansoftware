@@ -39,7 +39,7 @@ export {
 }
 
 export class AdminAccessError extends Error {
-  constructor(message = "Yonetim alanina erisim izni bulunamadi.") {
+  constructor(message = "Yönetim alanına erişim izni bulunamadı.") {
     super(message)
     this.name = "AdminAccessError"
   }
@@ -104,7 +104,7 @@ export async function requireAdminAccess(): Promise<AdminAccessContext> {
   const tenant = await getTenantContextBySlugOrDefault(tenantSlug)
 
   if (!isIpAllowed(ipAddress, allowlist)) {
-    throw new AdminAccessError("Bu IP adresi admin erisimi icin izinli degil.")
+    throw new AdminAccessError("Bu IP adresi admin erişimi için izinli değil.")
   }
 
   const existingSession = await resolveAdminSession()
@@ -164,7 +164,7 @@ export async function requireAdminAccess(): Promise<AdminAccessContext> {
   }
 
   if (!env.ADMIN_USERNAME?.trim() || !env.ADMIN_PASSWORD?.trim()) {
-    throw new AdminAccessError("Admin erisimi icin ortam degiskenleri eksik.")
+    throw new AdminAccessError("Admin erişimi için ortam değişkenleri eksik.")
   }
 
   if (!authorizeAdminRequest(requestHeaders.get("authorization"))) {

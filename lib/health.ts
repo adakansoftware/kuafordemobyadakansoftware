@@ -38,78 +38,78 @@ export function buildHealthSummary(options: {
     {
       key: "database",
       ok: options.databaseOk,
-      detail: options.databaseOk ? "Veritabani baglantisi saglikli." : "Veritabani baglantisi basarisiz.",
+      detail: options.databaseOk ? "Veritabanı bağlantısı sağlıklı." : "Veritabanı bağlantısı başarısız.",
     },
     {
       key: "environment",
       ok: options.envIssues.length === 0,
-      detail: options.envIssues[0] ?? "Ortam degiskenleri tamam.",
+      detail: options.envIssues[0] ?? "Ortam değişkenleri tamam.",
     },
     {
       key: "canonical_url",
       ok: options.hasCanonicalUrl,
-      detail: options.hasCanonicalUrl ? "Canonical site adresi tanimli." : "Canonical site adresi eksik.",
+      detail: options.hasCanonicalUrl ? "Canonical site adresi tanımlı." : "Canonical site adresi eksik.",
     },
     {
       key: "admin_auth",
       ok: options.adminConfigured,
       detail: options.adminConfigured
-        ? "Admin kimlik dogrulamasi yapilandirilmis."
-        : "Admin kimlik dogrulamasi eksik veya zayif.",
+        ? "Admin kimlik doğrulaması yapılandırılmış."
+        : "Admin kimlik doğrulaması eksik veya zayıf.",
     },
     {
       key: "security_secret",
       ok: options.securitySecretConfigured,
       detail: options.securitySecretConfigured
-        ? "Uygulama guvenlik sirri tanimli."
-        : "APP_SECURITY_SECRET eksik veya zayif.",
+        ? "Uygulama güvenlik sırrı tanımlı."
+        : "APP_SECURITY_SECRET eksik veya zayıf.",
     },
     {
       key: "health_token",
       ok: options.healthTokenConfigured,
       detail: options.healthTokenConfigured
-        ? "Health readiness token tanimli."
-        : "HEALTHCHECK_TOKEN tanimli degil veya zayif.",
+        ? "Health readiness token tanımlı."
+        : "HEALTHCHECK_TOKEN tanımlı değil veya zayıf.",
     },
     {
       key: "turnstile",
       ok: options.turnstileConfigured,
       detail: options.turnstileConfigured
-        ? "Turnstile bot dogrulamasi yapilandirilmis."
-        : "Turnstile devre disi.",
+        ? "Turnstile bot doğrulaması yapılandırılmış."
+        : "Turnstile devre dışı.",
     },
     {
       key: "admin_allowlist",
       ok: options.adminAllowlistConfigured,
       detail: options.adminAllowlistConfigured
-        ? "Admin IP allowlist tanimli."
-        : "Admin IP allowlist tanimli degil.",
+        ? "Admin IP allowlist tanımlı."
+        : "Admin IP allowlist tanımlı değil.",
     },
     {
       key: "healthcheck_allowlist",
       ok: options.healthcheckAllowlistConfigured,
       detail: options.healthcheckAllowlistConfigured
-        ? "Health readiness IP allowlist tanimli."
-        : "Health readiness IP allowlist tanimli degil.",
+        ? "Health readiness IP allowlist tanımlı."
+        : "Health readiness IP allowlist tanımlı değil.",
     },
     {
       key: "origin_hosts",
       ok: options.allowedHostsConfigured,
-      detail: options.allowedHostsConfigured ? "Izinli host listesi hazir." : "Izinli host listesi eksik.",
+      detail: options.allowedHostsConfigured ? "İzinli host listesi hazır." : "İzinli host listesi eksik.",
     },
     {
       key: "rate_limit_storage",
       ok: options.rateLimitStorageOk,
       detail: options.rateLimitStorageOk
-        ? "Rate-limit depolama tablosu hazir."
-        : "Rate-limit depolama tablosu eksik veya erisilemiyor.",
+        ? "Rate-limit depolama tablosu hazır."
+        : "Rate-limit depolama tablosu eksik veya erişilemiyor.",
     },
     {
       key: "audit_log_storage",
       ok: options.auditLogStorageOk,
       detail: options.auditLogStorageOk
-        ? "Audit log depolama tablosu hazir."
-        : "Audit log depolama tablosu eksik veya erisilemiyor.",
+        ? "Audit log depolama tablosu hazır."
+        : "Audit log depolama tablosu eksik veya erişilemiyor.",
     },
   ]
 

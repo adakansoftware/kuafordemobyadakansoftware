@@ -14,11 +14,11 @@ export function collectPreflightWarnings(env: Partial<AppEnv>, options: Prefligh
   const warnings: string[] = []
 
   if (!env.NEXT_PUBLIC_SITE_URL && !options.ci) {
-    warnings.push("NEXT_PUBLIC_SITE_URL tanimli degil.")
+    warnings.push("NEXT_PUBLIC_SITE_URL tanımlı değil.")
   }
 
   if ((!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD) && !options.ci) {
-    warnings.push("Admin kimlik bilgileri tam degil.")
+    warnings.push("Admin kimlik bilgileri tam değil.")
   }
 
   if (!options.ci) {
@@ -33,7 +33,7 @@ export function filterPreflightEnvIssues(issues: string[], options: PreflightOpt
     return issues
   }
 
-  return issues.filter((issue) => issue !== "DATABASE_URL tanimlanmalidir.")
+  return issues.filter((issue) => issue !== "DATABASE_URL tanımlanmalıdır.")
 }
 
 function collectPlaceholderWarnings(env: Partial<AppEnv>) {
@@ -48,11 +48,11 @@ function collectPlaceholderWarnings(env: Partial<AppEnv>) {
     databaseUrl.includes("/db_name") ||
     databaseUrl === "postgresql://demo"
   ) {
-    warnings.push("DATABASE_URL ornek veya placeholder gorunuyor.")
+    warnings.push("DATABASE_URL örnek veya placeholder görünüyor.")
   }
 
   if (siteUrl.includes("example.com")) {
-    warnings.push("NEXT_PUBLIC_SITE_URL ornek bir alan adina isaret ediyor.")
+    warnings.push("NEXT_PUBLIC_SITE_URL örnek bir alan adına işaret ediyor.")
   }
 
   if (
@@ -60,11 +60,11 @@ function collectPlaceholderWarnings(env: Partial<AppEnv>) {
     adminPassword === "changeme123456" ||
     adminPassword === "password123456"
   ) {
-    warnings.push("ADMIN_PASSWORD varsayilan veya zayif bir deger gibi gorunuyor.")
+    warnings.push("ADMIN_PASSWORD varsayılan veya zayıf bir değer gibi görünüyor.")
   }
 
   if (allowedOriginHosts.includes("example.com")) {
-    warnings.push("ALLOWED_ORIGIN_HOSTS ornek host degerleri iceriyor.")
+    warnings.push("ALLOWED_ORIGIN_HOSTS örnek host değerleri içeriyor.")
   }
 
   return warnings

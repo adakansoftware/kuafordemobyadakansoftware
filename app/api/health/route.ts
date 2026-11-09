@@ -111,7 +111,7 @@ async function handleHealthRequest(scope: HealthScope, headers: Headers) {
           scope,
           status: "error",
           timestamp: new Date().toISOString(),
-          message: "Readiness endpoint erisimi gecici olarak engellendi.",
+          message: "Readiness endpoint erişimi geçici olarak engellendi.",
         },
         {
           status: 429,

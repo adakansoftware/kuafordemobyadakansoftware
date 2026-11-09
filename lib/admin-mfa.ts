@@ -183,7 +183,7 @@ export function decryptAdminMfaSecret(ciphertext: string) {
   const [ivValue, tagValue, payloadValue] = ciphertext.split(".")
 
   if (!ivValue || !tagValue || !payloadValue) {
-    throw new Error("Kayitli MFA anahtari gecersiz.")
+    throw new Error("Kayıtlı MFA anahtarı geçersiz.")
   }
 
   const decipher = createDecipheriv(

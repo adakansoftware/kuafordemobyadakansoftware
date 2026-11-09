@@ -23,8 +23,8 @@ export type BookingValidationMessages = {
 }
 
 const trMessages: BookingValidationMessages = {
-  serviceRequired: "Lutfen bir hizmet secin.",
-  serviceInvalid: "Gecerli bir hizmet secin.",
+  serviceRequired: "Lütfen bir hizmet seçin.",
+  serviceInvalid: "Geçerli bir hizmet seçin.",
   dateRequired: "Lütfen bir tarih seçin.",
   dateInvalid: "Geçerli bir tarih seçin.",
   timeRequired: "Lütfen bir saat seçin.",
@@ -72,14 +72,14 @@ export type BookingActionMessages = {
 
 export const bookingActionMessages: Record<Locale, BookingActionMessages> = {
   tr: {
-    securityError: "Istek kaynagi dogrulanamadi. Sayfayi yenileyip yeniden deneyin.",
-    rateLimited: "Kisa sure icinde cok fazla talep gonderildi. Lutfen bir dakika sonra tekrar deneyin.",
-    createFailed: "Randevu kaydedilirken beklenmeyen bir sorun olustu.",
-    honeypot: "Talebiniz dogrulanamadi. Lutfen formu yeniden deneyin.",
-    challengeFailed: "Talep dogrulamasi basarisiz oldu. Lutfen formu yenileyip tekrar deneyin.",
-    turnstileFailed: "Guvenlik dogrulamasi tamamlanamadi. Lutfen tekrar deneyin.",
-    checkFields: "Lutfen formdaki alanlari kontrol edin.",
-    success: "Randevu talebiniz basariyla alindi.",
+    securityError: "İstek kaynağı doğrulanamadı. Sayfayı yenileyip yeniden deneyin.",
+    rateLimited: "Kısa süre içinde çok fazla talep gönderildi. Lütfen bir dakika sonra tekrar deneyin.",
+    createFailed: "Randevu kaydedilirken beklenmeyen bir sorun oluştu.",
+    honeypot: "Talebiniz doğrulanamadı. Lütfen formu yeniden deneyin.",
+    challengeFailed: "Talep doğrulaması başarısız oldu. Lütfen formu yenileyip tekrar deneyin.",
+    turnstileFailed: "Güvenlik doğrulaması tamamlanamadı. Lütfen tekrar deneyin.",
+    checkFields: "Lütfen formdaki alanları kontrol edin.",
+    success: "Randevu talebiniz başarıyla alındı.",
   },
   en: {
     securityError: "The request origin could not be verified. Refresh the page and try again.",

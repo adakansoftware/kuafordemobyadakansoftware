@@ -36,7 +36,7 @@ export default async function SetupPage() {
           <div className="rounded-3xl border border-border bg-card p-8 shadow-sm">
             <p className="text-sm font-medium text-foreground">Kurulum kilitli</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Aktif tenant kurulumu tamamlanmis gorunuyor. Guvenlik nedeniyle setup sihirbazi yeniden acik degil.
+              Aktif tenant kurulumu tamamlanmış görünüyor. Güvenlik nedeniyle setup sihirbazı yeniden açık değil.
             </p>
           </div>
         )}

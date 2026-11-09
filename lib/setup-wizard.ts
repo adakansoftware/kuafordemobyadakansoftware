@@ -53,8 +53,8 @@ export function buildSetupServices(value: string) {
     slug: `setup-service-${index + 1}-${normalizeSetupSlug(title)}`,
     title,
     shortTitle: title,
-    teaser: `${title} hizmeti kurulum sihirbazi ile olusturuldu.`,
-    description: `${title} hizmeti tenant kurulumu sirasinda otomatik tanimlandi.`,
+    teaser: `${title} hizmeti kurulum sihirbazı ile oluşturuldu.`,
+    description: `${title} hizmeti tenant kurulumu sırasında otomatik tanımlandı.`,
     durationMinutes: 60,
     priceFrom: 1000 + index * 250,
   }))

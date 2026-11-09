@@ -7,37 +7,37 @@ function timeToMinutes(value: string) {
 }
 
 export const paymentSchema = z.object({
-  appointmentId: z.string().trim().min(1, "Randevu kaydi bulunamadi."),
-  amount: z.coerce.number().int().positive("Odeme tutari sifirdan buyuk olmalidir."),
+  appointmentId: z.string().trim().min(1, "Randevu kaydı bulunamadı."),
+  amount: z.coerce.number().int().positive("Ödeme tutarı sıfırdan büyük olmalıdır."),
   method: z.nativeEnum(PaymentMethod, {
-    errorMap: () => ({ message: "Gecerli bir odeme yontemi secin." }),
+    errorMap: () => ({ message: "Geçerli bir ödeme yöntemi seçin." }),
   }),
-  note: z.string().trim().max(500, "Odeme notu en fazla 500 karakter olabilir.").optional().default(""),
+  note: z.string().trim().max(500, "Ödeme notu en fazla 500 karakter olabilir.").optional().default(""),
 })
 
 export const businessSettingsSchema = z.object({
-  businessName: z.string().trim().min(2, "Salon adi gereklidir."),
-  tagline: z.string().trim().min(2, "Kisa aciklama gereklidir."),
-  phone: z.string().trim().min(10, "Telefon bilgisi eksik gorunuyor."),
-  whatsappPhone: z.string().trim().min(10, "WhatsApp numarasi eksik gorunuyor."),
-  email: z.string().trim().email("Gecerli bir e-posta girin."),
+  businessName: z.string().trim().min(2, "Salon adı gereklidir."),
+  tagline: z.string().trim().min(2, "Kısa açıklama gereklidir."),
+  phone: z.string().trim().min(10, "Telefon bilgisi eksik görünüyor."),
+  whatsappPhone: z.string().trim().min(10, "WhatsApp numarası eksik görünüyor."),
+  email: z.string().trim().email("Geçerli bir e-posta girin."),
   address: z.string().trim().min(5, "Adres gereklidir."),
-  city: z.string().trim().min(2, "Sehir bilgisi gereklidir."),
-  currency: z.string().trim().min(3, "Para birimi gereklidir.").max(6, "Para birimi cok uzun."),
-  dailyCapacity: z.coerce.number().int().min(1, "Gunluk kapasite en az 1 olmalidir.").max(500, "Gunluk kapasite cok yuksek."),
-  workingHoursNote: z.string().trim().max(1000, "Calisma saatleri notu en fazla 1000 karakter olabilir.").optional().default(""),
+  city: z.string().trim().min(2, "Şehir bilgisi gereklidir."),
+  currency: z.string().trim().min(3, "Para birimi gereklidir.").max(6, "Para birimi çok uzun."),
+  dailyCapacity: z.coerce.number().int().min(1, "Günlük kapasite en az 1 olmalıdır.").max(500, "Günlük kapasite çok yüksek."),
+  workingHoursNote: z.string().trim().max(1000, "Çalışma saatleri notu en fazla 1000 karakter olabilir.").optional().default(""),
 })
 
 export const customerNotesSchema = z.object({
-  customerId: z.string().trim().min(1, "Musteri kaydi bulunamadi."),
-  notes: z.string().trim().max(1000, "Musteri notu en fazla 1000 karakter olabilir.").default(""),
+  customerId: z.string().trim().min(1, "Müşteri kaydı bulunamadı."),
+  notes: z.string().trim().max(1000, "Müşteri notu en fazla 1000 karakter olabilir.").default(""),
 })
 
 export const staffAvailabilitySchema = z.object({
-  staffId: z.string().trim().min(1, "Personel kaydi bulunamadi."),
+  staffId: z.string().trim().min(1, "Personel kaydı bulunamadı."),
   dayOfWeek: z.coerce.number().int().min(1).max(7),
-  startTime: z.string().trim().regex(/^\d{2}:\d{2}$/, "Baslangic saati gecersiz."),
-  endTime: z.string().trim().regex(/^\d{2}:\d{2}$/, "Bitis saati gecersiz."),
+  startTime: z.string().trim().regex(/^\d{2}:\d{2}$/, "Başlangıç saati geçersiz."),
+  endTime: z.string().trim().regex(/^\d{2}:\d{2}$/, "Bitiş saati geçersiz."),
   breakStartTime: z.string().trim().optional().default(""),
   breakEndTime: z.string().trim().optional().default(""),
 }).superRefine((value, context) => {
@@ -45,7 +45,7 @@ export const staffAvailabilitySchema = z.object({
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["endTime"],
-      message: "Bitis saati baslangic saatinden sonra olmalidir.",
+      message: "Bitiş saati başlangıç saatinden sonra olmalıdır.",
     })
   }
 
@@ -69,7 +69,7 @@ export const staffAvailabilitySchema = z.object({
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["breakStartTime"],
-      message: "Mola saatleri HH:MM formatinda olmalidir.",
+      message: "Mola saatleri HH:MM formatında olmalıdır.",
     })
     return
   }
@@ -83,7 +83,7 @@ export const staffAvailabilitySchema = z.object({
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["breakEndTime"],
-      message: "Mola bitisi mola baslangicindan sonra olmalidir.",
+      message: "Mola bitişi mola başlangıcından sonra olmalıdır.",
     })
   }
 
@@ -91,25 +91,25 @@ export const staffAvailabilitySchema = z.object({
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["breakStartTime"],
-      message: "Mola saatleri mesai araligi icinde kalmalidir.",
+      message: "Mola saatleri mesai aralığı içinde kalmalıdır.",
     })
   }
 })
 
 export const staffTimeOffSchema = z.object({
-  staffId: z.string().trim().min(1, "Personel kaydi bulunamadi."),
-  startDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Baslangic tarihi gecersiz."),
-  endDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Bitis tarihi gecersiz."),
+  staffId: z.string().trim().min(1, "Personel kaydı bulunamadı."),
+  startDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Başlangıç tarihi geçersiz."),
+  endDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Bitiş tarihi geçersiz."),
   isAllDay: z.union([z.literal("true"), z.literal("false"), z.boolean()]).optional().default("true"),
   startTime: z.string().trim().optional().default(""),
   endTime: z.string().trim().optional().default(""),
-  reason: z.string().trim().max(500, "Izin nedeni en fazla 500 karakter olabilir.").optional().default(""),
+  reason: z.string().trim().max(500, "İzin nedeni en fazla 500 karakter olabilir.").optional().default(""),
 }).superRefine((value, context) => {
   if (value.startDate > value.endDate) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["endDate"],
-      message: "Bitis tarihi baslangic tarihinden once olamaz.",
+      message: "Bitiş tarihi başlangıç tarihinden önce olamaz.",
     })
   }
 
@@ -125,7 +125,7 @@ export const staffTimeOffSchema = z.object({
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["startTime"],
-      message: "Saat bazli izin icin baslangic ve bitis saati birlikte girilmelidir.",
+      message: "Saat bazlı izin için başlangıç ve bitiş saati birlikte girilmelidir.",
     })
     return
   }
@@ -134,7 +134,7 @@ export const staffTimeOffSchema = z.object({
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["startTime"],
-      message: "Izin saatleri HH:MM formatinda olmalidir.",
+      message: "İzin saatleri HH:MM formatında olmalıdır.",
     })
     return
   }
@@ -143,25 +143,25 @@ export const staffTimeOffSchema = z.object({
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["endTime"],
-      message: "Izin bitis saati baslangic saatinden sonra olmalidir.",
+      message: "İzin bitiş saati başlangıç saatinden sonra olmalıdır.",
     })
   }
 })
 
 export const productSaleSchema = z.object({
-  productId: z.string().trim().min(1, "Urun secilmelidir."),
-  quantity: z.coerce.number().int().min(1, "Adet en az 1 olmalidir."),
+  productId: z.string().trim().min(1, "Ürün seçilmelidir."),
+  quantity: z.coerce.number().int().min(1, "Adet en az 1 olmalıdır."),
   customerId: z.string().trim().optional().default(""),
   staffId: z.string().trim().optional().default(""),
   method: z.nativeEnum(PaymentMethod, {
-    errorMap: () => ({ message: "Gecerli bir odeme yontemi secin." }),
+    errorMap: () => ({ message: "Geçerli bir ödeme yöntemi seçin." }),
   }),
-  note: z.string().trim().max(500, "Satis notu en fazla 500 karakter olabilir.").optional().default(""),
+  note: z.string().trim().max(500, "Satış notu en fazla 500 karakter olabilir.").optional().default(""),
 })
 
 export function mapAdminPaymentError(
   error: unknown,
-  messages: { unexpected: string } = { unexpected: "Odeme kaydi sirasinda beklenmeyen bir hata olustu." }
+  messages: { unexpected: string } = { unexpected: "Ödeme kaydı sırasında beklenmeyen bir hata oluştu." }
 ) {
   if (error instanceof Error && error.name === "AdminPaymentError") {
     return error.message
@@ -171,13 +171,13 @@ export function mapAdminPaymentError(
 }
 
 export function mapBusinessSettingsError(
-  messages: { unexpected: string } = { unexpected: "Isletme ayarlari guncellenirken beklenmeyen bir hata olustu." }
+  messages: { unexpected: string } = { unexpected: "İşletme ayarları güncellenirken beklenmeyen bir hata oluştu." }
 ) {
   return messages.unexpected
 }
 
 export function mapCustomerNotesError(
-  messages: { unexpected: string } = { unexpected: "Musteri notu guncellenirken beklenmeyen bir hata olustu." }
+  messages: { unexpected: string } = { unexpected: "Müşteri notu güncellenirken beklenmeyen bir hata oluştu." }
 ) {
   return messages.unexpected
 }

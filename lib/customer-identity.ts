@@ -14,7 +14,7 @@ export function assertMatchingCustomerIdentity(options: {
 
   if (emailCustomerId && phoneCustomerId && emailCustomerId !== phoneCustomerId) {
     throw new CustomerIdentityConflictError(
-      "Bu e-posta adresi ve telefon numarasi farkli musteri kayitlariyla eslesiyor. Lutfen salon ile iletisime gecin."
+      "Bu e-posta adresi ve telefon numarası farklı müşteri kayıtlarıyla eşleşiyor. Lütfen salon ile iletişime geçin."
     )
   }
 }

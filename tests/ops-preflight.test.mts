@@ -13,9 +13,9 @@ export function runOpsPreflightTests() {
       { ci: false }
     ),
     [
-      "NEXT_PUBLIC_SITE_URL tanimli degil.",
-      "Admin kimlik bilgileri tam degil.",
-      "DATABASE_URL ornek veya placeholder gorunuyor.",
+      "NEXT_PUBLIC_SITE_URL tanımlı değil.",
+      "Admin kimlik bilgileri tam değil.",
+      "DATABASE_URL örnek veya placeholder görünüyor.",
     ]
   )
 
@@ -41,17 +41,17 @@ export function runOpsPreflightTests() {
       { ci: false }
     ),
     [
-      "DATABASE_URL ornek veya placeholder gorunuyor.",
-      "NEXT_PUBLIC_SITE_URL ornek bir alan adina isaret ediyor.",
-      "ADMIN_PASSWORD varsayilan veya zayif bir deger gibi gorunuyor.",
-      "ALLOWED_ORIGIN_HOSTS ornek host degerleri iceriyor.",
+      "DATABASE_URL örnek veya placeholder görünüyor.",
+      "NEXT_PUBLIC_SITE_URL örnek bir alan adına işaret ediyor.",
+      "ADMIN_PASSWORD varsayılan veya zayıf bir değer gibi görünüyor.",
+      "ALLOWED_ORIGIN_HOSTS örnek host değerleri içeriyor.",
     ]
   )
 
-  assert.deepEqual(filterPreflightEnvIssues(["DATABASE_URL tanimlanmalidir."], { ci: false }), [
-    "DATABASE_URL tanimlanmalidir.",
+  assert.deepEqual(filterPreflightEnvIssues(["DATABASE_URL tanımlanmalıdır."], { ci: false }), [
+    "DATABASE_URL tanımlanmalıdır.",
   ])
-  assert.deepEqual(filterPreflightEnvIssues(["DATABASE_URL tanimlanmalidir."], { ci: true }), [])
+  assert.deepEqual(filterPreflightEnvIssues(["DATABASE_URL tanımlanmalıdır."], { ci: true }), [])
 }
 
 import { test } from "vitest"

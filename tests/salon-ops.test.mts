@@ -140,9 +140,9 @@ export function runSalonOpsTests() {
   })
   assert.equal(validCustomerNotes.success, true)
 
-  const paymentError = new Error("Odeme zaten alinmis")
+  const paymentError = new Error("Ödeme zaten alınmış")
   paymentError.name = "AdminPaymentError"
-  assert.equal(mapAdminPaymentError(paymentError), "Odeme zaten alinmis")
+  assert.equal(mapAdminPaymentError(paymentError), "Ödeme zaten alınmış")
 }
 
 import { test } from "vitest"

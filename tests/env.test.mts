@@ -38,30 +38,30 @@ export function runEnvTests() {
   resetEnvCacheForTests()
 
   let issues = getEnvIssues()
-  assert.equal(issues.includes("ADMIN_USERNAME ve ADMIN_PASSWORD birlikte tanimlanmalidir."), true)
+  assert.equal(issues.includes("ADMIN_USERNAME ve ADMIN_PASSWORD birlikte tanımlanmalıdır."), true)
 
   process.env.ADMIN_PASSWORD = "short"
   resetEnvCacheForTests()
   issues = getEnvIssues()
-  assert.equal(issues.includes("ADMIN_PASSWORD en az 12 karakter olmalidir."), true)
+  assert.equal(issues.includes("ADMIN_PASSWORD en az 12 karakter olmalıdır."), true)
 
   process.env.ADMIN_PASSWORD = "very-strong-pass"
   process.env.ALLOWED_ORIGIN_HOSTS = "https://example.com"
   resetEnvCacheForTests()
   issues = getEnvIssues()
-  assert.equal(issues.includes("ALLOWED_ORIGIN_HOSTS sadece host isimleri icermelidir."), true)
+  assert.equal(issues.includes("ALLOWED_ORIGIN_HOSTS sadece host isimleri içermelidir."), true)
 
   process.env.ALLOWED_ORIGIN_HOSTS = "booking.example.com"
   process.env.HEALTHCHECK_ALLOWLIST_IPS = "203.0.113.10/32"
   resetEnvCacheForTests()
   issues = getEnvIssues()
-  assert.equal(issues.includes("HEALTHCHECK_ALLOWLIST_IPS sadece virgulle ayrilmis tekil IP degerleri icermelidir."), true)
+  assert.equal(issues.includes("HEALTHCHECK_ALLOWLIST_IPS sadece virgülle ayrılmış tekil IP değerleri içermelidir."), true)
 
   process.env.HEALTHCHECK_ALLOWLIST_IPS = "203.0.113.10"
   process.env.DATABASE_URL = "mysql://demo"
   resetEnvCacheForTests()
   issues = getEnvIssues()
-  assert.equal(issues.includes("DATABASE_URL PostgreSQL baglantisi olmalidir."), true)
+  assert.equal(issues.includes("DATABASE_URL PostgreSQL bağlantısı olmalıdır."), true)
 
   process.env.NODE_ENV = "production"
   delete process.env.NEXT_PUBLIC_SITE_URL
@@ -71,7 +71,7 @@ export function runEnvTests() {
   delete process.env.HEALTHCHECK_TOKEN
   resetEnvCacheForTests()
   issues = getEnvIssues()
-  assert.equal(issues.includes("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur."), true)
+  assert.equal(issues.includes("Production ortamında NEXT_PUBLIC_SITE_URL zorunludur."), true)
   assert.throws(() => getEnv(), /NEXT_PUBLIC_SITE_URL zorunludur/)
 
   process.env.NEXT_PUBLIC_SITE_URL = "https://example.com"
@@ -80,11 +80,11 @@ export function runEnvTests() {
   process.env.ADMIN_PASSWORD = "short"
   process.env.HEALTHCHECK_TOKEN = "short"
   resetEnvCacheForTests()
-  assert.throws(() => getEnv(), /ADMIN_PASSWORD en az 12 karakter olmalidir/)
+  assert.throws(() => getEnv(), /ADMIN_PASSWORD en az 12 karakter olmalıdır/)
 
   process.env.ADMIN_PASSWORD = "very-strong-pass"
   resetEnvCacheForTests()
-  assert.throws(() => getEnv(), /HEALTHCHECK_TOKEN en az 24 karakter olmalidir/)
+  assert.throws(() => getEnv(), /HEALTHCHECK_TOKEN en az 24 karakter olmalıdır/)
 
   restoreEnv()
 }

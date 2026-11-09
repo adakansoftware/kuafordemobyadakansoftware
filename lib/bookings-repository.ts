@@ -826,7 +826,7 @@ export async function updateAppointmentFromAdmin(input: {
       (error.code === "P2034" || error.code === "P2002")
     ) {
       throw new AppointmentConflictError(
-        "Bu randevu kaydi ayni anda baska bir islem tarafindan guncellendi. Lutfen tekrar deneyin."
+        "Bu randevu kaydı aynı anda başka bir işlem tarafından güncellendi. Lütfen tekrar deneyin."
       )
     }
 

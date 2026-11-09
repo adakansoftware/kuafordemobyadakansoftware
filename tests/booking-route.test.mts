@@ -62,7 +62,7 @@ export function runBookingRouteTests() {
 
   assert.deepEqual(mapBookingCreateError(new Error("boom")), {
     status: 500,
-    message: "Randevu kaydi sirasinda beklenmeyen bir hata olustu.",
+    message: "Randevu kaydı sırasında beklenmeyen bir hata oluştu.",
   })
 }
 

@@ -29,7 +29,7 @@ export function CustomerPortalForm({ securityChallenge }: { securityChallenge: P
         </label>
         {requestState.mockCode ? <p className="text-sm text-muted-foreground">Mock kod: {requestState.mockCode}</p> : null}
         <p className={verifyState.success ? "text-sm text-green-600" : "text-sm text-muted-foreground"}>
-          {verifyState.message || "Dogrulama kodunu girin."}
+          {verifyState.message || "Doğrulama kodunu girin."}
         </p>
         <button type="submit" className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground">
           Panele Gir
@@ -48,10 +48,10 @@ export function CustomerPortalForm({ securityChallenge }: { securityChallenge: P
         <input name="identifier" className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
       </label>
       <p className={requestState.success ? "text-sm text-green-600" : "text-sm text-muted-foreground"}>
-        {requestState.message || "Musteri paneli icin mock OTP olusturulur."}
+        {requestState.message || "Müşteri paneli için mock OTP oluşturulur."}
       </p>
       <button type="submit" className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground">
-        Kodu Gonder
+        Kodu Gönder
       </button>
     </form>
   )

@@ -25,18 +25,18 @@ export function SetupWizardForm({ securityChallenge }: { securityChallenge: Publ
         aria-hidden="true"
       />
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Salon Adi" name="tenantName" />
+        <Field label="Salon Adı" name="tenantName" />
         <Field label="Telefon" name="phone" />
-        <Field label="Owner Kullanici Adi" name="ownerUsername" />
+        <Field label="Owner Kullanıcı Adı" name="ownerUsername" />
         <Field label="Owner E-posta" name="ownerEmail" type="email" />
-        <Field label="Owner Sifre" name="ownerPassword" type="password" />
-        <Field label="Kurulum Erisim Tokeni" name="setupAccessToken" type="password" />
+        <Field label="Owner Şifre" name="ownerPassword" type="password" />
+        <Field label="Kurulum Erişim Tokenı" name="setupAccessToken" type="password" />
         <Field label="Personeller" name="staffNames" placeholder="Elif, Emre, Seda" />
       </div>
-      <Field label="Hizmetler" name="serviceTitles" placeholder="Sac Kesim, Sac Boyama, Keratin" />
+      <Field label="Hizmetler" name="serviceTitles" placeholder="Saç Kesim, Saç Boyama, Keratin" />
       <div className="flex items-center justify-between gap-4">
         <p className={state.success ? "text-sm text-green-600" : "text-sm text-muted-foreground"}>
-          {state.message || "Demo veriden production tenant kurgusuna gecis sihirbazi."}
+          {state.message || "Demo veriden production tenant kurgusuna geçiş sihirbazı."}
         </p>
         <button type="submit" className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground">
           Kurulumu Tamamla

@@ -16,7 +16,7 @@ const ADMIN_SESSION_ROTATE_AFTER_MS = 1000 * 60 * 30
 const ADMIN_STEP_UP_MAX_AGE_MS = 1000 * 60 * 10
 
 export class AdminStepUpError extends Error {
-  constructor(message = "Kritik islem icin yonetici sifresi ile ek dogrulama gereklidir.") {
+  constructor(message = "Kritik işlem için yönetici şifresi ile ek doğrulama gereklidir.") {
     super(message)
     this.name = "AdminStepUpError"
   }
@@ -347,7 +347,7 @@ export async function requireAdminSessionStepUp(input: {
   })
 
   if (!session) {
-    throw new AdminStepUpError("Admin oturumu gecersiz veya suresi dolmus.")
+    throw new AdminStepUpError("Admin oturumu geçersiz veya süresi dolmuş.")
   }
 
   if (
@@ -363,7 +363,7 @@ export async function requireAdminSessionStepUp(input: {
       },
     })
 
-    throw new AdminStepUpError("Admin oturumu guvenlik nedeniyle sonlandirildi. Lutfen tekrar giris yapin.")
+    throw new AdminStepUpError("Admin oturumu güvenlik nedeniyle sonlandırıldı. Lütfen tekrar giriş yapın.")
   }
 
   const maxAgeMs = input.maxAgeMs ?? ADMIN_STEP_UP_MAX_AGE_MS
@@ -379,7 +379,7 @@ export async function requireAdminSessionStepUp(input: {
   }
 
   if (!(await verifyPassword(password, session.adminUser.passwordHash))) {
-    throw new AdminStepUpError("Yonetici sifresi dogrulanamadi.")
+    throw new AdminStepUpError("Yönetici şifresi doğrulanamadı.")
   }
 
   if (session.adminUser.mfaEnabledAt && session.adminUser.mfaSecretCiphertext) {

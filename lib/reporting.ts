@@ -28,14 +28,14 @@ export function normalizeReportDateRange(input: { from: string; to: string }) {
   const to = input.to.trim()
 
   if (!isIsoDateOnly(from) || !isIsoDateOnly(to)) {
-    throw new ReportRangeError("Rapor tarihleri YYYY-MM-DD formatinda olmalidir.")
+    throw new ReportRangeError("Rapor tarihleri YYYY-MM-DD formatında olmalıdır.")
   }
 
   const fromDate = createUtcDate(from)
   const toDate = createUtcDate(to)
 
   if (fromDate.getTime() > toDate.getTime()) {
-    throw new ReportRangeError("Baslangic tarihi bitis tarihinden sonra olamaz.")
+    throw new ReportRangeError("Başlangıç tarihi bitiş tarihinden sonra olamaz.")
   }
 
   const rangeDays = Math.floor((toDate.getTime() - fromDate.getTime()) / 86_400_000) + 1

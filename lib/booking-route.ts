@@ -53,6 +53,6 @@ export function mapBookingCreateError(error: unknown) {
 
   return {
     status: 500,
-    message: "Randevu kaydi sirasinda beklenmeyen bir hata olustu.",
+    message: "Randevu kaydı sırasında beklenmeyen bir hata oluştu.",
   }
 }

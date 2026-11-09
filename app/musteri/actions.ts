@@ -67,7 +67,7 @@ export async function requestCustomerPortalCodeAction(
       return {
         step: "request",
         success: false,
-        message: "Istek dogrulanamadi.",
+        message: "İstek doğrulanamadı.",
       }
     }
 
@@ -77,7 +77,7 @@ export async function requestCustomerPortalCodeAction(
       return {
         step: "request",
         success: false,
-        message: "Cok fazla kod denemesi yapildi. Lutfen biraz sonra tekrar deneyin.",
+        message: "Çok fazla kod denemesi yapıldı. Lütfen biraz sonra tekrar deneyin.",
       }
     }
 
@@ -103,7 +103,7 @@ export async function requestCustomerPortalCodeAction(
       return {
         step: "request",
         success: false,
-        message: "Istek dogrulanamadi.",
+        message: "İstek doğrulanamadı.",
       }
     }
 
@@ -119,7 +119,7 @@ export async function requestCustomerPortalCodeAction(
       return {
         step: "request",
         success: false,
-        message: "Cok fazla kod denemesi yapildi. Lutfen biraz sonra tekrar deneyin.",
+        message: "Çok fazla kod denemesi yapıldı. Lütfen biraz sonra tekrar deneyin.",
       }
     }
 
@@ -132,8 +132,8 @@ export async function requestCustomerPortalCodeAction(
       success: true,
       message:
         process.env.NODE_ENV === "production"
-          ? "Bilgi mevcutsa dogrulama kodu hazirlandi. Kodu girerek devam edin."
-          : "Mock OTP olusturuldu. Demo kod ekranda gosteriliyor.",
+          ? "Bilgi mevcutsa doğrulama kodu hazırlandı. Kodu girerek devam edin."
+          : "Mock OTP oluşturuldu. Demo kod ekranda gösteriliyor.",
       tokenId: result.tokenId,
       mockCode: result.mockCode,
       customerId: result.customerId,
@@ -155,10 +155,10 @@ export async function requestCustomerPortalCodeAction(
       success: false,
       message:
         process.env.NODE_ENV === "production"
-          ? "Kod istegi su anda tamamlanamadi."
+          ? "Kod isteği şu anda tamamlanamadı."
           : error instanceof Error
             ? error.message
-            : "Kod olusturulamadi.",
+            : "Kod oluşturulamadı.",
     }
   }
 }
@@ -195,7 +195,7 @@ export async function verifyCustomerPortalCodeAction(
         ...previousState,
         step: "verify",
         success: false,
-        message: "Kod dogrulanamadi.",
+        message: "Kod doğrulanamadı.",
       }
     }
 
@@ -212,7 +212,7 @@ export async function verifyCustomerPortalCodeAction(
         ...previousState,
         step: "verify",
         success: false,
-        message: "Cok fazla dogrulama denemesi yapildi. Lutfen biraz sonra tekrar deneyin.",
+        message: "Çok fazla doğrulama denemesi yapıldı. Lütfen biraz sonra tekrar deneyin.",
       }
     }
 
@@ -223,7 +223,7 @@ export async function verifyCustomerPortalCodeAction(
         ...previousState,
         step: "verify",
         success: false,
-        message: "Cok fazla dogrulama denemesi yapildi. Lutfen biraz sonra tekrar deneyin.",
+        message: "Çok fazla doğrulama denemesi yapıldı. Lütfen biraz sonra tekrar deneyin.",
       }
     }
 
@@ -245,7 +245,7 @@ export async function verifyCustomerPortalCodeAction(
     const parsed = parseCustomerPortalSessionValue(sessionValue, sessionFingerprint)
 
     if (!parsed?.sessionId) {
-      throw new Error("Musteri oturumu olusturulamadi.")
+      throw new Error("Müşteri oturumu oluşturulamadı.")
     }
 
     await registerCustomerPortalSession({
@@ -267,7 +267,7 @@ export async function verifyCustomerPortalCodeAction(
     return {
       step: "ready",
       success: true,
-      message: "Musteri paneli acildi.",
+      message: "Müşteri paneli açıldı.",
       customerId: result.customerId,
     }
   } catch (error) {
@@ -297,10 +297,10 @@ export async function verifyCustomerPortalCodeAction(
       success: false,
       message:
         process.env.NODE_ENV === "production"
-          ? "Kod dogrulanamadi."
+          ? "Kod doğrulanamadı."
           : error instanceof Error
             ? error.message
-            : "Kod dogrulanamadi.",
+            : "Kod doğrulanamadı.",
     }
   }
 }
@@ -325,7 +325,7 @@ export async function requestCancellationAction(appointmentId: string, reason: s
       expires: new Date(0),
       maxAge: 0,
     })
-    throw new Error("Musteri oturumu bulunamadi.")
+    throw new Error("Müşteri oturumu bulunamadı.")
   }
 
   await verifyTrustedOrigin({ allowHostFallback: true })
@@ -337,7 +337,7 @@ export async function requestCancellationAction(appointmentId: string, reason: s
   })
 
   if (!rateLimit.allowed) {
-    throw new Error("Cok fazla iptal talebi gonderildi. Lutfen biraz sonra tekrar deneyin.")
+    throw new Error("Çok fazla iptal talebi gönderildi. Lütfen biraz sonra tekrar deneyin.")
   }
 
   const replayClaim = await claimReplayWindow(
@@ -347,7 +347,7 @@ export async function requestCancellationAction(appointmentId: string, reason: s
   )
 
   if (!replayClaim.ok) {
-    throw new Error("Bu iptal talebi zaten isleme alindi. Lutfen tekrar denemeden once bekleyin.")
+    throw new Error("Bu iptal talebi zaten işleme alındı. Lütfen tekrar denemeden önce bekleyin.")
   }
 
   try {

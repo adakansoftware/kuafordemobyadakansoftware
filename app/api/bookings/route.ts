@@ -94,7 +94,7 @@ export async function GET(request: Request) {
       return jsonResponse(
         {
           success: false,
-          message: "Kisa sure icinde cok fazla sorgu gonderildi. Lutfen biraz sonra tekrar deneyin.",
+          message: "Kısa süre içinde çok fazla sorgu gönderildi. Lütfen biraz sonra tekrar deneyin.",
         },
         requestId,
         {
@@ -141,7 +141,7 @@ export async function GET(request: Request) {
       return jsonResponse(
         {
           success: false,
-          message: "Gecerli bir tarih parametresi gonderin.",
+          message: "Geçerli bir tarih parametresi gönderin.",
         },
         requestId,
         { status: 400 }
@@ -198,7 +198,7 @@ export async function GET(request: Request) {
     return jsonResponse(
       {
         success: false,
-        message: "Uygunluk bilgisi alinirken beklenmeyen bir hata olustu.",
+        message: "Uygunluk bilgisi alınırken beklenmeyen bir hata oluştu.",
       },
       requestId,
       {
@@ -259,7 +259,7 @@ export async function POST(request: Request) {
       return jsonResponse(
         {
           success: false,
-          message: "Kisa sure icinde cok fazla talep gonderildi. Lutfen bir dakika sonra tekrar deneyin.",
+          message: "Kısa süre içinde çok fazla talep gönderildi. Lütfen bir dakika sonra tekrar deneyin.",
         },
         requestId,
         {
@@ -300,7 +300,7 @@ export async function POST(request: Request) {
       return jsonResponse(
         {
           success: false,
-          message: "Istek kaynagi dogrulanamadi.",
+          message: "İstek kaynağı doğrulanamadı.",
         },
         requestId,
         { status: 403 }
@@ -342,7 +342,7 @@ export async function POST(request: Request) {
       return jsonResponse(
         {
           success: false,
-          message: "Kisa sure icinde cok fazla talep gonderildi. Lutfen bir dakika sonra tekrar deneyin.",
+          message: "Kısa süre içinde çok fazla talep gönderildi. Lütfen bir dakika sonra tekrar deneyin.",
         },
         requestId,
         {
@@ -400,7 +400,7 @@ export async function POST(request: Request) {
       return jsonResponse(
         {
           success: false,
-          message: "Form verisi gecersiz.",
+          message: "Form verisi geçersiz.",
         },
         requestId,
         { status: 400 }
@@ -421,7 +421,7 @@ export async function POST(request: Request) {
       return jsonResponse(
         {
           success: false,
-          message: "Talebiniz dogrulanamadi.",
+          message: "Talebiniz doğrulanamadı.",
         },
         requestId,
         { status: 400 }
@@ -454,7 +454,7 @@ export async function POST(request: Request) {
         return jsonResponse(
           {
             success: false,
-            message: "Talep dogrulamasi basarisiz oldu.",
+            message: "Talep doğrulaması başarısız oldu.",
           },
           requestId,
           { status: 400 }
@@ -485,7 +485,7 @@ export async function POST(request: Request) {
       return jsonResponse(
         {
           success: false,
-          message: "Guvenlik dogrulamasi tamamlanamadi.",
+          message: "Güvenlik doğrulaması tamamlanamadı.",
         },
         requestId,
         { status: 403 }
@@ -512,7 +512,7 @@ export async function POST(request: Request) {
       return jsonResponse(
         {
           success: false,
-          message: "Form verisi gecersiz.",
+          message: "Form verisi geçersiz.",
           errors: validation.errors,
         },
         requestId,

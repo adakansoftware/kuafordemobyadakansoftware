@@ -20,11 +20,11 @@ export type AdminAppointmentActionMessages = {
 }
 
 const defaultMessages: AdminAppointmentActionMessages = {
-  adminAccessDenied: "Bu islem icin yonetim erisimi dogrulanamadi.",
-  requestOriginDenied: "Istek kaynagi dogrulanamadi.",
-  securityFailed: "Guvenlik dogrulamasi basarisiz oldu.",
-  rateLimited: "Kisa sure icinde cok fazla guncelleme denemesi algilandi. Lutfen biraz sonra tekrar deneyin.",
-  updateFailed: "Guncelleme sirasinda beklenmeyen bir hata olustu.",
+  adminAccessDenied: "Bu işlem için yönetim erişimi doğrulanamadı.",
+  requestOriginDenied: "İstek kaynağı doğrulanamadı.",
+  securityFailed: "Güvenlik doğrulaması başarısız oldu.",
+  rateLimited: "Kısa süre içinde çok fazla güncelleme denemesi algılandı. Lütfen biraz sonra tekrar deneyin.",
+  updateFailed: "Güncelleme sırasında beklenmeyen bir hata oluştu.",
 }
 
 export function mapAdminAppointmentSecurityError(

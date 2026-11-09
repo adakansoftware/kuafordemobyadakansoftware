@@ -17,18 +17,18 @@ export function runBookingActionTests() {
 
   assert.equal(
     mapSubmitBookingSecurityError(securityError),
-    "Istek kaynagi dogrulanamadi. Sayfayi yenileyip yeniden deneyin."
+    "İstek kaynağı doğrulanamadı. Sayfayı yenileyip yeniden deneyin."
   )
   assert.equal(mapSubmitBookingSecurityError(new Error("other")), null)
   assert.equal(
     getSubmitBookingRateLimitMessage(),
-    "Kisa sure icinde cok fazla talep gonderildi. Lutfen bir dakika sonra tekrar deneyin."
+    "Kısa süre içinde çok fazla talep gönderildi. Lütfen bir dakika sonra tekrar deneyin."
   )
   assert.equal(mapSubmitBookingCreateError(identityConflictError), "Kimlik cakismasi")
   assert.equal(mapSubmitBookingCreateError(conflictError), "Secilen saat dolu")
   assert.equal(
     mapSubmitBookingCreateError(new Error("other")),
-    "Randevu kaydedilirken beklenmeyen bir sorun olustu."
+    "Randevu kaydedilirken beklenmeyen bir sorun oluştu."
   )
 }
 

@@ -18,11 +18,11 @@ test("env rules", () => {
   process.env.ADMIN_USERNAME = "admin"
   delete process.env.ADMIN_PASSWORD
   resetEnvCacheForTests()
-  assert.equal(getEnvIssues().includes("ADMIN_USERNAME ve ADMIN_PASSWORD birlikte tanimlanmalidir."), true)
+  assert.equal(getEnvIssues().includes("ADMIN_USERNAME ve ADMIN_PASSWORD birlikte tanımlanmalıdır."), true)
 
   process.env.ADMIN_PASSWORD = "short"
   resetEnvCacheForTests()
-  assert.equal(getEnvIssues().includes("ADMIN_PASSWORD en az 12 karakter olmalidir."), true)
+  assert.equal(getEnvIssues().includes("ADMIN_PASSWORD en az 12 karakter olmalıdır."), true)
 
   process.env.NODE_ENV = "production"
   delete process.env.NEXT_PUBLIC_SITE_URL
@@ -30,7 +30,7 @@ test("env rules", () => {
   delete process.env.ADMIN_USERNAME
   delete process.env.ADMIN_PASSWORD
   resetEnvCacheForTests()
-  assert.equal(getEnvIssues().includes("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur."), true)
+  assert.equal(getEnvIssues().includes("Production ortamında NEXT_PUBLIC_SITE_URL zorunludur."), true)
 })
 
 test("security helpers", () => {

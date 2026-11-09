@@ -67,15 +67,15 @@ async function main() {
   const adminPage = await readFile(new URL("../app/(admin)/admin/page.tsx", import.meta.url), "utf8")
 
   if (!adminOperations.includes("getAdminMessages")) {
-    throw new Error('Smoke check failed: admin mesaj sozlugu kullanilmiyor -> components/admin/appointment-operations.tsx')
+    throw new Error('Smoke check failed: admin mesaj sözlüğü kullanılmıyor -> components/admin/appointment-operations.tsx')
   }
 
-  if (!adminMessages.includes("Odeme Alindi")) {
-    throw new Error('Smoke check failed: "Odeme Alindi" aksiyonu bulunamadi -> lib/i18n/admin-messages.ts')
+  if (!adminMessages.includes("Ödeme Alındı")) {
+    throw new Error('Smoke check failed: "Ödeme Alındı" aksiyonu bulunamadı -> lib/i18n/admin-messages.ts')
   }
 
   if (!adminPage.includes("/admin/dashboard")) {
-    throw new Error('Smoke check failed: admin giris yonlendirmesi bulunamadi -> app/admin/page.tsx')
+    throw new Error('Smoke check failed: admin giriş yönlendirmesi bulunamadı -> app/admin/page.tsx')
   }
 
   console.log("Smoke check passed.")

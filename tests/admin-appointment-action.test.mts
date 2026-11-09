@@ -22,25 +22,25 @@ export function runAdminAppointmentActionTests() {
 
   assert.equal(
     mapAdminAppointmentSecurityError(adminError),
-    "Bu islem icin yonetim erisimi dogrulanamadi."
+    "Bu işlem için yönetim erişimi doğrulanamadı."
   )
   assert.equal(
     mapAdminAppointmentSecurityError(securityError),
-    "Istek kaynagi dogrulanamadi."
+    "İstek kaynağı doğrulanamadı."
   )
   assert.equal(
     mapAdminAppointmentSecurityError(new Error("other")),
-    "Guvenlik dogrulamasi basarisiz oldu."
+    "Güvenlik doğrulaması başarısız oldu."
   )
 
   assert.equal(
     getAdminAppointmentRateLimitMessage(),
-    "Kisa sure icinde cok fazla guncelleme denemesi algilandi. Lutfen biraz sonra tekrar deneyin."
+    "Kısa süre içinde çok fazla güncelleme denemesi algılandı. Lütfen biraz sonra tekrar deneyin."
   )
   assert.equal(mapAdminAppointmentUpdateError(conflictError), "Cakisiyor")
   assert.equal(
     mapAdminAppointmentUpdateError(new Error("other")),
-    "Guncelleme sirasinda beklenmeyen bir hata olustu."
+    "Güncelleme sırasında beklenmeyen bir hata oluştu."
   )
 }
 

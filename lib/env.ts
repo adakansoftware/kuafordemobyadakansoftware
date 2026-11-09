@@ -19,7 +19,7 @@ const optionalUrlString = z.preprocess((value) => {
 }, z.string().url().optional())
 
 const envSchema = z.object({
-  DATABASE_URL: z.string({ required_error: "DATABASE_URL tanimlanmalidir." }).min(1, "DATABASE_URL tanimlanmalidir."),
+  DATABASE_URL: z.string({ required_error: "DATABASE_URL tanımlanmalıdır." }).min(1, "DATABASE_URL tanımlanmalıdır."),
   NEXT_PUBLIC_SITE_URL: optionalUrlString,
   ADMIN_USERNAME: optionalTrimmedString,
   ADMIN_PASSWORD: optionalTrimmedString,
@@ -63,31 +63,31 @@ function collectEnvIssues(env: AppEnv) {
   const normalizedDatabaseUrl = env.DATABASE_URL.trim().toLowerCase()
 
   if (hasAdminUsername !== hasAdminPassword) {
-    issues.push("ADMIN_USERNAME ve ADMIN_PASSWORD birlikte tanimlanmalidir.")
+    issues.push("ADMIN_USERNAME ve ADMIN_PASSWORD birlikte tanımlanmalıdır.")
   }
 
   if (env.ADMIN_USERNAME && env.ADMIN_USERNAME.length < 3) {
-    issues.push("ADMIN_USERNAME en az 3 karakter olmalidir.")
+    issues.push("ADMIN_USERNAME en az 3 karakter olmalıdır.")
   }
 
   if (env.ADMIN_PASSWORD && env.ADMIN_PASSWORD.length < 12) {
-    issues.push("ADMIN_PASSWORD en az 12 karakter olmalidir.")
+    issues.push("ADMIN_PASSWORD en az 12 karakter olmalıdır.")
   }
 
   if (env.APP_SECURITY_SECRET && env.APP_SECURITY_SECRET.length < 24) {
-    issues.push("APP_SECURITY_SECRET en az 24 karakter olmalidir.")
+    issues.push("APP_SECURITY_SECRET en az 24 karakter olmalıdır.")
   }
 
   if (env.NODE_ENV === "production" && !env.NEXT_PUBLIC_SITE_URL) {
-    issues.push("Production ortaminda NEXT_PUBLIC_SITE_URL zorunludur.")
+    issues.push("Production ortamında NEXT_PUBLIC_SITE_URL zorunludur.")
   }
 
   if (env.HEALTHCHECK_TOKEN && env.HEALTHCHECK_TOKEN.length < 24) {
-    issues.push("HEALTHCHECK_TOKEN en az 24 karakter olmalidir.")
+    issues.push("HEALTHCHECK_TOKEN en az 24 karakter olmalıdır.")
   }
 
   if (!normalizedDatabaseUrl.startsWith("postgres://") && !normalizedDatabaseUrl.startsWith("postgresql://")) {
-    issues.push("DATABASE_URL PostgreSQL baglantisi olmalidir.")
+    issues.push("DATABASE_URL PostgreSQL bağlantısı olmalıdır.")
   }
 
   if (
@@ -98,14 +98,14 @@ function collectEnvIssues(env: AppEnv) {
       .filter(Boolean)
       .some((value) => value.includes("://") || value.includes("/"))
   ) {
-    issues.push("ALLOWED_ORIGIN_HOSTS sadece host isimleri icermelidir.")
+    issues.push("ALLOWED_ORIGIN_HOSTS sadece host isimleri içermelidir.")
   }
 
   const hasTurnstileSiteKey = Boolean(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
   const hasTurnstileSecret = Boolean(env.TURNSTILE_SECRET_KEY)
 
   if (hasTurnstileSiteKey !== hasTurnstileSecret) {
-    issues.push("Turnstile ayarlari icin NEXT_PUBLIC_TURNSTILE_SITE_KEY ve TURNSTILE_SECRET_KEY birlikte tanimlanmalidir.")
+    issues.push("Turnstile ayarları için NEXT_PUBLIC_TURNSTILE_SITE_KEY ve TURNSTILE_SECRET_KEY birlikte tanımlanmalıdır.")
   }
 
   if (
@@ -116,7 +116,7 @@ function collectEnvIssues(env: AppEnv) {
       .filter(Boolean)
       .some((value) => value.includes("/") || value.includes(" "))
   ) {
-    issues.push("ADMIN_ALLOWLIST_IPS sadece virgulle ayrilmis tekil IP degerleri icermelidir.")
+    issues.push("ADMIN_ALLOWLIST_IPS sadece virgülle ayrılmış tekil IP değerleri içermelidir.")
   }
 
   if (
@@ -127,7 +127,7 @@ function collectEnvIssues(env: AppEnv) {
       .filter(Boolean)
       .some((value) => value.includes("/") || value.includes(" "))
   ) {
-    issues.push("HEALTHCHECK_ALLOWLIST_IPS sadece virgulle ayrilmis tekil IP degerleri icermelidir.")
+    issues.push("HEALTHCHECK_ALLOWLIST_IPS sadece virgülle ayrılmış tekil IP değerleri içermelidir.")
   }
 
   return issues

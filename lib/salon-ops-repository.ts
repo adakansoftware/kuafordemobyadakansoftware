@@ -119,11 +119,11 @@ export async function recordAppointmentPayment(input: {
     })
 
     if (appointment.status !== AppointmentStatus.COMPLETED) {
-      throw new AdminPaymentError("Odeme sadece tamamlanan randevular icin alinabilir.")
+      throw new AdminPaymentError("Ödeme sadece tamamlanan randevular için alınabilir.")
     }
 
     if (appointment.payment) {
-      throw new AdminPaymentError("Bu randevu icin odeme kaydi zaten bulunuyor.")
+      throw new AdminPaymentError("Bu randevu için ödeme kaydı zaten bulunuyor.")
     }
 
     const payment = await tx.payment.create({
@@ -494,7 +494,7 @@ export async function updateBusinessSettings(input: {
   const tenantId = await resolveTenantId(input.tenantId)
 
   if (input.accessContext && !canViewSettings(input.accessContext.role)) {
-    throw new SubscriptionFeatureError("Isletme ayarlari sadece yetkili kullanicilar tarafindan guncellenebilir.")
+    throw new SubscriptionFeatureError("İşletme ayarları sadece yetkili kullanıcılar tarafından güncellenebilir.")
   }
 
   const existing = await db.businessSettings.findFirst({
@@ -981,7 +981,7 @@ export async function createStaffTimeOff(input: {
   })
 
   if (input.startDate > input.endDate) {
-    throw new SubscriptionFeatureError("Izin bitis tarihi baslangic tarihinden once olamaz.")
+    throw new SubscriptionFeatureError("İzin bitiş tarihi başlangıç tarihinden önce olamaz.")
   }
 
   const timeOff = await db.staffTimeOff.create({
@@ -1088,11 +1088,11 @@ export async function verifyCustomerPortalAccess(input: {
     })
 
     if (!token) {
-      throw new CustomerPortalAccessError("Kodun suresi dolmus veya gecersiz.")
+      throw new CustomerPortalAccessError("Kodun süresi dolmuş veya geçersiz.")
     }
 
     if (!(await verifyPassword(input.code.trim(), token.codeHash))) {
-      throw new CustomerPortalAccessError("Kod gecersiz.")
+      throw new CustomerPortalAccessError("Kod geçersiz.")
     }
 
     const consumeResult = await tx.customerAccessCode.updateMany({
@@ -1106,7 +1106,7 @@ export async function verifyCustomerPortalAccess(input: {
     })
 
     if (consumeResult.count !== 1) {
-      throw new CustomerPortalAccessError("Kod daha once kullanilmis veya gecersiz.")
+      throw new CustomerPortalAccessError("Kod daha önce kullanılmış veya geçersiz.")
     }
 
     await createAuditLog(
@@ -1266,8 +1266,8 @@ export async function completeSetupWizard(input: {
         phone: input.phone,
         whatsappPhone: input.phone,
         email: input.ownerEmail,
-        address: "Adres bilgisi kurulum sonrasinda guncellenecek.",
-        city: "Istanbul",
+        address: "Adres bilgisi kurulum sonrasında güncellenecek.",
+        city: "İstanbul",
         timezone: SALON_TIMEZONE,
         currency: "TRY",
         dailyCapacity: 24,
@@ -1279,8 +1279,8 @@ export async function completeSetupWizard(input: {
         phone: input.phone,
         whatsappPhone: input.phone,
         email: input.ownerEmail,
-        address: "Adres bilgisi kurulum sonrasinda guncellenecek.",
-        city: "Istanbul",
+        address: "Adres bilgisi kurulum sonrasında güncellenecek.",
+        city: "İstanbul",
         timezone: SALON_TIMEZONE,
         currency: "TRY",
         dailyCapacity: 24,
@@ -1312,7 +1312,7 @@ export async function completeSetupWizard(input: {
           tenantId: tenant.id,
           name: staffMember.name,
           role: staffMember.role,
-          bio: `${staffMember.role} icin kurulum sirasinda olusturulan ekip profili.`,
+          bio: `${staffMember.role} için kurulum sırasında oluşturulan ekip profili.`,
           avatar: "/images/team-1.jpg",
           sortOrder: index + 1,
           commissionRate: 10,
@@ -1336,7 +1336,7 @@ export async function completeSetupWizard(input: {
           durationMinutes: service.durationMinutes,
           sortOrder: index + 1,
           isActive: true,
-          features: ["Kurulum sihirbazi ile olusturuldu"],
+          features: ["Kurulum sihirbazı ile oluşturuldu"],
         },
       })
     }

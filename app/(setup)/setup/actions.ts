@@ -13,12 +13,12 @@ import { completeSetupWizard } from "@/lib/salon-ops-repository"
 import { buildSetupServices, buildSetupStaffMembers } from "@/lib/setup-wizard"
 
 const setupSchema = z.object({
-  tenantName: z.string().trim().min(2, "Salon adi en az 2 karakter olmalidir."),
-  phone: z.string().trim().min(10, "Telefon bilgisi en az 10 karakter olmalidir."),
-  ownerUsername: z.string().trim().min(3, "Kurucu kullanici adi en az 3 karakter olmalidir."),
-  ownerEmail: z.string().trim().email("Gecerli bir e-posta adresi girin."),
-  ownerPassword: z.string().trim().min(12, "Kurucu sifresi en az 12 karakter olmalidir."),
-  setupAccessToken: z.string().trim().min(1, "Kurulum erisim tokeni gereklidir."),
+  tenantName: z.string().trim().min(2, "Salon adı en az 2 karakter olmalıdır."),
+  phone: z.string().trim().min(10, "Telefon bilgisi en az 10 karakter olmalıdır."),
+  ownerUsername: z.string().trim().min(3, "Kurucu kullanıcı adı en az 3 karakter olmalıdır."),
+  ownerEmail: z.string().trim().email("Geçerli bir e-posta adresi girin."),
+  ownerPassword: z.string().trim().min(12, "Kurucu şifresi en az 12 karakter olmalıdır."),
+  setupAccessToken: z.string().trim().min(1, "Kurulum erişim tokenı gereklidir."),
   staffNames: z.string().trim().min(2, "En az bir personel girilmelidir."),
   serviceTitles: z.string().trim().min(2, "En az bir hizmet girilmelidir."),
 })
@@ -52,7 +52,7 @@ export async function completeSetupWizardAction(
 
     return {
       success: false,
-      message: "Kurulum istegi dogrulanamadi.",
+      message: "Kurulum isteği doğrulanamadı.",
     }
   }
 
@@ -64,14 +64,14 @@ export async function completeSetupWizardAction(
   if (!challenge.ok) {
     return {
       success: false,
-      message: "Kurulum formu dogrulamasi basarisiz oldu.",
+      message: "Kurulum formu doğrulaması başarısız oldu.",
     }
   }
 
   if (String(formData.get("website") ?? "").trim()) {
     return {
       success: false,
-      message: "Kurulum istegi reddedildi.",
+      message: "Kurulum isteği reddedildi.",
     }
   }
 
@@ -89,7 +89,7 @@ export async function completeSetupWizardAction(
   if (!validation.success) {
     return {
       success: false,
-      message: validation.error.issues[0]?.message ?? "Kurulum formu gecersiz.",
+      message: validation.error.issues[0]?.message ?? "Kurulum formu geçersiz.",
     }
   }
 
@@ -100,7 +100,7 @@ export async function completeSetupWizardAction(
   if (blockState && blockState.resetAt > Date.now()) {
     return {
       success: false,
-      message: "Cok fazla kurulum denemesi yapildi. Lutfen daha sonra tekrar deneyin.",
+      message: "Çok fazla kurulum denemesi yapıldı. Lütfen daha sonra tekrar deneyin.",
     }
   }
 
@@ -115,7 +115,7 @@ export async function completeSetupWizardAction(
     await blockTemporarily("setup", clientKey, 60 * 60_000)
     return {
       success: false,
-      message: "Cok fazla kurulum denemesi yapildi. Lutfen daha sonra tekrar deneyin.",
+      message: "Çok fazla kurulum denemesi yapıldı. Lütfen daha sonra tekrar deneyin.",
     }
   }
 
@@ -142,7 +142,7 @@ export async function completeSetupWizardAction(
 
     return {
       success: false,
-      message: "Kurulum daha once tamamlanmis.",
+      message: "Kurulum daha önce tamamlanmış.",
     }
   }
 
@@ -166,7 +166,7 @@ export async function completeSetupWizardAction(
 
     return {
       success: false,
-      message: "Kurulum erisim tokeni gecersiz.",
+      message: "Kurulum erişim tokenı geçersiz.",
     }
   }
 
@@ -176,14 +176,14 @@ export async function completeSetupWizardAction(
   if (staffMembers.length === 0) {
     return {
       success: false,
-      message: "Kurulum icin en az bir benzersiz personel girilmelidir.",
+      message: "Kurulum için en az bir benzersiz personel girilmelidir.",
     }
   }
 
   if (services.length === 0) {
     return {
       success: false,
-      message: "Kurulum icin en az bir benzersiz hizmet girilmelidir.",
+      message: "Kurulum için en az bir benzersiz hizmet girilmelidir.",
     }
   }
 
@@ -203,7 +203,7 @@ export async function completeSetupWizardAction(
 
     return {
       success: true,
-      message: "Kurulum tamamlandi. Salon artik production modunda.",
+      message: "Kurulum tamamlandı. Salon artık production modunda.",
     }
   } catch (error) {
     logEvent({
@@ -219,7 +219,7 @@ export async function completeSetupWizardAction(
 
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Kurulum tamamlanamadi.",
+      message: error instanceof Error ? error.message : "Kurulum tamamlanamadı.",
     }
   }
 }
