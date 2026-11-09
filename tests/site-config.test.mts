@@ -3,6 +3,7 @@ import { getEnv, resetEnvCacheForTests } from "../lib/env.ts"
 import { getAboutPageViewModel, getBookingPageViewModel, getHomePageViewModel } from "../lib/public-site.ts"
 import { getOrganizationJsonLd } from "../lib/seo.ts"
 import { siteContent } from "../lib/site-content.ts"
+import { siteContentEn } from "../lib/content/en.ts"
 import { getSiteUrlString } from "../lib/site-url.ts"
 
 const originalEnv = {
@@ -38,6 +39,17 @@ export function runSiteConfigTests() {
   assert.equal(/[ÃÄÅ]/.test(homePage.hero.title), false)
   assert.equal(/[ÃÄÅ]/.test(bookingPage.description), false)
   assert.equal(/[ÃÄÅ]/.test(aboutPage.title), false)
+
+  assert.equal(homePage.faq.items.length >= 5, true)
+  assert.equal(siteContentEn.pages.home.faq.items.length >= 5, true)
+  assert.equal(
+    siteContentEn.pages.home.faq.items.every((item) => item.question.length > 0 && item.answer.length > 0),
+    true
+  )
+  assert.equal(
+    homePage.faq.items.every((item) => item.question.length > 0 && item.answer.length > 0),
+    true
+  )
 
   process.env.DATABASE_URL = "postgresql://demo"
   process.env.NEXT_PUBLIC_SITE_URL = "https://example.com"

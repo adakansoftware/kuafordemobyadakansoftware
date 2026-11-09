@@ -2,6 +2,7 @@ import Script from "next/script"
 import { notFound } from "next/navigation"
 import { setRequestLocale } from "next-intl/server"
 import { CtaSection } from "@/components/home/cta-section"
+import { FaqSection } from "@/components/home/faq-section"
 import { FeaturedServices } from "@/components/home/featured-services"
 import { GallerySection } from "@/components/home/gallery-section"
 import { HeroSection } from "@/components/home/hero-section"
@@ -42,6 +43,7 @@ export default async function HomePage({
       <FeaturedServices {...viewModel.featuredServices} />
       <GallerySection {...viewModel.gallery} />
       <TestimonialsSection {...viewModel.testimonials} />
+      <FaqSection {...viewModel.faq} />
       <CtaSection {...viewModel.cta} />
     </>
   )

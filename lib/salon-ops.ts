@@ -70,9 +70,9 @@ export function buildAppointmentWhatsAppMessages(input: {
   const baseContext = `${input.businessName} / ${input.serviceTitle} / ${input.scheduledDate} ${input.scheduledTime}`
 
   return {
-    reminder: `Merhaba ${input.customerName}, ${baseContext} icin randevu hatirlatmasi.`,
-    confirmation: `Merhaba ${input.customerName}, ${baseContext} icin randevunuz onaylandi.`,
-    cancellation: `Merhaba ${input.customerName}, ${baseContext} icin randevunuz iptal edildi.`,
-    paymentReminder: `Merhaba ${input.customerName}, ${baseContext} icin odeme kaydiniz bekleniyor.`,
+    reminder: `Merhaba ${input.customerName}, ${baseContext} için randevu hatırlatması.`,
+    confirmation: `Merhaba ${input.customerName}, ${baseContext} için randevunuz onaylandı.`,
+    cancellation: `Merhaba ${input.customerName}, ${baseContext} için randevunuz iptal edildi.`,
+    paymentReminder: `Merhaba ${input.customerName}, ${baseContext} için ödeme kaydınız bekleniyor.`,
   }
 }

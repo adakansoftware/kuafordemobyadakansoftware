@@ -50,7 +50,7 @@ export function runNotificationsTests() {
   const trEmail = renderNotificationDelivery(baseContext, "musteri@example.com")
   assert.equal(trEmail.channel, "EMAIL")
   assert.equal(trEmail.recipient, "musteri@example.com")
-  assert.equal(trEmail.subject, "Randevu kaydiniz alindi — Adakan Kuafor")
+  assert.equal(trEmail.subject, "Randevu kaydınız alındı — Adakan Kuafor")
   assert.ok(trEmail.body.includes("Merhaba Ayse Yilmaz"))
   assert.ok(trEmail.body.includes("Hizmet: Sac Kesim — Mehmet"))
   assert.ok(trEmail.body.includes("Tarih: 12 Kasım 2026"))

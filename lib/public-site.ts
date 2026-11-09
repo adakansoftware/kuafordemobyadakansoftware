@@ -54,6 +54,12 @@ export function getHomePageViewModel(locale: Locale = "tr") {
       title: content.pages.home.testimonials.title,
       items: [...content.testimonials],
     },
+    faq: {
+      eyebrow: content.pages.home.faq.eyebrow,
+      title: content.pages.home.faq.title,
+      description: content.pages.home.faq.description,
+      items: content.pages.home.faq.items.map((item) => ({ ...item })),
+    },
     cta: {
       eyebrow: content.cta.eyebrow,
       title: content.cta.title,

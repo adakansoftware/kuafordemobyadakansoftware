@@ -81,27 +81,27 @@ function buildTemplate(context: NotificationTemplateContext): TemplateBody {
   switch (context.templateKey) {
     case "appointment-confirmation":
       return {
-        subject: `Randevu kaydiniz alindi — ${context.businessName}`,
+        subject: `Randevu kaydınız alındı — ${context.businessName}`,
         email:
           `Merhaba ${context.customerName},\n\n` +
-          `${context.businessName} icindeki randevunuz kayda alindi.\n\n` +
+          `${context.businessName} içindeki randevunuz kayda alındı.\n\n` +
           `Hizmet: ${context.serviceName}${staffLabel}\n` +
           `Tarih: ${dateLabel}\n\n` +
           `Sizi bekliyoruz.`,
         sms:
-          `${context.businessName}: ${context.serviceName} randevunuz ${dateLabel} icin kayda alindi. Gorusmek uzere!`,
+          `${context.businessName}: ${context.serviceName} randevunuz ${dateLabel} için kayda alındı. Görüşmek üzere!`,
       }
     case "reminder-24h":
       return {
-        subject: `Hatirlatma — randevunuz yarin — ${context.businessName}`,
+        subject: `Hatırlatma — randevunuz yarın — ${context.businessName}`,
         email:
           `Merhaba ${context.customerName},\n\n` +
-          `Yarinki randevunuz icin hatirlatma.\n\n` +
+          `Yarınki randevunuz için hatırlatma.\n\n` +
           `Hizmet: ${context.serviceName}${staffLabel}\n` +
           `Tarih: ${dateLabel}\n\n` +
-          `${context.businessName} icinde gorusmek uzere.`,
+          `${context.businessName} içinde görüşmek üzere.`,
         sms:
-          `${context.businessName} hatirlatma: ${context.serviceName} randevunuz yarin ${dateLabel}.`,
+          `${context.businessName} hatırlatma: ${context.serviceName} randevunuz yarın ${dateLabel}.`,
       }
     case "appointment-cancelled":
       return {
@@ -109,7 +109,7 @@ function buildTemplate(context: NotificationTemplateContext): TemplateBody {
         email:
           `Merhaba ${context.customerName},\n\n` +
           `${dateLabel} tarihindeki ${context.serviceName} randevunuz iptal edildi.\n\n` +
-          `Dilediginiz zaman yeni bir randevu olusturabilirsiniz.`,
+          `Dilediğiniz zaman yeni bir randevu oluşturabilirsiniz.`,
         sms:
           `${context.businessName}: ${dateLabel} tarihindeki ${context.serviceName} randevunuz iptal edildi.`,
       }

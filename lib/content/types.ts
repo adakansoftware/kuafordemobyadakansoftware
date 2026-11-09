@@ -65,6 +65,11 @@ export type IntroHighlight = {
   description: string
 }
 
+export type FaqItem = {
+  question: string
+  answer: string
+}
+
 export type SiteContent = {
   brand: {
     shortName: string
@@ -157,6 +162,12 @@ export type SiteContent = {
       testimonials: {
         eyebrow: string
         title: string
+      }
+      faq: {
+        eyebrow: string
+        title: string
+        description: string
+        items: FaqItem[]
       }
     }
     booking: {

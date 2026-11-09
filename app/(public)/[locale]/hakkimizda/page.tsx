@@ -72,7 +72,7 @@ export default async function HakkimizdaPage({ params }: PageProps) {
           </div>
           <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             {viewModel.values.map((value, index) => {
-              const Icon = valueIcons[index]
+              const Icon = valueIcons[index % valueIcons.length]
 
               return (
                 <div key={value.title} className="rounded-[1.5rem] border border-border bg-card p-6 text-center shadow-sm">

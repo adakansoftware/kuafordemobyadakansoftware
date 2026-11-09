@@ -53,8 +53,8 @@ export const siteContentEn: SiteContent = {
     ],
   },
   social: {
-    instagram: "",
-    tiktok: "",
+    instagram: "https://instagram.com/adakanhairstudio",
+    tiktok: "https://tiktok.com/@adakanhairstudio",
   },
   stats: [
     { value: 10, suffix: "+", label: "Years of Experience" },
@@ -67,30 +67,34 @@ export const siteContentEn: SiteContent = {
       slug: "sac-kesim-tasarim",
       title: "Haircut and Design",
       shortTitle: "Haircut",
-      price: "Starting from 250 TRY",
+      price: "Starting from 950 TRY",
       teaser: "A professional cut planned around your facial features and daily habits.",
       description:
-        "Your hair structure, face shape and daily routine are evaluated together; a clear cutting experience is delivered with measured consulting, washing and final styling.",
+        "Your hair structure, face shape and daily routine are evaluated together; a complete cutting experience is delivered with style consulting, washing, the right choice of scissors and razor techniques, and final styling. The cut plan respects the natural fall of your hair and a shape you can maintain at home.",
       image: "/images/service-haircut.jpg",
       features: [
         "Personal style consulting",
-        "Wash and professional finishing touch",
-        "A cut plan suited to daily use",
         "Balance work around your face line",
+        "Wash and scalp care",
+        "Right choice of scissors and razor techniques",
+        "A cut plan suited to daily use",
+        "Professional finishing touch and styling",
       ],
     },
     {
       slug: "sac-boyama",
       title: "Hair Coloring",
       shortTitle: "Coloring",
-      price: "Starting from 400 TRY",
+      price: "Starting from 2,200 TRY",
       teaser: "Balanced color application with natural transitions and controlled tone work.",
       description:
-        "The current state of your hair is analyzed and ombre, balayage, toning or color renewal applications are planned in a controlled way; the goal is a natural, bright and wearable result.",
+        "The current state of your hair is analyzed and ombre, balayage, root color, toning or color renewal applications are planned in a controlled way. When needed, a color test is done before the application; the process runs with premium products that protect hair health. The goal is a natural, bright and wearable result.",
       image: "/images/service-coloring.jpg",
       features: [
         "Ombre and balayage options",
         "Tone equalizing and color renewal",
+        "Root color and retouch applications",
+        "Pre-color test when needed",
         "Premium products and protective care",
         "Post-treatment care guidance",
       ],
@@ -99,13 +103,15 @@ export const siteContentEn: SiteContent = {
       slug: "keratin-bakimi",
       title: "Keratin Treatment",
       shortTitle: "Keratin",
-      price: "Starting from 800 TRY",
+      price: "Starting from 2,800 TRY",
       teaser: "Intensive care for shine, softness and a more controlled hair look.",
       description:
-        "Planned according to your level of wear, the keratin treatment aims for a brighter, calmer and easier-to-style look with intensive formulas that support the hair strands.",
+        "Planned according to your level of wear, the keratin treatment aims for a brighter, calmer and easier-to-style look with intensive formulas that support the hair strands. Application steps are adjusted section by section to your hair structure; what to watch in the first days after the treatment and your home care routine are explained in detail.",
       image: "/images/service-keratin.jpg",
       features: [
+        "Planning based on level of wear",
         "Intensive repair-focused care",
+        "Frizz and static control",
         "Bright and balanced finish",
         "Support for easier styling",
         "Home care routine recommendations",
@@ -115,14 +121,16 @@ export const siteContentEn: SiteContent = {
       slug: "fon-sekillendirme",
       title: "Blowout and Styling",
       shortTitle: "Styling",
-      price: "Starting from 150 TRY",
+      price: "Starting from 400 TRY",
       teaser: "Clean and lasting styling for daily use or special days.",
       description:
-        "Straight, voluminous or more mobile finishes are prepared by evaluating your hair length, density and purpose of use; the aim is a fast yet careful result.",
+        "Straight, voluminous or wavy finishes are prepared by evaluating your hair length, density and purpose of use. Blow-dry, curling iron and straightener techniques are supported with heat-protective products; the aim is a fast yet careful result you can carry all day.",
       image: "/images/service-blowdry.jpg",
       features: [
         "Daily and special day alternatives",
-        "Straight, voluminous or mobile finishes",
+        "Straight, voluminous or wavy finishes",
+        "Blow-dry, curling iron and straightener techniques",
+        "Heat-protective product use",
         "Heat-controlled application",
         "Timely and orderly service flow",
       ],
@@ -131,47 +139,91 @@ export const siteContentEn: SiteContent = {
       slug: "kaynak-islemleri",
       title: "Hair Extensions",
       shortTitle: "Extensions",
-      price: "Starting from 1,500 TRY",
+      price: "Starting from 1,800 TRY",
       teaser: "Natural-looking volume and length solutions.",
       description:
-        "The technique suited to your hair structure is selected and your length and volume needs are planned professionally; comfort, naturalness and ease of use are prioritized.",
+        "The technique suited to your hair structure is selected and your length and volume needs are planned professionally. Your color and hair thickness guide the extension choice; with a post-application care set and regular check-in appointments, naturalness and everyday comfort are preserved.",
       image: "/images/service-extensions.jpg",
       features: [
         "Natural-look-focused planning",
         "Different technique alternatives",
+        "Tone selection matched to your color",
         "Volume and length balance",
-        "Post-application usage guidance",
+        "Post-application care set recommendation",
+        "Regular check-in and renewal plan",
       ],
     },
   ],
   reasons: [
-    { title: "Expert Team", description: "An experienced team in continuous training that follows current techniques." },
-    { title: "Premium Products", description: "A reliable and professional product selection that protects hair health." },
-    { title: "Hygiene Standard", description: "A clean, orderly and trustworthy salon flow." },
-    { title: "Personal Planning", description: "Every treatment is evaluated separately according to hair structure and expectations." },
-    { title: "Calm Experience", description: "A visit process with controlled appointment density and clear communication." },
-    { title: "Result-Oriented Approach", description: "We focus on sustainable and wearable results, not flashy ones." },
+    {
+      title: "Expert Team",
+      description:
+        "An experienced team in continuous training that follows current techniques. Each specialist goes deep in their own field — cutting, color or care.",
+    },
+    {
+      title: "Premium Products",
+      description:
+        "A reliable and professional product selection that protects hair health. We share the series used in every application with each guest.",
+    },
+    {
+      title: "Hygiene Standard",
+      description:
+        "A clean, orderly and trustworthy salon flow. Tool sterilization after every guest is applied without compromise.",
+    },
+    {
+      title: "Personal Planning",
+      description:
+        "Every treatment is evaluated separately according to hair structure, face shape and expectations. We make a personal plan, not a template.",
+    },
+    {
+      title: "Calm Experience",
+      description:
+        "A visit process with controlled appointment density and clear communication. Time spent in the waiting area stays planned.",
+    },
+    {
+      title: "Result-Oriented Approach",
+      description:
+        "We focus on sustainable and wearable results, not flashy ones. We aim for a finish you can recreate at home.",
+    },
   ],
   gallery: [
     { src: "/images/before-after-1.jpg", alt: "Hair care application before and after" },
     { src: "/images/before-after-2.jpg", alt: "Color application before and after" },
     { src: "/images/before-after-3.jpg", alt: "Styling application before and after" },
+    { src: "/images/service-coloring.jpg", alt: "Natural color transitions with balayage application" },
+    { src: "/images/service-keratin.jpg", alt: "Bright and balanced look after keratin treatment" },
+    { src: "/images/service-blowdry.jpg", alt: "Everyday polished finish with blowout and styling" },
   ],
   testimonials: [
     {
-      name: "Ayse Yilmaz",
-      text: "The appointment process was very orderly. The team listened to my needs well and the result fully met my expectations.",
+      name: "Ayşe Yılmaz",
+      text: "The appointment process was very orderly. The team listened to my needs well and the result fully met my expectations. The cut styles just as easily at home.",
       rating: 5,
     },
     {
       name: "Zeynep Kara",
-      text: "Their guidance based on my hair structure during the keratin treatment was very reassuring. The result looks natural and well cared for.",
+      text: "Their guidance based on my hair structure during the keratin treatment was very reassuring. The result looks natural and well cared for, and the static is completely gone.",
       rating: 5,
     },
     {
       name: "Elif Demir",
-      text: "The tone selection in the color work was excellent. The salon experience was calm, clean and professional.",
+      text: "The tone selection in the color work was excellent. We're planning a slightly cooler tone for the root color in the next session. The salon experience was calm and professional.",
+      rating: 4,
+    },
+    {
+      name: "Merve Şahin",
+      text: "I received detailed information before the extension application, which removed all my hesitation. Thanks to the after-care recommendations, my extensions still look like day one.",
       rating: 5,
+    },
+    {
+      name: "Deniz Aksoy",
+      text: "I went in for a blowout before a special event; the wavy finish was exactly what I wanted and it held all night. They started on time and finished on time.",
+      rating: 5,
+    },
+    {
+      name: "Selin Yıldız",
+      text: "On my first visit they asked about my hair history carefully and never rushed. A good overall experience; I'm thinking of trying balayage next time.",
+      rating: 4,
     },
   ],
   values: [
@@ -182,19 +234,19 @@ export const siteContentEn: SiteContent = {
   ],
   team: [
     {
-      name: "Elif Aydin",
+      name: "Elif Aydın",
       title: "Founder and Lead Stylist",
       bio: "Founder stylist specialized in cutting, design and guest experience standards.",
       image: "/images/team-1.jpg",
     },
     {
-      name: "Emre Kilic",
+      name: "Emre Kılıç",
       title: "Color Specialist",
       bio: "Expert in modern color transitions, tone balancing and protective coloring applications.",
       image: "/images/team-2.jpg",
     },
     {
-      name: "Seda Ozturk",
+      name: "Seda Öztürk",
       title: "Care Specialist",
       bio: "Works with a hair-structure-appropriate planning approach in keratin and intensive care applications.",
       image: "/images/team-3.jpg",
@@ -208,8 +260,15 @@ export const siteContentEn: SiteContent = {
       "Appointment requests are confirmed based on salon density and team availability.",
       "For changes or cancellations, we kindly ask you to give at least 24 hours' notice when possible.",
       "On your first visit, arriving 5-10 minutes early helps us assess your hair history more healthily.",
+      "If you are more than 15 minutes late, the application duration may be shortened or the appointment rescheduled.",
+      "For coloring and color treatments, we may request a color test completed within the last 48 hours due to sensitivity risk.",
     ],
-    trustPoints: ["Confidential and secure request recording", "Conflict check for the same time slot", "Clear confirmation and follow-up flow"],
+    trustPoints: [
+      "Confidential and secure request recording",
+      "Conflict check for the same time slot",
+      "Clear confirmation and follow-up flow",
+      "Request with contact details only — no payment information",
+    ],
   },
   cta: {
     eyebrow: "Plan Your Appointment",
@@ -247,34 +306,87 @@ export const siteContentEn: SiteContent = {
         highlights: [
           {
             title: "Personalized",
-            description: "Face line, hair structure and usage habits are evaluated together.",
+            description:
+              "Face line, hair structure and usage habits are evaluated together; the result is planned for you.",
           },
           {
             title: "Premium",
-            description: "Product selection, application discipline and guest communication progress on the same line.",
+            description:
+              "Product selection, application discipline and guest communication progress on the same line; details are never small.",
           },
         ],
       },
       reasons: {
         eyebrow: "Our Difference",
         title: "Why Adakan Hair Studio?",
-        description: "We approach service quality not only through results but together with process discipline and communication trust.",
+        description:
+          "We approach service quality not only through results but together with process discipline and communication trust.",
       },
       featuredServices: {
         eyebrow: "Our Services",
         title: "Most requested services",
-        description: "Review the most frequently preferred in-salon applications with clear starting prices and brief content.",
+        description:
+          "Review the most frequently preferred in-salon applications with clear starting prices and brief content.",
         allServicesLabel: "View all services",
         bookingLabel: "Create a request for this service",
       },
       gallery: {
         eyebrow: "Gallery",
         title: "Before and after",
-        description: "Review our application discipline and the results achieved with visual examples.",
+        description:
+          "Review our application discipline and the results achieved with visual examples; every frame is real guest work.",
       },
       testimonials: {
         eyebrow: "Guest Reviews",
         title: "How do our guests describe the experience?",
+      },
+      faq: {
+        eyebrow: "Frequently Asked Questions",
+        title: "What guests ask most",
+        description:
+          "We answered the most frequently asked questions about the appointment process, pricing policy and post-treatment care.",
+        items: [
+          {
+            question: "How do I book an appointment and when is it confirmed?",
+            answer:
+              "You can submit your request through the online booking form by choosing a service, date and time. Your request is checked against salon density and team availability; we contact you as soon as possible to confirm. Conflicting time slots are automatically blocked by the system.",
+          },
+          {
+            question: "How are prices determined?",
+            answer:
+              "The starting price of each service is clearly stated. The exact price, which depends on hair length, density and the scope of the application, is shared during the consultation before the treatment; there are no surprise costs.",
+          },
+          {
+            question: "How should I care for my hair after coloring?",
+            answer:
+              "For the first 48 hours, avoid shampoos without color protection and wash your hair with lukewarm water. We recommend sulfate-free, color-protecting products; the right series visibly extends color longevity.",
+          },
+          {
+            question: "How long does a keratin treatment last?",
+            answer:
+              "Depending on your hair structure and home care routine, it typically lasts 3-4 months. Using a sulfate-free shampoo and rinsing after sea and pool sessions are the most important factors that extend its duration.",
+          },
+          {
+            question: "How should I care for my hair extensions?",
+            answer:
+              "Avoid brushing your hair while wet at the extension bonds, braid loosely before sleeping and use the recommended care set. A check-in appointment is scheduled every 6-8 weeks for extension health.",
+          },
+          {
+            question: "What happens on my first visit?",
+            answer:
+              "We start with a short conversation about your hair history, habits and expectations. Then a hair analysis and treatment plan are shared with you. That's why we kindly ask you to arrive 5-10 minutes early for your first appointment.",
+          },
+          {
+            question: "What payment options are available?",
+            answer:
+              "You can pay in cash or by credit card. Payment is taken after the service is completed and you approve the result; no payment information is requested for an appointment request.",
+          },
+          {
+            question: "What should I do if I need to cancel my appointment?",
+            answer:
+              "For changes or cancellations, we kindly ask you to notify us at least 24 hours in advance when possible. This lets us offer your slot to another guest who needs it.",
+          },
+        ],
       },
     },
     booking: {

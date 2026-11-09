@@ -26,7 +26,7 @@ export function WhyUsSection(props: WhyUsSectionProps) {
 
         <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {props.items.map((reason, index) => {
-            const Icon = reasonIcons[index]
+            const Icon = reasonIcons[index % reasonIcons.length]
 
             return (
               <div

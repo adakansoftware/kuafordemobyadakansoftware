@@ -52,8 +52,8 @@ export function runSalonOpsTests() {
     businessName: "Adakan Hair Studio",
   })
 
-  assert.equal(messages.confirmation.includes("randevunuz onaylandi"), true)
-  assert.equal(messages.paymentReminder.includes("odeme kaydiniz bekleniyor"), true)
+  assert.equal(messages.confirmation.includes("randevunuz onaylandı"), true)
+  assert.equal(messages.paymentReminder.includes("ödeme kaydınız bekleniyor"), true)
   assert.equal(normalizeCustomerPortalIdentifier(" Demo@Example.com "), "demo@example.com")
   assert.equal(normalizeCustomerPortalIdentifier("+90 (532) 111 00 01"), "905321110001")
   assert.equal(getCustomerPortalSessionMaxAgeSeconds(), 43200)
