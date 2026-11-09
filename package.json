@@ -27,7 +27,9 @@
     "db:migrate": "prisma migrate deploy",
     "db:hardening": "prisma db execute --file prisma/hardening.sql --schema prisma/schema.prisma",
     "db:seed": "node prisma/seed.mjs",
-    "ops:notifications": "node --experimental-strip-types scripts/ops-notifications.mjs"
+    "ops:notifications": "node --experimental-strip-types scripts/ops-notifications.mjs",
+    "test:e2e": "playwright test",
+    "verify:full": "npm run verify && npm run test:e2e"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -85,6 +87,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@playwright/test": "^1.65.0",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^22",
     "@types/react": "19.2.14",

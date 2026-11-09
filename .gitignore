@@ -14,3 +14,7 @@ node_modules/
 
 # vitest coverage
 coverage/
+
+# playwright
+playwright-report/
+test-results/

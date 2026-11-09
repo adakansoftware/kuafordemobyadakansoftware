@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import NextLink from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import { Menu, Scissors, X } from "lucide-react"
 import { getSiteContent } from "@/lib/content"
@@ -28,6 +27,7 @@ export function Navbar() {
 
   const isHome = pathname === "/"
   const solid = scrolled || !isHome
+  const otherLocale = locale === "en" ? "tr" : "en"
 
   return (
     <header
@@ -64,12 +64,13 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
-          <NextLink
-            href={locale === "en" ? "/" : "/en"}
+          <Link
+            href={pathname}
+            locale={otherLocale}
             className="rounded-full border border-border/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-foreground/70 transition-colors hover:border-accent hover:text-accent"
           >
             {locale === "en" ? "TR" : "EN"}
-          </NextLink>
+          </Link>
         </div>
 
         <Link
@@ -103,13 +104,14 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
-          <NextLink
-            href={locale === "en" ? "/" : "/en"}
+          <Link
+            href={pathname}
+            locale={otherLocale}
             onClick={() => setIsOpen(false)}
             className="block py-3 text-sm font-medium tracking-[0.16em] uppercase text-foreground/70 transition-colors hover:text-accent"
           >
             {locale === "en" ? "TR" : "EN"}
-          </NextLink>
+          </Link>
           <Link
             href="/randevu"
             onClick={() => setIsOpen(false)}
