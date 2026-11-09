@@ -40,6 +40,7 @@ const filesToCheck = [
   "lib/security.ts",
   "lib/seo.ts",
   "lib/site-content.ts",
+  "lib/i18n/admin-messages.ts",
 ]
 
 const forbiddenTokens = [String.fromCharCode(195), String.fromCharCode(196), String.fromCharCode(197), "TODO"]
@@ -59,10 +60,18 @@ async function main() {
     new URL("../components/admin/appointment-operations.tsx", import.meta.url),
     "utf8"
   )
+  const adminMessages = await readFile(
+    new URL("../lib/i18n/admin-messages.ts", import.meta.url),
+    "utf8"
+  )
   const adminPage = await readFile(new URL("../app/(admin)/admin/page.tsx", import.meta.url), "utf8")
 
-  if (!adminOperations.includes("Odeme Alindi")) {
-    throw new Error('Smoke check failed: "Odeme Alindi" aksiyonu bulunamadi -> components/admin/appointment-operations.tsx')
+  if (!adminOperations.includes("getAdminMessages")) {
+    throw new Error('Smoke check failed: admin mesaj sozlugu kullanilmiyor -> components/admin/appointment-operations.tsx')
+  }
+
+  if (!adminMessages.includes("Odeme Alindi")) {
+    throw new Error('Smoke check failed: "Odeme Alindi" aksiyonu bulunamadi -> lib/i18n/admin-messages.ts')
   }
 
   if (!adminPage.includes("/admin/dashboard")) {

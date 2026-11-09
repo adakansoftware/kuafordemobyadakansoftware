@@ -2,6 +2,8 @@
 
 import { useActionState } from "react"
 import { type StaffTimeOffActionState, createStaffTimeOffAction } from "@/app/(admin)/admin/actions"
+import { getAdminMessages } from "@/lib/i18n/admin-messages"
+import type { Locale } from "@/lib/i18n/validation"
 
 const initialState: StaffTimeOffActionState = {
   success: false,
@@ -10,32 +12,35 @@ const initialState: StaffTimeOffActionState = {
 
 export function StaffTimeOffForm({
   staffId,
+  locale,
 }: {
   staffId: string
+  locale: Locale
 }) {
   const [state, formAction] = useActionState(createStaffTimeOffAction, initialState)
+  const t = getAdminMessages(locale).staffTimeOff
 
   return (
     <form action={formAction} className="grid gap-3 rounded-2xl border border-border/80 bg-secondary/20 p-4">
       <input type="hidden" name="staffId" value={staffId} />
       <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Baslangic Tarihi" name="startDate" type="date" />
-        <Field label="Bitis Tarihi" name="endDate" type="date" />
+        <Field label={t.startDate} name="startDate" type="date" />
+        <Field label={t.endDate} name="endDate" type="date" />
       </div>
       <label className="flex items-center gap-2 text-sm text-foreground">
         <input type="checkbox" name="isAllDay" value="true" defaultChecked />
-        <span>Tum gun izin</span>
+        <span>{t.allDay}</span>
       </label>
-      <Field label="Izin Nedeni" name="reason" />
+      <Field label={t.reason} name="reason" />
       <div className="flex items-center justify-between gap-4">
         <p className={state.success ? "text-sm text-green-600" : "text-sm text-muted-foreground"}>
-          {state.message || "Yillik izin, rapor veya vardiya disi blok."}
+          {state.message || t.hint}
         </p>
         <button
           type="submit"
           className="rounded-xl bg-primary px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground"
         >
-          Izin Ekle
+          {t.submit}
         </button>
       </div>
     </form>

@@ -1,27 +1,30 @@
 import { AdminUserRole } from "@prisma/client"
 import { getUnpaidCompletedAppointments, getEndOfDaySummary } from "@/lib/salon-ops-repository"
+import { getAdminLocale, getAdminMessages } from "@/lib/i18n/admin"
 import { requireAdminRoles } from "@/lib/security"
 
 export default async function AdminPaymentsPage() {
   const access = await requireAdminRoles([AdminUserRole.OWNER, AdminUserRole.MANAGER])
-  const [unpaid, daySummary] = await Promise.all([
+  const [unpaid, daySummary, locale] = await Promise.all([
     getUnpaidCompletedAppointments(20, { accessContext: access }),
     getEndOfDaySummary(),
+    getAdminLocale(),
   ])
+  const t = getAdminMessages(locale).payments
 
   return (
     <section className="py-10">
       <div className="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="font-serif text-3xl font-bold text-foreground">Odemeler</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Tamamlanmis ama tahsil edilmemis randevular ve gunluk tahsilat ozeti.</p>
+          <h2 className="font-serif text-3xl font-bold text-foreground">{t.title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{t.intro}</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
-          <MetricCard label="Bugunku Ciro" value={formatCurrency(daySummary.revenueTotal)} />
-          <MetricCard label="Nakit" value={formatCurrency(daySummary.cashTotal)} />
-          <MetricCard label="Kart" value={formatCurrency(daySummary.cardTotal)} />
-          <MetricCard label="Bekleyen Odeme" value={formatCurrency(daySummary.pendingPaymentAmount)} />
+          <MetricCard label={t.todaysRevenue} value={formatCurrency(daySummary.revenueTotal)} />
+          <MetricCard label={t.cash} value={formatCurrency(daySummary.cashTotal)} />
+          <MetricCard label={t.card} value={formatCurrency(daySummary.cardTotal)} />
+          <MetricCard label={t.pendingPayment} value={formatCurrency(daySummary.pendingPaymentAmount)} />
         </div>
 
         <div className="space-y-4">
@@ -35,7 +38,7 @@ export default async function AdminPaymentsPage() {
                   </p>
                 </div>
                 <div className="text-sm font-medium text-amber-800">
-                  Bekleyen tahsilat: {formatCurrency(appointment.service.priceFrom)}
+                  {t.pendingCollection}: {formatCurrency(appointment.service.priceFrom)}
                 </div>
               </div>
             </div>

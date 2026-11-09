@@ -25,7 +25,20 @@ export function buildCustomerWhatsAppUrl(phone: string | null | undefined, messa
   return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`
 }
 
-export function getPaymentMethodLabel(method: PaymentMethod) {
+export function getPaymentMethodLabel(method: PaymentMethod, locale: "tr" | "en" = "tr") {
+  if (locale === "en") {
+    switch (method) {
+      case PaymentMethod.CASH:
+        return "Cash"
+      case PaymentMethod.CARD:
+        return "Card"
+      case PaymentMethod.IBAN:
+        return "IBAN"
+      default:
+        return "Other"
+    }
+  }
+
   switch (method) {
     case PaymentMethod.CASH:
       return "Nakit"
@@ -38,12 +51,12 @@ export function getPaymentMethodLabel(method: PaymentMethod) {
   }
 }
 
-export function getPaymentMethodOptions() {
+export function getPaymentMethodOptions(locale: "tr" | "en" = "tr") {
   return [
-    { value: PaymentMethod.CASH, label: getPaymentMethodLabel(PaymentMethod.CASH) },
-    { value: PaymentMethod.CARD, label: getPaymentMethodLabel(PaymentMethod.CARD) },
-    { value: PaymentMethod.IBAN, label: getPaymentMethodLabel(PaymentMethod.IBAN) },
-    { value: PaymentMethod.OTHER, label: getPaymentMethodLabel(PaymentMethod.OTHER) },
+    { value: PaymentMethod.CASH, label: getPaymentMethodLabel(PaymentMethod.CASH, locale) },
+    { value: PaymentMethod.CARD, label: getPaymentMethodLabel(PaymentMethod.CARD, locale) },
+    { value: PaymentMethod.IBAN, label: getPaymentMethodLabel(PaymentMethod.IBAN, locale) },
+    { value: PaymentMethod.OTHER, label: getPaymentMethodLabel(PaymentMethod.OTHER, locale) },
   ]
 }
 

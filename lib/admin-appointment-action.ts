@@ -11,30 +11,54 @@ export function isValidAppointmentStatus(value: string) {
   return validStatuses.has(value as AppointmentStatus)
 }
 
-export function mapAdminAppointmentSecurityError(error: unknown) {
+export type AdminAppointmentActionMessages = {
+  adminAccessDenied: string
+  requestOriginDenied: string
+  securityFailed: string
+  rateLimited: string
+  updateFailed: string
+}
+
+const defaultMessages: AdminAppointmentActionMessages = {
+  adminAccessDenied: "Bu islem icin yonetim erisimi dogrulanamadi.",
+  requestOriginDenied: "Istek kaynagi dogrulanamadi.",
+  securityFailed: "Guvenlik dogrulamasi basarisiz oldu.",
+  rateLimited: "Kisa sure icinde cok fazla guncelleme denemesi algilandi. Lutfen biraz sonra tekrar deneyin.",
+  updateFailed: "Guncelleme sirasinda beklenmeyen bir hata olustu.",
+}
+
+export function mapAdminAppointmentSecurityError(
+  error: unknown,
+  messages: AdminAppointmentActionMessages = defaultMessages
+) {
   if (error instanceof Error && error.name === "AdminAccessError") {
-    return "Bu islem icin yonetim erisimi dogrulanamadi."
+    return messages.adminAccessDenied
   }
 
   if (error instanceof Error && error.name === "RequestSecurityError") {
-    return "Istek kaynagi dogrulanamadi."
+    return messages.requestOriginDenied
   }
 
   if (error instanceof Error && error.name === "AdminStepUpError") {
     return error.message
   }
 
-  return "Guvenlik dogrulamasi basarisiz oldu."
+  return messages.securityFailed
 }
 
-export function getAdminAppointmentRateLimitMessage() {
-  return "Kisa sure icinde cok fazla guncelleme denemesi algilandi. Lutfen biraz sonra tekrar deneyin."
+export function getAdminAppointmentRateLimitMessage(
+  messages: Pick<AdminAppointmentActionMessages, "rateLimited"> = defaultMessages
+) {
+  return messages.rateLimited
 }
 
-export function mapAdminAppointmentUpdateError(error: unknown) {
+export function mapAdminAppointmentUpdateError(
+  error: unknown,
+  messages: Pick<AdminAppointmentActionMessages, "updateFailed"> = defaultMessages
+) {
   if (error instanceof Error && error.name === "AppointmentConflictError") {
     return error.message
   }
 
-  return "Guncelleme sirasinda beklenmeyen bir hata olustu."
+  return messages.updateFailed
 }

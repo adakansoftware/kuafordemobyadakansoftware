@@ -16,7 +16,9 @@ import {
   getPaymentMethodLabel,
   getPaymentMethodOptions,
 } from "@/lib/salon-ops"
-import { siteContent } from "@/lib/site-content"
+import { getAdminMessages } from "@/lib/i18n/admin-messages"
+import type { Locale } from "@/lib/i18n/validation"
+import { getSiteContent } from "@/lib/content"
 
 type StaffOption = {
   id: string
@@ -55,6 +57,7 @@ type AppointmentOperationCardProps = {
   }
   staffOptions: StaffOption[]
   businessName: string
+  locale: Locale
 }
 
 const initialAppointmentState: UpdateAppointmentActionState = {
@@ -73,16 +76,19 @@ export function AppointmentOperations({
   appointment,
   staffOptions,
   businessName,
+  locale,
 }: AppointmentOperationCardProps) {
   const [appointmentState, appointmentFormAction] = useActionState(updateAppointmentAction, initialAppointmentState)
   const [paymentState, paymentFormAction] = useActionState(recordAppointmentPaymentAction, initialPaymentState)
   const currentAppointmentState =
     appointmentState.appointmentId === appointment.id ? appointmentState : initialAppointmentState
   const currentPaymentState = paymentState.appointmentId === appointment.id ? paymentState : initialPaymentState
+  const t = getAdminMessages(locale).appointmentOps
+  const statusLabels = getSiteContent(locale).admin.statusLabels
 
   const assignedStaffLabel = (() => {
     if (!appointment.staff) {
-      return "Henuz atanmadi"
+      return t.notAssignedYet
     }
 
     const staffId = appointment.staff.id
@@ -111,9 +117,9 @@ export function AppointmentOperations({
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="font-serif text-xl font-bold text-foreground">{appointment.customer.name}</h3>
-            <StatusBadge status={appointment.status} />
+            <StatusBadge status={appointment.status} locale={locale} />
             <span className="rounded-full border border-border bg-background px-3 py-1 text-xs uppercase tracking-wide text-muted-foreground">
-              {appointment.payment ? "Odeme alindi" : "Odeme bekliyor"}
+              {appointment.payment ? t.paymentReceived : t.paymentPending}
             </span>
           </div>
 
@@ -121,38 +127,38 @@ export function AppointmentOperations({
             <p>
               {appointment.service.title} / {appointment.scheduledDate} / {appointment.scheduledTime}
             </p>
-            <p>Telefon: {appointment.customer.phone ?? "Yok"}</p>
-            <p>E-posta: {appointment.customer.email ?? "Yok"}</p>
-            <p>Personel: {assignedStaffLabel}</p>
-            <p>Tahmini tutar: {formatCurrency(appointment.service.priceFrom)}</p>
+            <p>{t.phone}: {appointment.customer.phone ?? t.none}</p>
+            <p>{t.email}: {appointment.customer.email ?? t.none}</p>
+            <p>{t.staff}: {assignedStaffLabel}</p>
+            <p>{t.estimatedAmount}: {formatCurrency(appointment.service.priceFrom)}</p>
             <p>
-              Musteri karti:{" "}
+              {t.customerCard}:{" "}
               <Link className="text-accent underline-offset-4 hover:underline" href={`/admin/customers/${appointment.customer.id}`}>
-                detaylari ac
+                {t.openDetails}
               </Link>
             </p>
           </div>
 
           {appointment.payment ? (
             <div className="rounded-2xl bg-emerald-500/10 px-4 py-4 text-sm text-emerald-800">
-              <div className="font-medium">Odeme kaydi mevcut</div>
+              <div className="font-medium">{t.paymentRecordTitle}</div>
               <div className="mt-1">
-                {formatCurrency(appointment.payment.amount)} / {getPaymentMethodLabel(appointment.payment.method)} /{" "}
+                {formatCurrency(appointment.payment.amount)} / {getPaymentMethodLabel(appointment.payment.method, locale)} /{" "}
                 {appointment.payment.paidAt.toLocaleString("tr-TR")}
               </div>
               {appointment.payment.note ? <div className="mt-1">{appointment.payment.note}</div> : null}
             </div>
           ) : appointment.status === "COMPLETED" ? (
             <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-              Bu tamamlanan randevu icin henuz odeme alinmadi.
+              {t.noPaymentForCompleted}
             </div>
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            <WhatsAppLink href={whatsappLinks.reminder} label="Hatirlatma" />
-            <WhatsAppLink href={whatsappLinks.confirmation} label="Onay" />
-            <WhatsAppLink href={whatsappLinks.cancellation} label="Iptal" />
-            <WhatsAppLink href={whatsappLinks.paymentReminder} label="Odeme Hatirlatma" />
+            <WhatsAppLink href={whatsappLinks.reminder} label={t.reminder} />
+            <WhatsAppLink href={whatsappLinks.confirmation} label={t.confirmation} />
+            <WhatsAppLink href={whatsappLinks.cancellation} label={t.cancellation} />
+            <WhatsAppLink href={whatsappLinks.paymentReminder} label={t.paymentReminder} />
           </div>
         </div>
 
@@ -163,7 +169,7 @@ export function AppointmentOperations({
 
             <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-2 text-sm text-foreground">
-                <span className="font-medium">Durum</span>
+                <span className="font-medium">{t.status}</span>
                 <select
                   name="status"
                   defaultValue={appointment.status}
@@ -171,20 +177,20 @@ export function AppointmentOperations({
                 >
                   {statusOptions.map((status) => (
                     <option key={status} value={status}>
-                      {siteContent.admin.statusLabels[status]}
+                      {statusLabels[status]}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="grid gap-2 text-sm text-foreground">
-                <span className="font-medium">Personel</span>
+                <span className="font-medium">{t.staffSelect}</span>
                 <select
                   name="staffId"
                   defaultValue={appointment.staff?.id ?? ""}
                   className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
                 >
-                  <option value="">Atama yapilmadi</option>
+                  <option value="">{t.unassignedOption}</option>
                   {staffOptions.map((staff) => (
                     <option key={staff.id} value={staff.id}>
                       {staff.name} - {staff.role}
@@ -195,44 +201,44 @@ export function AppointmentOperations({
             </div>
 
             <label className="grid gap-2 text-sm text-foreground">
-              <span className="font-medium">Operasyon Notu</span>
+              <span className="font-medium">{t.operationNote}</span>
               <textarea
                 name="notes"
                 defaultValue={appointment.notes ?? ""}
                 rows={3}
-                placeholder="Onay notu, musteri talebi veya operasyon bilgisi"
+                placeholder={t.operationNotePlaceholder}
                 maxLength={500}
                 className="resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
               />
             </label>
 
             <label className="grid gap-2 text-sm text-foreground">
-              <span className="font-medium">Admin Sifresi (kritik degisikliklerde)</span>
+              <span className="font-medium">{t.adminPassword}</span>
               <input
                 type="password"
                 name="adminPassword"
                 autoComplete="current-password"
-                placeholder="Son 10 dakikada dogrulandiysa bos birakilabilir"
+                placeholder={t.adminPasswordPlaceholder}
                 className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
               />
             </label>
 
             <label className="grid gap-2 text-sm text-foreground">
-              <span className="font-medium">Authenticator Kodu</span>
+              <span className="font-medium">{t.totpCode}</span>
               <input
                 name="adminTotpCode"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                placeholder="MFA aktifse 6 haneli kod"
+                placeholder={t.totpPlaceholder}
                 className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
               />
             </label>
 
             <div className="flex items-center justify-between gap-4">
               <p className={currentAppointmentState.success ? "text-sm text-green-600" : "text-sm text-muted-foreground"}>
-                {currentAppointmentState.message || "Randevu durumu ve atama bu cekirdek kayit uzerinden yonetilir."}
+                {currentAppointmentState.message || t.updateHint}
               </p>
-              <SubmitButton label="Kaydi Guncelle" pendingLabel="Kaydediliyor..." />
+              <SubmitButton label={t.updateButton} pendingLabel={t.saving} />
             </div>
           </form>
 
@@ -242,7 +248,7 @@ export function AppointmentOperations({
 
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="grid gap-2 text-sm text-foreground">
-                  <span className="font-medium">Odeme Tutari</span>
+                  <span className="font-medium">{t.paymentAmount}</span>
                   <input
                     type="number"
                     name="amount"
@@ -253,13 +259,13 @@ export function AppointmentOperations({
                 </label>
 
                 <label className="grid gap-2 text-sm text-foreground">
-                  <span className="font-medium">Yontem</span>
+                  <span className="font-medium">{t.method}</span>
                   <select
                     name="method"
                     defaultValue={PaymentMethod.CARD}
                     className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
                   >
-                    {getPaymentMethodOptions().map((method) => (
+                    {getPaymentMethodOptions(locale).map((method) => (
                       <option key={method.value} value={method.value}>
                         {method.label}
                       </option>
@@ -269,42 +275,42 @@ export function AppointmentOperations({
               </div>
 
               <label className="grid gap-2 text-sm text-foreground">
-                <span className="font-medium">Odeme Notu</span>
+                <span className="font-medium">{t.paymentNote}</span>
                 <input
                   type="text"
                   name="note"
-                  placeholder="Pos slip no, aciklama veya IBAN notu"
+                  placeholder={t.paymentNotePlaceholder}
                   className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </label>
 
               <label className="grid gap-2 text-sm text-foreground">
-                <span className="font-medium">Admin Sifresi</span>
+                <span className="font-medium">{t.paymentAdminPassword}</span>
                 <input
                   type="password"
                   name="adminPassword"
                   autoComplete="current-password"
-                  placeholder="Kritik odeme islemi icin gerekli olabilir"
+                  placeholder={t.paymentAdminPasswordPlaceholder}
                   className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </label>
 
               <label className="grid gap-2 text-sm text-foreground">
-                <span className="font-medium">Authenticator Kodu</span>
+                <span className="font-medium">{t.totpCode}</span>
                 <input
                   name="adminTotpCode"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  placeholder="MFA aktifse gerekli"
+                  placeholder={t.paymentTotpPlaceholder}
                   className="rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </label>
 
               <div className="flex items-center justify-between gap-4">
                 <p className={currentPaymentState.success ? "text-sm text-green-600" : "text-sm text-emerald-800"}>
-                  {currentPaymentState.message || "Tamamlanan randevu icin odemeyi tek tusla kaydedin."}
+                  {currentPaymentState.message || t.paymentHint}
                 </p>
-                <SubmitButton label="Odeme Alindi" pendingLabel="Kaydediliyor..." />
+                <SubmitButton label={t.paymentButton} pendingLabel={t.saving} />
               </div>
             </form>
           ) : null}
@@ -314,7 +320,7 @@ export function AppointmentOperations({
   )
 }
 
-function StatusBadge({ status }: { status: AppointmentStatus }) {
+function StatusBadge({ status, locale }: { status: AppointmentStatus; locale: Locale }) {
   const className =
     status === "CONFIRMED"
       ? "bg-emerald-500/10 text-emerald-700"
@@ -326,7 +332,7 @@ function StatusBadge({ status }: { status: AppointmentStatus }) {
 
   return (
     <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${className}`}>
-      {siteContent.admin.statusLabels[status]}
+      {getSiteContent(locale).admin.statusLabels[status]}
     </span>
   )
 }

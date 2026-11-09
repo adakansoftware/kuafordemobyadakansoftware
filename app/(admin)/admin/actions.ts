@@ -20,7 +20,9 @@ import {
   isValidAppointmentStatus,
   mapAdminAppointmentSecurityError,
   mapAdminAppointmentUpdateError,
+  type AdminAppointmentActionMessages,
 } from "@/lib/admin-appointment-action"
+import { getAdminMessages, getAdminLocale } from "@/lib/i18n/admin"
 import { AppointmentConflictError, updateAppointmentFromAdmin } from "@/lib/bookings-repository"
 import { adminNotesSchema } from "@/lib/booking"
 import { getCurrentRequestId } from "@/lib/http"
@@ -100,6 +102,14 @@ export type AdminSessionControlActionState = {
   message: string
 }
 
+export async function setAdminLocaleAction(formData: FormData) {
+  const requested = String(formData.get("locale") ?? "")
+  const locale = requested === "en" ? "en" : "tr"
+  const { setAdminLocaleCookie } = await import("@/lib/i18n/admin")
+  await setAdminLocaleCookie(locale)
+  revalidatePath("/admin", "layout")
+}
+
 function isHighRiskAppointmentMutation(statusValue: string, currentStatus?: AppointmentStatus | null) {
   return (
     statusValue === AppointmentStatus.CANCELLED ||
@@ -108,7 +118,15 @@ function isHighRiskAppointmentMutation(statusValue: string, currentStatus?: Appo
   )
 }
 
-async function requireAdminMutationGuard(namespace: string, requestId: string) {
+async function getActionMessages() {
+  return getAdminMessages(await getAdminLocale()).actionMessages
+}
+
+async function requireAdminMutationGuard(
+  namespace: string,
+  requestId: string,
+  securityMessages: AdminAppointmentActionMessages
+) {
   const ipAddress = await getRequestIpAddress()
   const accessContext = await requireAdminAccess()
   await verifyTrustedOrigin({ allowHostFallback: true })
@@ -141,7 +159,7 @@ async function requireAdminMutationGuard(namespace: string, requestId: string) {
       },
     })
 
-    throw new Error(getAdminAppointmentRateLimitMessage())
+    throw new Error(getAdminAppointmentRateLimitMessage(securityMessages))
   }
 
   return {
@@ -168,12 +186,13 @@ export async function updateAppointmentAction(
   formData: FormData
 ): Promise<UpdateAppointmentActionState> {
   const requestId = await getCurrentRequestId()
+  const t = await getActionMessages()
   let accessContext
   let actorIdentifier = "admin"
   let ipAddress = "unknown"
 
   try {
-    const guard = await requireAdminMutationGuard("admin-appointment-write", requestId)
+    const guard = await requireAdminMutationGuard("admin-appointment-write", requestId, t.security)
     accessContext = guard.accessContext
     actorIdentifier = guard.actorIdentifier
     ipAddress = guard.ipAddress
@@ -191,7 +210,7 @@ export async function updateAppointmentAction(
 
     return {
       success: false,
-      message: mapAdminAppointmentSecurityError(error),
+      message: mapAdminAppointmentSecurityError(error, t.security),
     }
   }
 
@@ -205,14 +224,14 @@ export async function updateAppointmentAction(
   if (!appointmentId) {
     return {
       success: false,
-      message: "Randevu kaydi bulunamadi.",
+      message: t.appointment.notFound,
     }
   }
 
   if (!isValidAppointmentStatus(statusValue)) {
     return {
       success: false,
-      message: "Gecersiz durum secildi.",
+      message: t.appointment.invalidStatus,
       appointmentId,
     }
   }
@@ -222,7 +241,7 @@ export async function updateAppointmentAction(
   if (!validatedNotes.success) {
     return {
       success: false,
-      message: validatedNotes.error.issues[0]?.message ?? "Operasyon notu gecersiz.",
+      message: validatedNotes.error.issues[0]?.message ?? t.appointment.invalidNotes,
       appointmentId,
     }
   }
@@ -237,7 +256,7 @@ export async function updateAppointmentAction(
     } catch (error) {
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Ek yonetici dogrulamasi basarisiz oldu.",
+        message: error instanceof Error ? error.message : t.appointment.stepUpFailed,
         appointmentId,
       }
     }
@@ -261,14 +280,14 @@ export async function updateAppointmentAction(
 
     return {
       success: true,
-      message: "Randevu kaydi guncellendi.",
+      message: t.appointment.updated,
       appointmentId,
     }
   } catch (error) {
     if (error instanceof AppointmentConflictError) {
       return {
         success: false,
-        message: mapAdminAppointmentUpdateError(error),
+        message: mapAdminAppointmentUpdateError(error, t.security),
         appointmentId,
       }
     }
@@ -289,7 +308,7 @@ export async function updateAppointmentAction(
 
     return {
       success: false,
-      message: mapAdminAppointmentUpdateError(error),
+      message: mapAdminAppointmentUpdateError(error, t.security),
       appointmentId,
     }
   }
@@ -300,19 +319,20 @@ export async function recordAppointmentPaymentAction(
   formData: FormData
 ): Promise<RecordPaymentActionState> {
   const requestId = await getCurrentRequestId()
+  const t = await getActionMessages()
   let accessContext
   let actorIdentifier = "admin"
   let ipAddress = "unknown"
 
   try {
-    const guard = await requireAdminMutationGuard("admin-payment-write", requestId)
+    const guard = await requireAdminMutationGuard("admin-payment-write", requestId, t.security)
     accessContext = guard.accessContext
     actorIdentifier = guard.actorIdentifier
     ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
-      message: mapAdminAppointmentSecurityError(error),
+      message: mapAdminAppointmentSecurityError(error, t.security),
     }
   }
 
@@ -326,7 +346,7 @@ export async function recordAppointmentPaymentAction(
   if (!validation.success) {
     return {
       success: false,
-      message: validation.error.issues[0]?.message ?? "Odeme formu gecersiz.",
+      message: validation.error.issues[0]?.message ?? t.payment.invalidForm,
       appointmentId: String(formData.get("appointmentId") ?? "").trim() || undefined,
     }
   }
@@ -340,7 +360,7 @@ export async function recordAppointmentPaymentAction(
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Ek yonetici dogrulamasi basarisiz oldu.",
+      message: error instanceof Error ? error.message : t.appointment.stepUpFailed,
       appointmentId: validation.data.appointmentId,
     }
   }
@@ -359,14 +379,14 @@ export async function recordAppointmentPaymentAction(
 
     return {
       success: true,
-      message: "Odeme kaydi alindi.",
+      message: t.payment.recorded,
       appointmentId: validation.data.appointmentId,
     }
   } catch (error) {
     if (error instanceof AdminPaymentError) {
       return {
         success: false,
-        message: mapAdminPaymentError(error),
+        message: mapAdminPaymentError(error, t.payment),
         appointmentId: validation.data.appointmentId,
       }
     }
@@ -386,7 +406,7 @@ export async function recordAppointmentPaymentAction(
 
     return {
       success: false,
-      message: mapAdminPaymentError(error),
+      message: mapAdminPaymentError(error, t.payment),
       appointmentId: validation.data.appointmentId,
     }
   }
@@ -397,19 +417,20 @@ export async function updateBusinessSettingsAction(
   formData: FormData
 ): Promise<BusinessSettingsActionState> {
   const requestId = await getCurrentRequestId()
+  const t = await getActionMessages()
   let accessContext
   let actorIdentifier = "admin"
   let ipAddress = "unknown"
 
   try {
-    const guard = await requireAdminMutationGuard("admin-business-settings-write", requestId)
+    const guard = await requireAdminMutationGuard("admin-business-settings-write", requestId, t.security)
     accessContext = guard.accessContext
     actorIdentifier = guard.actorIdentifier
     ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
-      message: mapAdminAppointmentSecurityError(error),
+      message: mapAdminAppointmentSecurityError(error, t.security),
     }
   }
 
@@ -429,7 +450,7 @@ export async function updateBusinessSettingsAction(
   if (!validation.success) {
     return {
       success: false,
-      message: validation.error.issues[0]?.message ?? "Isletme ayarlari formu gecersiz.",
+      message: validation.error.issues[0]?.message ?? t.businessSettings.invalidForm,
     }
   }
 
@@ -442,7 +463,7 @@ export async function updateBusinessSettingsAction(
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Ek yonetici dogrulamasi basarisiz oldu.",
+      message: error instanceof Error ? error.message : t.appointment.stepUpFailed,
     }
   }
 
@@ -460,7 +481,7 @@ export async function updateBusinessSettingsAction(
 
     return {
       success: true,
-      message: "Isletme ayarlari guncellendi.",
+      message: t.businessSettings.updated,
     }
   } catch (error) {
     logEvent({
@@ -477,7 +498,7 @@ export async function updateBusinessSettingsAction(
 
     return {
       success: false,
-      message: mapBusinessSettingsError(),
+      message: mapBusinessSettingsError(t.businessSettings),
     }
   }
 }
@@ -487,19 +508,20 @@ export async function updateCustomerNotesAction(
   formData: FormData
 ): Promise<CustomerNotesActionState> {
   const requestId = await getCurrentRequestId()
+  const t = await getActionMessages()
   let accessContext
   let actorIdentifier = "admin"
   let ipAddress = "unknown"
 
   try {
-    const guard = await requireAdminMutationGuard("admin-customer-notes-write", requestId)
+    const guard = await requireAdminMutationGuard("admin-customer-notes-write", requestId, t.security)
     accessContext = guard.accessContext
     actorIdentifier = guard.actorIdentifier
     ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
-      message: mapAdminAppointmentSecurityError(error),
+      message: mapAdminAppointmentSecurityError(error, t.security),
     }
   }
 
@@ -511,7 +533,7 @@ export async function updateCustomerNotesAction(
   if (!validation.success) {
     return {
       success: false,
-      message: validation.error.issues[0]?.message ?? "Musteri notu gecersiz.",
+      message: validation.error.issues[0]?.message ?? t.customerNotes.invalid,
       customerId: String(formData.get("customerId") ?? "").trim() || undefined,
     }
   }
@@ -530,7 +552,7 @@ export async function updateCustomerNotesAction(
 
     return {
       success: true,
-      message: "Musteri notu guncellendi.",
+      message: t.customerNotes.updated,
       customerId: validation.data.customerId,
     }
   } catch (error) {
@@ -549,7 +571,7 @@ export async function updateCustomerNotesAction(
 
     return {
       success: false,
-      message: mapCustomerNotesError(),
+      message: mapCustomerNotesError(t.customerNotes),
       customerId: validation.data.customerId,
     }
   }
@@ -560,17 +582,18 @@ export async function updateStaffAvailabilityAction(
   formData: FormData
 ): Promise<StaffAvailabilityActionState> {
   const requestId = await getCurrentRequestId()
+  const t = await getActionMessages()
   let accessContext
   let ipAddress = "unknown"
 
   try {
-    const guard = await requireAdminMutationGuard("admin-staff-availability-write", requestId)
+    const guard = await requireAdminMutationGuard("admin-staff-availability-write", requestId, t.security)
     accessContext = guard.accessContext
     ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
-      message: mapAdminAppointmentSecurityError(error),
+      message: mapAdminAppointmentSecurityError(error, t.security),
     }
   }
 
@@ -586,7 +609,7 @@ export async function updateStaffAvailabilityAction(
   if (!validation.success) {
     return {
       success: false,
-      message: validation.error.issues[0]?.message ?? "Personel musaitlik formu gecersiz.",
+      message: validation.error.issues[0]?.message ?? t.staffAvailability.invalidForm,
     }
   }
 
@@ -603,12 +626,12 @@ export async function updateStaffAvailabilityAction(
 
     return {
       success: true,
-      message: "Personel musaitligi guncellendi.",
+      message: t.staffAvailability.updated,
     }
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Musaitlik guncellenemedi.",
+      message: error instanceof Error ? error.message : t.staffAvailability.failed,
     }
   }
 }
@@ -618,17 +641,18 @@ export async function createStaffTimeOffAction(
   formData: FormData
 ): Promise<StaffTimeOffActionState> {
   const requestId = await getCurrentRequestId()
+  const t = await getActionMessages()
   let accessContext
   let ipAddress = "unknown"
 
   try {
-    const guard = await requireAdminMutationGuard("admin-staff-timeoff-write", requestId)
+    const guard = await requireAdminMutationGuard("admin-staff-timeoff-write", requestId, t.security)
     accessContext = guard.accessContext
     ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
-      message: mapAdminAppointmentSecurityError(error),
+      message: mapAdminAppointmentSecurityError(error, t.security),
     }
   }
 
@@ -645,7 +669,7 @@ export async function createStaffTimeOffAction(
   if (!validation.success) {
     return {
       success: false,
-      message: validation.error.issues[0]?.message ?? "Izin formu gecersiz.",
+      message: validation.error.issues[0]?.message ?? t.staffTimeOff.invalidForm,
     }
   }
 
@@ -668,12 +692,12 @@ export async function createStaffTimeOffAction(
 
     return {
       success: true,
-      message: "Personel izin kaydi olusturuldu.",
+      message: t.staffTimeOff.created,
     }
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Izin kaydi olusturulamadi.",
+      message: error instanceof Error ? error.message : t.staffTimeOff.failed,
     }
   }
 }
@@ -683,17 +707,18 @@ export async function recordProductSaleAction(
   formData: FormData
 ): Promise<ProductSaleActionState> {
   const requestId = await getCurrentRequestId()
+  const t = await getActionMessages()
   let accessContext
   let ipAddress = "unknown"
 
   try {
-    const guard = await requireAdminMutationGuard("admin-product-sale-write", requestId)
+    const guard = await requireAdminMutationGuard("admin-product-sale-write", requestId, t.security)
     accessContext = guard.accessContext
     ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
-      message: mapAdminAppointmentSecurityError(error),
+      message: mapAdminAppointmentSecurityError(error, t.security),
     }
   }
 
@@ -709,7 +734,7 @@ export async function recordProductSaleAction(
   if (!validation.success) {
     return {
       success: false,
-      message: validation.error.issues[0]?.message ?? "Satis formu gecersiz.",
+      message: validation.error.issues[0]?.message ?? t.productSale.invalidForm,
     }
   }
 
@@ -722,7 +747,7 @@ export async function recordProductSaleAction(
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Ek yonetici dogrulamasi basarisiz oldu.",
+      message: error instanceof Error ? error.message : t.appointment.stepUpFailed,
     }
   }
 
@@ -744,13 +769,13 @@ export async function recordProductSaleAction(
 
     return {
       success: true,
-      message: "Urun satisi kaydedildi.",
+      message: t.productSale.recorded,
     }
   } catch (error) {
     const message =
       error instanceof SubscriptionFeatureError || error instanceof Error
         ? error.message
-        : "Urun satisi kaydedilemedi."
+        : t.productSale.failed
 
     return {
       success: false,
@@ -764,24 +789,25 @@ export async function configureAdminMfaAction(
   formData: FormData
 ): Promise<AdminMfaActionState> {
   const requestId = await getCurrentRequestId()
+  const t = await getActionMessages()
   let accessContext
   let ipAddress = "unknown"
 
   try {
-    const guard = await requireAdminMutationGuard("admin-mfa-write", requestId)
+    const guard = await requireAdminMutationGuard("admin-mfa-write", requestId, t.security)
     accessContext = guard.accessContext
     ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
-      message: mapAdminAppointmentSecurityError(error),
+      message: mapAdminAppointmentSecurityError(error, t.security),
     }
   }
 
   if (!accessContext.adminUserId || accessContext.source !== "admin_session") {
     return {
       success: false,
-      message: "MFA yonetimi icin aktif admin oturumu gereklidir.",
+      message: t.mfa.sessionRequired,
     }
   }
 
@@ -803,7 +829,7 @@ export async function configureAdminMfaAction(
   if (!adminUser) {
     return {
       success: false,
-      message: "Admin kullanicisi bulunamadi.",
+      message: t.mfa.userNotFound,
     }
   }
 
@@ -825,7 +851,7 @@ export async function configureAdminMfaAction(
 
     return {
       success: false,
-      message: "Yonetici sifresi dogrulanamadi.",
+      message: t.mfa.passwordFailed,
     }
   }
 
@@ -841,14 +867,14 @@ export async function configureAdminMfaAction(
     if (!enrollment) {
       return {
         success: false,
-        message: "MFA kurulum oturumu gecersiz veya suresi dolmus.",
+        message: t.mfa.enrollmentInvalid,
       }
     }
 
     if (!verifyTotpCode({ secret: enrollment.secret, code: totpCode })) {
       return {
         success: false,
-        message: "Authenticator kodu dogrulanamadi.",
+        message: t.mfa.totpFailed,
       }
     }
 
@@ -887,7 +913,7 @@ export async function configureAdminMfaAction(
 
     return {
       success: true,
-      message: "Admin MFA aktif edildi. Onceki tum oturumlar iptal edilip bu cihaz icin yeni bir oturum verildi.",
+      message: t.mfa.enabled,
     }
   }
 
@@ -895,7 +921,7 @@ export async function configureAdminMfaAction(
     if (!adminUser.mfaEnabledAt || !adminUser.mfaSecretCiphertext) {
       return {
         success: false,
-        message: "MFA zaten kapali.",
+        message: t.mfa.alreadyDisabled,
       }
     }
 
@@ -904,7 +930,7 @@ export async function configureAdminMfaAction(
     if (!verifyTotpCode({ secret, code: totpCode })) {
       return {
         success: false,
-        message: "Authenticator kodu dogrulanamadi.",
+        message: t.mfa.totpFailed,
       }
     }
 
@@ -943,13 +969,13 @@ export async function configureAdminMfaAction(
 
     return {
       success: true,
-      message: "Admin MFA kapatildi. Onceki tum oturumlar iptal edilip bu cihaz icin yeni bir oturum verildi.",
+      message: t.mfa.disabled,
     }
   }
 
   return {
     success: false,
-    message: "Gecersiz MFA islemi.",
+    message: t.mfa.invalidIntent,
   }
 }
 
@@ -958,26 +984,27 @@ export async function revokeAdminSessionsAction(
   formData: FormData
 ): Promise<AdminSessionControlActionState> {
   const requestId = await getCurrentRequestId()
+  const t = await getActionMessages()
   let accessContext
   let actorIdentifier = "admin"
   let ipAddress = "unknown"
 
   try {
-    const guard = await requireAdminMutationGuard("admin-session-revoke", requestId)
+    const guard = await requireAdminMutationGuard("admin-session-revoke", requestId, t.security)
     accessContext = guard.accessContext
     actorIdentifier = guard.actorIdentifier
     ipAddress = guard.ipAddress
   } catch (error) {
     return {
       success: false,
-      message: mapAdminAppointmentSecurityError(error),
+      message: mapAdminAppointmentSecurityError(error, t.security),
     }
   }
 
   if (!accessContext?.adminUserId) {
     return {
       success: false,
-      message: "Oturum yonetimi icin aktif admin oturumu gereklidir.",
+      message: t.sessionControl.sessionRequired,
     }
   }
 
@@ -998,7 +1025,7 @@ export async function revokeAdminSessionsAction(
   if (!adminUser) {
     return {
       success: false,
-      message: "Admin kullanicisi bulunamadi.",
+      message: t.mfa.userNotFound,
     }
   }
 
@@ -1020,7 +1047,7 @@ export async function revokeAdminSessionsAction(
 
     return {
       success: false,
-      message: "Yonetici sifresi dogrulanamadi.",
+      message: t.mfa.passwordFailed,
     }
   }
 
@@ -1034,7 +1061,7 @@ export async function revokeAdminSessionsAction(
     } catch (error) {
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Ek yonetici dogrulamasi basarisiz oldu.",
+        message: error instanceof Error ? error.message : t.appointment.stepUpFailed,
       }
     }
   }
@@ -1066,6 +1093,6 @@ export async function revokeAdminSessionsAction(
 
   return {
     success: true,
-    message: "Tum eski admin oturumlari kapatildi ve bu cihaz icin yeni bir oturum olusturuldu.",
+    message: t.sessionControl.revoked,
   }
 }

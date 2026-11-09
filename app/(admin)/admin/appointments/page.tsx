@@ -1,6 +1,7 @@
 import { AppointmentOperations } from "@/components/admin/appointment-operations"
 import { getBusinessSettings, listAppointments, listStaffFromDb } from "@/lib/bookings-repository"
 import { getDailyCalendarView } from "@/lib/salon-ops-repository"
+import { getAdminLocale, getAdminMessages } from "@/lib/i18n/admin"
 import { requireAdminAccess } from "@/lib/security"
 
 type AppointmentsPageProps = {
@@ -15,6 +16,8 @@ type AppointmentsPageProps = {
 export default async function AdminAppointmentsPage({ searchParams }: AppointmentsPageProps) {
   const access = await requireAdminAccess()
   const params = (await searchParams) ?? {}
+  const locale = await getAdminLocale()
+  const t = getAdminMessages(locale).appointments
   const [settings, staff, appointments, calendarView] = await Promise.all([
     getBusinessSettings(),
     listStaffFromDb(),
@@ -42,10 +45,8 @@ export default async function AdminAppointmentsPage({ searchParams }: Appointmen
     <section className="py-10">
       <div className="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="font-serif text-3xl font-bold text-foreground">Randevular</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Mevcut randevu akisi korunur; tenant ve rol izolasyonu ile ayni ekran uzerinden yonetilir.
-          </p>
+          <h2 className="font-serif text-3xl font-bold text-foreground">{t.title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{t.intro}</p>
         </div>
 
         <div className="space-y-4">
@@ -53,6 +54,7 @@ export default async function AdminAppointmentsPage({ searchParams }: Appointmen
             <AppointmentOperations
               key={appointment.id}
               appointment={appointment}
+              locale={locale}
               businessName={settings?.businessName ?? "Adakan Hair Studio"}
               staffOptions={staff.map((person) => ({
                 id: person.id,
@@ -64,7 +66,7 @@ export default async function AdminAppointmentsPage({ searchParams }: Appointmen
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="font-serif text-2xl font-bold text-foreground">Gunluk Takvim</h3>
+          <h3 className="font-serif text-2xl font-bold text-foreground">{t.calendarTitle}</h3>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {calendarView.appointments.map((appointment) => (
               <div key={appointment.id} className="rounded-xl border border-border/80 bg-secondary/20 p-4">
@@ -72,7 +74,7 @@ export default async function AdminAppointmentsPage({ searchParams }: Appointmen
                 <div className="mt-1 text-sm text-muted-foreground">
                   {appointment.scheduledTime} / {appointment.service.title}
                 </div>
-                <div className="text-sm text-muted-foreground">{appointment.staff?.name ?? "Atanmamis"}</div>
+                <div className="text-sm text-muted-foreground">{appointment.staff?.name ?? t.unassigned}</div>
               </div>
             ))}
           </div>

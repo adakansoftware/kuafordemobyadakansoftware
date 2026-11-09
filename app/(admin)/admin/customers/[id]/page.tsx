@@ -3,11 +3,12 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AdminUserRole, AppointmentStatus } from "@prisma/client"
 import { CustomerNotesForm } from "@/components/admin/customer-notes-form"
+import { formatAdminMessage, getAdminLocale, getAdminMessages } from "@/lib/i18n/admin"
 import { requireAdminRoles } from "@/lib/security"
 import { buildAppointmentWhatsAppMessages, buildCustomerWhatsAppUrl, getPaymentMethodLabel } from "@/lib/salon-ops"
 import { getBusinessSettings } from "@/lib/bookings-repository"
 import { getCustomerDetail } from "@/lib/salon-ops-repository"
-import { siteContent } from "@/lib/site-content"
+import { getSiteContent } from "@/lib/content"
 
 type CustomerDetailPageProps = {
   params: Promise<{
@@ -37,7 +38,8 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
     notFound()
   }
 
-  const settings = await getBusinessSettings()
+  const [settings, locale] = await Promise.all([getBusinessSettings(), getAdminLocale()])
+  const t = getAdminMessages(locale).customerDetail
   const { customer, totalSpending, cancellationCount, lastVisit, completedPaidAppointments, discountCount } = detail
 
   const businessName = settings?.businessName ?? "Adakan Hair Studio"
@@ -48,40 +50,38 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <Link href="/admin" className="text-sm uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
-              Admina Don
+              {t.backToAdmin}
             </Link>
             <h1 className="mt-3 font-serif text-4xl font-bold text-foreground">{customer.name}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Musteri gecmisi, sadakat, notlar ve odeme durumu bu sayfadan izlenir.
-            </p>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{t.intro}</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <SummaryCard label="Toplam Harcama" value={formatCurrency(totalSpending)} />
-            <SummaryCard label="Sadakat Puani" value={String(customer.loyaltyPoints)} />
-            <SummaryCard label="Indirim Hakki" value={String(discountCount)} />
+            <SummaryCard label={t.totalSpending} value={formatCurrency(totalSpending)} />
+            <SummaryCard label={t.loyaltyPoints} value={String(customer.loyaltyPoints)} />
+            <SummaryCard label={t.discountRights} value={String(discountCount)} />
           </div>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_1.5fr]">
           <div className="space-y-6">
             <div className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="font-serif text-2xl font-bold text-foreground">Musteri Bilgileri</h2>
+              <h2 className="font-serif text-2xl font-bold text-foreground">{t.infoTitle}</h2>
               <div className="mt-4 grid gap-3 text-sm text-muted-foreground">
-                <p>Telefon: {customer.phone ?? "Kayitli degil"}</p>
-                <p>E-posta: {customer.email ?? "Kayitli degil"}</p>
-                <p>Toplam randevu: {customer.appointments.length}</p>
-                <p>Odenmis tamamlanan islem: {completedPaidAppointments}</p>
-                <p>Iptal sayisi: {cancellationCount}</p>
-                <p>Son gelis tarihi: {lastVisit ? `${lastVisit.scheduledDate} / ${lastVisit.scheduledTime}` : "Henuz yok"}</p>
-                <p>Kayit tarihi: {customer.createdAt.toLocaleDateString("tr-TR")}</p>
+                <p>{t.phone}: {customer.phone ?? t.notRegistered}</p>
+                <p>{t.email}: {customer.email ?? t.notRegistered}</p>
+                <p>{t.totalAppointments}: {customer.appointments.length}</p>
+                <p>{t.completedPaid}: {completedPaidAppointments}</p>
+                <p>{t.cancellationCount}: {cancellationCount}</p>
+                <p>{t.lastVisit}: {lastVisit ? `${lastVisit.scheduledDate} / ${lastVisit.scheduledTime}` : t.noVisitYet}</p>
+                <p>{t.registeredAt}: {customer.createdAt.toLocaleDateString("tr-TR")}</p>
               </div>
             </div>
 
             <div className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="font-serif text-2xl font-bold text-foreground">Admin Notlari</h2>
+              <h2 className="font-serif text-2xl font-bold text-foreground">{t.notesTitle}</h2>
               <div className="mt-4">
-                <CustomerNotesForm customerId={customer.id} notes={customer.notes} />
+                <CustomerNotesForm customerId={customer.id} notes={customer.notes} locale={locale} />
               </div>
             </div>
           </div>
@@ -89,13 +89,11 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
           <div className="rounded-2xl border border-border bg-card p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="font-serif text-2xl font-bold text-foreground">Tum Randevu Gecmisi</h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Durum, personel, odeme ve WhatsApp aksiyonlariyla birlikte tam operasyon kaydi.
-                </p>
+                <h2 className="font-serif text-2xl font-bold text-foreground">{t.historyTitle}</h2>
+                <p className="mt-2 text-sm text-muted-foreground">{t.historyIntro}</p>
               </div>
               <span className="rounded-full bg-secondary px-4 py-2 text-sm text-foreground">
-                {customer.appointments.length} kayit
+                {formatAdminMessage(t.records, { count: customer.appointments.length })}
               </span>
             </div>
 
@@ -115,37 +113,37 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="font-medium text-foreground">{appointment.service.title}</h3>
-                          <StatusBadge status={appointment.status} />
+                          <StatusBadge status={appointment.status} locale={locale} />
                           <span className="rounded-full border border-border bg-background px-3 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                            {appointment.payment ? "Odeme alindi" : "Odeme bekliyor"}
+                            {appointment.payment ? t.paymentReceived : t.paymentPending}
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {appointment.scheduledDate} / {appointment.scheduledTime}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Personel: {appointment.staff?.name ?? "Atanmamis"}
+                          {t.staff}: {appointment.staff?.name ?? t.unassigned}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Tutar: {formatCurrency(appointment.payment?.amount ?? appointment.service.priceFrom)}
+                          {t.amount}: {formatCurrency(appointment.payment?.amount ?? appointment.service.priceFrom)}
                         </p>
-                        {appointment.notes ? <p className="text-sm text-muted-foreground">Not: {appointment.notes}</p> : null}
+                        {appointment.notes ? <p className="text-sm text-muted-foreground">{t.note}: {appointment.notes}</p> : null}
                         {appointment.payment?.note ? (
-                          <p className="text-sm text-muted-foreground">Odeme notu: {appointment.payment.note}</p>
+                          <p className="text-sm text-muted-foreground">{t.paymentNote}: {appointment.payment.note}</p>
                         ) : null}
                       </div>
 
                       <div className="space-y-3">
                         <div className="text-sm text-muted-foreground">
                           {appointment.payment
-                            ? `${getPaymentMethodLabel(appointment.payment.method)} / ${appointment.payment.paidAt.toLocaleString("tr-TR")}`
-                            : "Tahsilat bekleniyor"}
+                            ? `${getPaymentMethodLabel(appointment.payment.method, locale)} / ${appointment.payment.paidAt.toLocaleString("tr-TR")}`
+                            : t.awaitingPayment}
                         </div>
                         <div className="flex flex-wrap gap-2 lg:justify-end">
-                          <WhatsAppLink href={buildCustomerWhatsAppUrl(customer.phone, messages.reminder)} label="Hatirlatma" />
-                          <WhatsAppLink href={buildCustomerWhatsAppUrl(customer.phone, messages.confirmation)} label="Onay" />
-                          <WhatsAppLink href={buildCustomerWhatsAppUrl(customer.phone, messages.cancellation)} label="Iptal" />
-                          <WhatsAppLink href={buildCustomerWhatsAppUrl(customer.phone, messages.paymentReminder)} label="Odeme" />
+                          <WhatsAppLink href={buildCustomerWhatsAppUrl(customer.phone, messages.reminder)} label={t.reminder} />
+                          <WhatsAppLink href={buildCustomerWhatsAppUrl(customer.phone, messages.confirmation)} label={t.confirmation} />
+                          <WhatsAppLink href={buildCustomerWhatsAppUrl(customer.phone, messages.cancellation)} label={t.cancellation} />
+                          <WhatsAppLink href={buildCustomerWhatsAppUrl(customer.phone, messages.paymentReminder)} label={t.payment} />
                         </div>
                       </div>
                     </div>
@@ -169,7 +167,7 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
   )
 }
 
-function StatusBadge({ status }: { status: AppointmentStatus }) {
+function StatusBadge({ status, locale }: { status: AppointmentStatus; locale: "tr" | "en" }) {
   const className =
     status === "CONFIRMED"
       ? "bg-emerald-500/10 text-emerald-700"
@@ -181,7 +179,7 @@ function StatusBadge({ status }: { status: AppointmentStatus }) {
 
   return (
     <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${className}`}>
-      {siteContent.admin.statusLabels[status]}
+      {getSiteContent(locale).admin.statusLabels[status]}
     </span>
   )
 }

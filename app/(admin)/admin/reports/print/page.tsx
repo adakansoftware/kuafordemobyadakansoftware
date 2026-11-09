@@ -1,6 +1,7 @@
 import { AdminUserRole } from "@prisma/client"
 import { getTodayInIstanbulDate, resolveSafeReportDateRange } from "@/lib/reporting"
 import { getDateRangeReport } from "@/lib/salon-ops-repository"
+import { getAdminLocale, getAdminMessages } from "@/lib/i18n/admin"
 import { requireAdminRoles } from "@/lib/security"
 
 type PrintPageProps = {
@@ -20,18 +21,20 @@ export default async function PrintableReportsPage({ searchParams }: PrintPagePr
     fallbackDate: today,
   })
   const report = await getDateRangeReport(range)
+  const locale = await getAdminLocale()
+  const t = getAdminMessages(locale).printReport
 
   return (
     <section className="mx-auto max-w-4xl space-y-6 px-6 py-10">
-      <h1 className="font-serif text-4xl font-bold text-foreground">Yazdirilabilir Gun Sonu ve Tarih Araligi Raporu</h1>
+      <h1 className="font-serif text-4xl font-bold text-foreground">{t.title}</h1>
       <p className="text-sm text-muted-foreground">
         {range.from} - {range.to}
       </p>
       <div className="grid gap-3 md:grid-cols-2">
-        <ReportItem label="Toplam Ciro" value={formatCurrency(report.revenueTotal)} />
-        <ReportItem label="Tamamlanan Randevu" value={String(report.completedAppointments)} />
-        <ReportItem label="Iptal Orani" value={`%${report.cancelRate}`} />
-        <ReportItem label="Tekrar Musteri Orani" value={`%${report.repeatCustomerRate}`} />
+        <ReportItem label={t.totalRevenue} value={formatCurrency(report.revenueTotal)} />
+        <ReportItem label={t.completedAppointments} value={String(report.completedAppointments)} />
+        <ReportItem label={t.cancelRate} value={`%${report.cancelRate}`} />
+        <ReportItem label={t.repeatRate} value={`%${report.repeatCustomerRate}`} />
       </div>
     </section>
   )

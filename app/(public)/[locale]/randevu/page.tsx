@@ -6,6 +6,7 @@ import { Clock, MapPin, Phone, ShieldCheck } from "lucide-react"
 import { BookingForm } from "@/components/booking-form"
 import { listServicesFromDb } from "@/lib/bookings-repository"
 import { getSiteContent } from "@/lib/content"
+import { localizedServiceFields } from "@/lib/i18n/db-content"
 import { normalizeLocale } from "@/lib/i18n/validation"
 import { getBookingPageViewModel } from "@/lib/public-site"
 import { createPublicFormChallenge } from "@/lib/request-security"
@@ -43,7 +44,10 @@ export default async function RandevuPage({ params }: PageProps) {
   const t = await getTranslations({ locale, namespace: "common" })
   const servicesFromDb = await listServicesFromDb().catch(() => [])
   const services = servicesFromDb.length
-    ? servicesFromDb
+    ? servicesFromDb.map((service) => ({
+        slug: service.slug,
+        ...localizedServiceFields(service, normalized),
+      }))
     : content.services.map((service) => ({
         slug: service.slug,
         title: service.title,

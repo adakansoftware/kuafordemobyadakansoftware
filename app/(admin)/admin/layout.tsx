@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { AdminUserRole } from "@prisma/client"
 import { adminLogoutAction } from "@/app/(admin)/admin/login/actions"
+import { setAdminLocaleAction } from "@/app/(admin)/admin/actions"
+import { getAdminLocale, getAdminMessages } from "@/lib/i18n/admin"
 import { requireAdminAccess } from "@/lib/security"
 import { siteContent } from "@/lib/site-content"
 import "../../globals.css"
@@ -18,6 +20,8 @@ export default async function AdminLayout({
   children: React.ReactNode
 }) {
   const access = await requireAdminAccess()
+  const adminLocale = await getAdminLocale()
+  const t = getAdminMessages(adminLocale)
 
   const navItems = [
     { href: "/admin/dashboard", label: "Dashboard", roles: [AdminUserRole.OWNER, AdminUserRole.MANAGER, AdminUserRole.STAFF] },
@@ -33,26 +37,37 @@ export default async function AdminLayout({
   ].filter((item) => item.roles.includes(access.role))
 
   return (
-    <html lang="tr">
+    <html lang={adminLocale}>
       <body className="font-sans antialiased">
         <div className="min-h-screen bg-background">
           <header className="border-b border-border bg-card">
             <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5 lg:px-8">
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{access.tenantSlug}</p>
-                <h1 className="font-serif text-2xl font-bold text-foreground">Salon Isletme Paneli</h1>
+                <h1 className="font-serif text-2xl font-bold text-foreground">{t.layout.panelTitle}</h1>
               </div>
               <div className="text-right text-sm text-muted-foreground">
                 <div>{access.actorIdentifier}</div>
                 <div>{access.role}</div>
-                <form action={adminLogoutAction} className="mt-2">
-                  <button
-                    type="submit"
-                    className="rounded-full border border-input bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:border-accent"
-                  >
-                    Oturumu Kapat
-                  </button>
-                </form>
+                <div className="mt-2 flex justify-end gap-2">
+                  <form action={setAdminLocaleAction}>
+                    <input type="hidden" name="locale" value={adminLocale === "en" ? "tr" : "en"} />
+                    <button
+                      type="submit"
+                      className="rounded-full border border-input bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:border-accent"
+                    >
+                      {adminLocale === "en" ? "TR" : "EN"}
+                    </button>
+                  </form>
+                  <form action={adminLogoutAction}>
+                    <button
+                      type="submit"
+                      className="rounded-full border border-input bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:border-accent"
+                    >
+                      {t.layout.logout}
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
             <nav className="mx-auto flex max-w-7xl flex-wrap gap-3 px-6 pb-5 lg:px-8">

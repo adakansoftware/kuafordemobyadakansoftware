@@ -3,22 +3,25 @@ import { StaffAvailabilityForm } from "@/components/admin/staff-availability-for
 import { StaffTimeOffForm } from "@/components/admin/staff-timeoff-form"
 import { getStaffWorkload, listStaffFromDb } from "@/lib/bookings-repository"
 import { getStaffCommissionSummary } from "@/lib/salon-ops-repository"
+import { getAdminLocale, getAdminMessages } from "@/lib/i18n/admin"
 import { requireAdminRoles } from "@/lib/security"
 
 export default async function AdminStaffPage() {
   await requireAdminRoles([AdminUserRole.OWNER, AdminUserRole.MANAGER])
-  const [staff, workload, commissions] = await Promise.all([
+  const [staff, workload, commissions, locale] = await Promise.all([
     listStaffFromDb(),
     getStaffWorkload(),
     getStaffCommissionSummary(),
+    getAdminLocale(),
   ])
+  const t = getAdminMessages(locale).staff
 
   return (
     <section className="py-10">
       <div className="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="font-serif text-3xl font-bold text-foreground">Personel</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Prim, is yukü, musaitlik ve izin yonetimi.</p>
+          <h2 className="font-serif text-3xl font-bold text-foreground">{t.title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{t.intro}</p>
         </div>
 
         <div className="space-y-6">
@@ -32,14 +35,14 @@ export default async function AdminStaffPage() {
                   <div>
                     <h3 className="font-medium text-foreground">{person.name}</h3>
                     <div className="mt-2 grid gap-2 text-sm text-muted-foreground">
-                      <p>Rol: {person.role}</p>
-                      <p>Aktif randevu: {workloadItem?.activeAppointments ?? 0}</p>
-                      <p>Odemeli islem: {commissionItem?.totalAppointments ?? 0}</p>
-                      <p>Tahmini prim: {formatCurrency(commissionItem?.estimatedCommission ?? 0)}</p>
+                      <p>{t.role}: {person.role}</p>
+                      <p>{t.activeAppointments}: {workloadItem?.activeAppointments ?? 0}</p>
+                      <p>{t.paidServices}: {commissionItem?.totalAppointments ?? 0}</p>
+                      <p>{t.estimatedCommission}: {formatCurrency(commissionItem?.estimatedCommission ?? 0)}</p>
                     </div>
                   </div>
-                  <StaffAvailabilityForm staffId={person.id} />
-                  <StaffTimeOffForm staffId={person.id} />
+                  <StaffAvailabilityForm staffId={person.id} locale={locale} />
+                  <StaffTimeOffForm staffId={person.id} locale={locale} />
                 </div>
               </div>
             )

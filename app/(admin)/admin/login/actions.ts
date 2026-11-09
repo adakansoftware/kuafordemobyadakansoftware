@@ -10,6 +10,7 @@ import { verifyPassword } from "@/lib/password"
 import { applyRateLimit, claimRateLimitWindow } from "@/lib/rate-limit"
 import { blockTemporarily, getTemporaryBlock, recordSuspicion, verifyPublicFormChallenge } from "@/lib/request-security"
 import { getRequestIpAddress, verifyTrustedOrigin } from "@/lib/security"
+import { getAdminMessages, getAdminLocale } from "@/lib/i18n/admin"
 import { getTenantContextBySlugOrDefault, getTenantRequestCandidate } from "@/lib/tenant"
 
 export type AdminLoginState = {
@@ -23,13 +24,14 @@ export async function adminLoginAction(
 ): Promise<AdminLoginState> {
   const requestId = await getCurrentRequestId()
   const ipAddress = await getRequestIpAddress()
+  const t = getAdminMessages(await getAdminLocale()).actionMessages
 
   try {
     await verifyTrustedOrigin({ allowHostFallback: true })
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Giris istegi dogrulanamadi.",
+      message: error instanceof Error ? error.message : t.login.requestInvalid,
     }
   }
 
@@ -52,7 +54,7 @@ export async function adminLoginAction(
 
     return {
       success: false,
-      message: "Giris istegi dogrulanamadi.",
+      message: t.login.requestInvalid,
     }
   }
 
@@ -61,7 +63,7 @@ export async function adminLoginAction(
   if (blockState && blockState.resetAt > Date.now()) {
     return {
       success: false,
-      message: "Cok fazla giris denemesi yapildi. Lutfen biraz sonra tekrar deneyin.",
+      message: t.login.rateLimited,
     }
   }
 
@@ -87,14 +89,14 @@ export async function adminLoginAction(
 
     return {
       success: false,
-      message: "Giris istegi dogrulanamadi.",
+      message: t.login.requestInvalid,
     }
   }
 
   if (!username || !password) {
     return {
       success: false,
-      message: "Kullanici adi ve sifre gereklidir.",
+      message: t.login.credentialsRequired,
     }
   }
 
@@ -110,7 +112,7 @@ export async function adminLoginAction(
     await blockTemporarily("admin-login", clientKey, 30 * 60_000)
     return {
       success: false,
-      message: "Cok fazla giris denemesi yapildi. Lutfen biraz sonra tekrar deneyin.",
+      message: t.login.rateLimited,
     }
   }
 
@@ -155,7 +157,7 @@ export async function adminLoginAction(
 
     return {
       success: false,
-      message: "Kullanici adi veya sifre gecersiz.",
+      message: t.login.credentialsInvalid,
     }
   }
 
@@ -188,7 +190,7 @@ export async function adminLoginAction(
 
       return {
         success: false,
-        message: "Authenticator kodu gecersiz.",
+        message: t.login.totpInvalid,
       }
     }
 
@@ -211,7 +213,7 @@ export async function adminLoginAction(
 
       return {
         success: false,
-        message: "Bu authenticator kodu daha once kullanildi. Yeni kod bekleyin.",
+        message: t.login.totpReused,
       }
     }
   }

@@ -159,18 +159,25 @@ export const productSaleSchema = z.object({
   note: z.string().trim().max(500, "Satis notu en fazla 500 karakter olabilir.").optional().default(""),
 })
 
-export function mapAdminPaymentError(error: unknown) {
+export function mapAdminPaymentError(
+  error: unknown,
+  messages: { unexpected: string } = { unexpected: "Odeme kaydi sirasinda beklenmeyen bir hata olustu." }
+) {
   if (error instanceof Error && error.name === "AdminPaymentError") {
     return error.message
   }
 
-  return "Odeme kaydi sirasinda beklenmeyen bir hata olustu."
+  return messages.unexpected
 }
 
-export function mapBusinessSettingsError() {
-  return "Isletme ayarlari guncellenirken beklenmeyen bir hata olustu."
+export function mapBusinessSettingsError(
+  messages: { unexpected: string } = { unexpected: "Isletme ayarlari guncellenirken beklenmeyen bir hata olustu." }
+) {
+  return messages.unexpected
 }
 
-export function mapCustomerNotesError() {
-  return "Musteri notu guncellenirken beklenmeyen bir hata olustu."
+export function mapCustomerNotesError(
+  messages: { unexpected: string } = { unexpected: "Musteri notu guncellenirken beklenmeyen bir hata olustu." }
+) {
+  return messages.unexpected
 }

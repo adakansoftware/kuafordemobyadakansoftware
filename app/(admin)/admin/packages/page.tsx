@@ -1,17 +1,19 @@
 import { AdminUserRole } from "@prisma/client"
 import { getActivePackages } from "@/lib/salon-ops-repository"
+import { getAdminLocale, getAdminMessages } from "@/lib/i18n/admin"
 import { requireAdminRoles } from "@/lib/security"
 
 export default async function AdminPackagesPage() {
   await requireAdminRoles([AdminUserRole.OWNER, AdminUserRole.MANAGER])
-  const packages = await getActivePackages()
+  const [packages, locale] = await Promise.all([getActivePackages(), getAdminLocale()])
+  const t = getAdminMessages(locale).packages
 
   return (
     <section className="py-10">
       <div className="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="font-serif text-3xl font-bold text-foreground">Paketler</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Mevcut service yapisini bozmadan paket satis kurgusu.</p>
+          <h2 className="font-serif text-3xl font-bold text-foreground">{t.title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{t.intro}</p>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
