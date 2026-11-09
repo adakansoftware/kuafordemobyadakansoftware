@@ -19,7 +19,7 @@ const optionalUrlString = z.preprocess((value) => {
 }, z.string().url().optional())
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().min(1, "DATABASE_URL tanimlanmalidir."),
+  DATABASE_URL: z.string({ required_error: "DATABASE_URL tanimlanmalidir." }).min(1, "DATABASE_URL tanimlanmalidir."),
   NEXT_PUBLIC_SITE_URL: optionalUrlString,
   ADMIN_USERNAME: optionalTrimmedString,
   ADMIN_PASSWORD: optionalTrimmedString,

@@ -10,6 +10,12 @@ jobs:
   verify:
     runs-on: ubuntu-latest
 
+    # Build-time page data collection (sitemap/robots) validates the env
+    # schema; no live database is needed, placeholders suffice.
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/salon_test
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
