@@ -48,7 +48,8 @@
     "date": "Date:",
     "time": "Time:",
     "requestNo": "Request No:",
-    "newRequest": "Create a new request"
+    "newRequest": "Create a new request",
+    "notificationsLabel": "I want to receive appointment confirmation and a 24-hour reminder email."
   },
   "errorPage": {
     "eyebrow": "Unexpected Situation",

@@ -1,15 +1,17 @@
 import Link from "next/link"
 import { getAppointmentMetrics, getBusinessSettings, getOperationalAlerts } from "@/lib/bookings-repository"
 import { getEndOfDaySummary, getTenantSubscriptionDetails } from "@/lib/salon-ops-repository"
+import { getNotificationDashboardSnapshot } from "@/lib/notifications/notification-service"
 import { getAdminLocale, getAdminMessages } from "@/lib/i18n/admin"
 
 export default async function AdminDashboardPage() {
-  const [settings, metrics, alerts, daySummary, subscription, locale] = await Promise.all([
+  const [settings, metrics, alerts, daySummary, subscription, notifications, locale] = await Promise.all([
     getBusinessSettings(),
     getAppointmentMetrics(),
     getOperationalAlerts(),
     getEndOfDaySummary(),
     getTenantSubscriptionDetails(),
+    getNotificationDashboardSnapshot(),
     getAdminLocale(),
   ])
   const t = getAdminMessages(locale).dashboard
@@ -62,6 +64,29 @@ export default async function AdminDashboardPage() {
               `${t.inventory}: ${subscription.limits.inventoryEnabled ? t.open : t.closed}`,
             ]}
           />
+          <PanelCard
+            title={t.notificationsTitle}
+            lines={[
+              `${t.notificationsPending}: ${notifications.counts.PENDING}`,
+              `${t.notificationsSent}: ${notifications.counts.SENT}`,
+              `${t.notificationsFailed}: ${notifications.counts.FAILED}`,
+              `${t.notificationsSkipped}: ${notifications.counts.SKIPPED}`,
+              `${t.notificationsRecent}: ${notifications.recent.length}`,
+            ]}
+          >
+            <div className="mt-4 space-y-1 text-xs text-muted-foreground">
+              {notifications.recent.length === 0 ? (
+                <p>{t.notificationsEmpty}</p>
+              ) : (
+                notifications.recent.map((notification) => (
+                  <p key={notification.id}>
+                    {notification.templateKey} · {notification.channel} · {notification.status} ·{" "}
+                    {notification.recipient}
+                  </p>
+                ))
+              )}
+            </div>
+          </PanelCard>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -91,7 +116,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
   )
 }
 
-function PanelCard({ title, lines }: { title: string; lines: string[] }) {
+function PanelCard({ title, lines, children }: { title: string; lines: string[]; children?: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
       <h3 className="font-serif text-2xl font-bold text-foreground">{title}</h3>
@@ -100,6 +125,7 @@ function PanelCard({ title, lines }: { title: string; lines: string[] }) {
           <p key={line}>{line}</p>
         ))}
       </div>
+      {children}
     </div>
   )
 }

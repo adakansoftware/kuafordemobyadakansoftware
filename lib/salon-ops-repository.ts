@@ -1135,7 +1135,13 @@ export async function getCustomerPortalSnapshot(input: {
   tenantId?: string
 }) {
   const tenantId = await resolveTenantId(input.tenantId)
-  const detail = await getCustomerDetail(input.customerId, { tenantId })
+  const [detail, notificationPreference] = await Promise.all([
+    getCustomerDetail(input.customerId, { tenantId }),
+    db.notificationPreference.findUnique({
+      where: { customerId: input.customerId },
+      select: { emailOptIn: true, smsOptIn: true },
+    }),
+  ])
 
   return {
     customer: detail.customer,
@@ -1145,6 +1151,7 @@ export async function getCustomerPortalSnapshot(input: {
     completedPaidAppointments: detail.completedPaidAppointments,
     discountCount: detail.discountCount,
     appointments: detail.customer.appointments,
+    notificationPreference: notificationPreference ?? null,
   }
 }
 

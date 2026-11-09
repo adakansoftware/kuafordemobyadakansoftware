@@ -82,6 +82,7 @@ export function BookingForm({
     formSignature: securityChallenge.formSignature,
     turnstileToken: "",
     clientFingerprint: "",
+    notificationOptIn: "",
   })
 
   const minDate = getBookingMinDate()
@@ -215,6 +216,15 @@ export function BookingForm({
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
 
+    if (event.target instanceof HTMLInputElement && event.target.type === "checkbox") {
+      const checked = event.target.checked
+      setFormData((prev) => ({
+        ...prev,
+        [name]: checked ? "true" : "",
+      }))
+      return
+    }
+
     if (name === "date") {
       const normalizedDate = normalizeBookingDateInput(value)
 
@@ -279,6 +289,7 @@ export function BookingForm({
               formSignature: securityChallenge.formSignature,
               turnstileToken: "",
               clientFingerprint: formData.clientFingerprint,
+              notificationOptIn: "",
             })
             setErrors({})
             setFormMessage("")
@@ -457,6 +468,17 @@ export function BookingForm({
             {errors.email ? <p className="mt-2 text-sm text-destructive">{errors.email}</p> : null}
           </div>
         </div>
+
+        <label className="flex items-start gap-3 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            name="notificationOptIn"
+            checked={formData.notificationOptIn === "true"}
+            onChange={handleChange}
+            className="mt-0.5 h-4 w-4 rounded border-input text-accent accent-accent"
+          />
+          <span>{t("notificationsLabel")}</span>
+        </label>
 
         <button
           type="submit"

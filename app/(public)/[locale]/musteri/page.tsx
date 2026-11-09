@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation"
 import { setRequestLocale } from "next-intl/server"
 import { CustomerPortalForm } from "@/components/customer-portal-form"
-import { customerPortalLogoutAction, getCustomerPortalSessionSnapshot, requestCancellationAction } from "@/app/musteri/actions"
+import {
+  customerPortalLogoutAction,
+  getCustomerPortalSessionSnapshot,
+  requestCancellationAction,
+  updateNotificationPreferencesAction,
+} from "@/app/musteri/actions"
 import { createPublicFormChallenge } from "@/lib/request-security"
 import { routing } from "@/i18n/routing"
 
@@ -59,6 +64,38 @@ export default async function CustomerPortalPage({
               <MetricCard label="Toplam Harcama" value={formatCurrency(snapshot.totalSpending)} />
               <MetricCard label="Tamamlanan Islem" value={String(snapshot.completedPaidAppointments)} />
               <MetricCard label="Indirim Hakki" value={String(snapshot.discountCount)} />
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-border/80 bg-secondary/20 p-4">
+              <form action={updateNotificationPreferencesAction} className="grid gap-3">
+                <p className="text-sm font-medium text-foreground">Bildirim Tercihleri</p>
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    name="emailOptIn"
+                    value="true"
+                    defaultChecked={snapshot.notificationPreference?.emailOptIn ?? false}
+                    className="h-4 w-4 rounded border-input accent-accent"
+                  />
+                  <span>E-posta ile randevu onayi ve hatirlatma almak istiyorum.</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    name="smsOptIn"
+                    value="true"
+                    defaultChecked={snapshot.notificationPreference?.smsOptIn ?? false}
+                    className="h-4 w-4 rounded border-input accent-accent"
+                  />
+                  <span>SMS ile randevu hatirlatmasi almak istiyorum.</span>
+                </label>
+                <button
+                  type="submit"
+                  className="justify-self-start rounded-xl border border-input bg-background px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:border-accent"
+                >
+                  Tercihleri Kaydet
+                </button>
+              </form>
             </div>
 
             <div className="mt-6 space-y-4">

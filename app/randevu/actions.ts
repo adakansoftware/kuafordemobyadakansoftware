@@ -10,6 +10,10 @@ import {
 import { AppointmentConflictError, createAppointmentFromWeb } from "@/lib/bookings-repository"
 import { validateBookingForm, type BookingFormDraft } from "@/lib/booking"
 import { bookingActionMessages, normalizeLocale } from "@/lib/i18n/validation"
+import {
+  enqueueAppointmentNotifications,
+  upsertNotificationPreference,
+} from "@/lib/notifications/notification-service"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
 import {
@@ -261,6 +265,47 @@ export async function submitBookingAction(values: BookingFormDraft): Promise<Sub
         rateLimitSource: rateLimit.source,
       },
     })
+
+    if (!result.wasDeduplicated) {
+      const notificationOptIn = values.notificationOptIn === "true"
+
+      if (notificationOptIn && booking.customer?.id) {
+        try {
+          await upsertNotificationPreference({
+            tenantId: booking.tenantId,
+            customerId: booking.customer.id,
+            emailOptIn: Boolean(booking.customer.email),
+            locale,
+          })
+        } catch (error) {
+          logEvent({
+            level: "warn",
+            event: "booking_notification_preference_failed",
+            requestId,
+            route: "/randevu",
+            message: error instanceof Error ? error.message : "Notification preference upsert failed.",
+            meta: { bookingId: booking.id },
+          })
+        }
+      }
+
+      try {
+        await enqueueAppointmentNotifications({
+          appointmentId: booking.id,
+          templateKeys: ["appointment-confirmation", "reminder-24h"],
+          requestId,
+        })
+      } catch (error) {
+        logEvent({
+          level: "warn",
+          event: "booking_notification_enqueue_failed",
+          requestId,
+          route: "/randevu",
+          message: error instanceof Error ? error.message : "Notification enqueue failed.",
+          meta: { bookingId: booking.id },
+        })
+      }
+    }
 
     return {
       success: true,

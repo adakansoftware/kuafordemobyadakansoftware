@@ -48,7 +48,8 @@
     "date": "Tarih:",
     "time": "Saat:",
     "requestNo": "Talep No:",
-    "newRequest": "Yeni talep oluştur"
+    "newRequest": "Yeni talep oluştur",
+    "notificationsLabel": "Randevu onayi ve 24 saat once hatirlatma e-postasi almak istiyorum."
   },
   "errorPage": {
     "eyebrow": "Beklenmeyen Durum",

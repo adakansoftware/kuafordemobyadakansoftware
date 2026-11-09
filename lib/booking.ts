@@ -71,6 +71,7 @@ export type BookingFormDraft = {
   formSignature?: string
   turnstileToken?: string
   clientFingerprint?: string
+  notificationOptIn?: string
 }
 
 export type BookingFieldErrors = Partial<Record<keyof BookingFormValues, string>>
@@ -92,6 +93,7 @@ export function sanitizeBookingForm(values: BookingFormDraft): BookingFormDraft 
     formSignature: values.formSignature?.trim() ?? "",
     turnstileToken: values.turnstileToken?.trim() ?? "",
     clientFingerprint: values.clientFingerprint?.trim() ?? "",
+    notificationOptIn: values.notificationOptIn === "true" ? "true" : "",
   }
 }
 

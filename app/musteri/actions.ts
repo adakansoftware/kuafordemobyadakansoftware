@@ -1,6 +1,9 @@
 "use server"
 
 import { cookies, headers } from "next/headers"
+import { revalidatePath } from "next/cache"
+import { db } from "@/lib/db"
+import { upsertNotificationPreference } from "@/lib/notifications/notification-service"
 import { getCurrentRequestId } from "@/lib/http"
 import { logEvent } from "@/lib/observability"
 import {
@@ -402,6 +405,41 @@ export async function getCustomerPortalSessionSnapshot() {
   }
 
   return getCustomerPortalSnapshot({ customerId })
+}
+
+export async function updateNotificationPreferencesAction(formData: FormData) {
+  const requestHeaders = await headers()
+  const fingerprint = `${requestHeaders.get("user-agent")?.slice(0, 120) ?? ""}|${requestHeaders.get("accept-language")?.slice(0, 40) ?? ""}`
+  const cookieStore = await cookies()
+  const session = await resolveCustomerPortalSession({
+    value: cookieStore.get(CUSTOMER_PORTAL_SESSION_COOKIE_NAME)?.value,
+    fingerprint,
+  })
+
+  if (!session?.customerId) {
+    return
+  }
+
+  const customer = await db.customer.findFirst({
+    where: { id: session.customerId },
+    select: { tenantId: true, email: true, phone: true },
+  })
+
+  if (!customer) {
+    return
+  }
+
+  const emailOptIn = String(formData.get("emailOptIn") ?? "") === "true" && Boolean(customer.email)
+  const smsOptIn = String(formData.get("smsOptIn") ?? "") === "true" && Boolean(customer.phone)
+
+  await upsertNotificationPreference({
+    tenantId: customer.tenantId,
+    customerId: session.customerId,
+    emailOptIn,
+    smsOptIn,
+  })
+
+  revalidatePath("/musteri")
 }
 
 export async function customerPortalLogoutAction() {

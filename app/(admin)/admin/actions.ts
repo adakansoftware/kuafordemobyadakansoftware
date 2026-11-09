@@ -23,6 +23,7 @@ import {
   type AdminAppointmentActionMessages,
 } from "@/lib/admin-appointment-action"
 import { getAdminMessages, getAdminLocale } from "@/lib/i18n/admin"
+import { enqueueAppointmentNotifications } from "@/lib/notifications/notification-service"
 import { AppointmentConflictError, updateAppointmentFromAdmin } from "@/lib/bookings-repository"
 import { adminNotesSchema } from "@/lib/booking"
 import { getCurrentRequestId } from "@/lib/http"
@@ -277,6 +278,31 @@ export async function updateAppointmentAction(
 
     revalidatePath("/admin")
     revalidatePath("/randevu")
+
+    try {
+      if (statusValue === AppointmentStatus.CONFIRMED) {
+        await enqueueAppointmentNotifications({
+          appointmentId,
+          templateKeys: ["appointment-confirmation", "reminder-24h"],
+          requestId,
+        })
+      } else if (statusValue === AppointmentStatus.CANCELLED) {
+        await enqueueAppointmentNotifications({
+          appointmentId,
+          templateKeys: ["appointment-cancelled"],
+          requestId,
+        })
+      }
+    } catch (error) {
+      logEvent({
+        level: "warn",
+        event: "admin_appointment_notification_enqueue_failed",
+        requestId,
+        route: "/admin",
+        message: error instanceof Error ? error.message : "Notification enqueue failed.",
+        meta: { appointmentId, statusValue },
+      })
+    }
 
     return {
       success: true,
